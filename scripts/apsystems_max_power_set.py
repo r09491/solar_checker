@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+
+__doc__="""
+Writes the latest inverter data to stdout
+"""
+
+__version__ = "0.0.0"
+__author__ = "r09491@t-online.de"
+
+import os
+import sys
+import argparse
+import asyncio
+
+from apsystems import EZ1M
+
+from aiohttp.client_exceptions import ClientConnectorError
+
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(os.path.basename(sys.argv[0]))
+
+
+async def main(inverter, new_max_power):
+    max_power = await inverter.get_max_power()
+    logger.info(f"Old_Power: {max_power}W")
+
+    if new_max_power is None:
+        return
+    
+    # Set maximum power limit (ensure the value is within valid range)
+    set_power_response = await inverter.set_max_power(new_max_power)
+    logger.info(f"Commanded Power to: {set_power_response}W")
+
+    max_power = await inverter.get_max_power()
+    logger.info(f"New_Power: {max_power}W")
+                
+    # Set power status (ensure "ON" or other value is valid)
+    set_power_status_response = await inverter.set_device_power_status("ON")
+    logger.info(f"Commanded Power Status to: {'ON' if set_power_status_response == 0 else 'OFF'}")
+
+    # Get current power status
+    power_status = await inverter.get_device_power_status()
+    logger.info(f"New Power Status: {'ON' if power_status == 0 else 'OFF'}")
+
+
+def parse_arguments():
+    """Parse command line arguments"""
+
+    parser = argparse.ArgumentParser(
+        prog=os.path.basename(sys.argv[0]),
+        description='Set the the maximum power of the inverter',
+        epilog=__doc__)
+
+    parser.add_argument('--version', action = 'version', version = __version__)
+
+    parser.add_argument('--ip', type = str,
+                        help = "IP address of the APsystems inverter")
+
+    parser.add_argument('--port', type = int, default = 8050,
+                        help = "IP port of the APsystems inverter")
+    
+    parser.add_argument('--max_power', type = int,
+                        help = "The new maximum power of the inverter")
+    
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_arguments()
+
+    if args.ip is None:
+        logger.error('IP address is missing.')
+        sys.exit(1)
+
+    if args.max_power is not None and (args.max_power < 30 or
+                                       args.max_power > 800):
+        logger.info(f'Input "{args.max_power}" is out of legal range.')
+        args.max_power = None
+        
+    ez1m = EZ1M(args.ip, args.port)
+
+    try:
+        asyncio.run(main(ez1m, args.max_power))
+        err = 0
+    except ClientConnectorError:
+        logger.error('Cannot connect to smartmeter.')
+        err = 10
+    except KeyboardInterrupt: 
+        err = 99
+
+    sys.exit(err)
