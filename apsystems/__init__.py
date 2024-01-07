@@ -55,37 +55,40 @@ class EZ1M:
         
     async def get_device_info(self) -> ReturnDeviceInfo | None:
         response = await self._request("getDeviceInfo")
+        data = response["data"] if response and response.get("data") else None
         return (
             ReturnDeviceInfo(
-                deviceId=response["data"]["deviceId"],
-                devVer=response["data"]["devVer"],
-                ssId=response["data"]["ssId"],
-                ipAddr=response["data"]["ipAddr"],
-                minPower=int(response["data"]["minPower"]),
-                maxPower=int(response["data"]["maxPower"]),
+                deviceId=data["deviceId"],
+                devVer=data["devVer"],
+                ssId=data["ssId"],
+                ipAddr=data["ipAddr"],
+                minPower=int(data["minPower"]),
+                maxPower=int(data["maxPower"]),
             )
-            if response and response.get("data")
+            if data
             else None
         )
 
     
     async def get_alarm_info(self) -> ReturnAlarmInfo | None:
         response = await self._request("getAlarm")
+        data = response["data"] if response and response.get("data") else None
         return (
             ReturnAlarmInfo(
-                og=Status(int(response["data"]["og"])),
-                isce1=Status(int(response["data"]["isce1"])),
-                isce2=Status(int(response["data"]["isce2"])),
-                oe=Status(int(response["data"]["oe"])),
+                og=Status(int(data["og"])),
+                isce1=Status(int(data["isce1"])),
+                isce2=Status(int(data["isce2"])),
+                oe=Status(int(data["oe"])),
             )
-            if response
+            if data
             else None
         )
 
     
     async def get_output_data(self) -> ReturnOutputData | None:
         response = await self._request("getOutputData")
-        return ReturnOutputData(**response["data"]) if response else None
+        data = response["data"] if response and response.get("data") else None
+        return ReturnOutputData(**data) if data else None
 
     
     async def get_total_output(self) -> float | None:
@@ -105,9 +108,9 @@ class EZ1M:
     
     async def get_max_power(self) -> int | None:
         response = await self._request("getMaxPower")
-        if response is None or response["data"]["maxPower"] == "":
-            return None
-        return int(response["data"]["maxPower"])
+        data = response["data"] if response and response.get("data") else None
+        max_power = data["maxPower"] if data and data["maxPower"] != "" else None
+        return int(max_power) if max_power else None
 
     
     async def set_max_power(self, power_limit: int) -> int | None:
@@ -116,12 +119,16 @@ class EZ1M:
                 f"Invalid setMaxPower value: expected int between '30' and '800', got '{power_limit}'"
             )
         request = await self._request(f"setMaxPower?p={power_limit}")
-        return int(request["data"]["maxPower"]) if request else None
+        data = request["data"] if request and request.get("data") else None
+        max_power = data["maxPower"] if data and data["maxPower"] != "" else None
+        return int(max_power) if max_power else None
 
     
     async def get_device_power_status(self) -> Status | None:
         response = await self._request("getOnOff")
-        return Status(int(response["data"]["status"])) if response else None
+        data = response["data"] if response and response.get("data") else None
+        onoff = data["status"] if data and data["status"] != "" else None
+        return Status(int(onoff)) if onoff else None
 
     
     async def set_device_power_status(self, power_status: Status | None) -> Status | None:
@@ -133,8 +140,11 @@ class EZ1M:
                 + "'\n Set '0' or 'ON' to start the inverter | Set '1' or 'SLEEP' or 'OFF' to stop the inverter."
             )
         request = await self._request(f"setOnOff?status={status_value}")
-        return Status(int(request["data"]["status"])) if request else None
+        data = request["data"] if request and request.get("data") else None
+        onoff = data["status"] if data and data["status"] != "" else None
+        return Status(int(onoff)) if onoff else None
 
     
-    async def is_power_on(self) -> bool | None:
-        return await self.get_device_power_status() == Status(0)
+    async def is_power_on(self) -> bool:
+        power_status = await self.get_device_power_status()
+        return  power_status == Status(0) if power_status else False

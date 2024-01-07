@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 __doc__="""
-Writes the latest inverter data to stdout
+Sets the new power limit to the APsystems EZ1 inverter
 """
 
 __version__ = "0.0.0"
@@ -23,24 +23,41 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 async def main(inverter, new_max_power):
     max_power = await inverter.get_max_power()
-    logger.info(f"Old_Power: {max_power}W")
+    if max_power is None:
+        logger.error(f"Could not get max power limit")
+        return
+        
+    logger.info(f"Ol Max _Power Limit: {max_power}W")
 
     if new_max_power is None:
         return
     
     # Set maximum power limit (ensure the value is within valid range)
-    set_power_response = await inverter.set_max_power(new_max_power)
+    set_max_power_response = await inverter.set_max_power(new_max_power)
+    if set_power_response is None:
+        logger.error(f"Could not set max power limit")
+        return
+        
     logger.info(f"Commanded Power to: {set_power_response}W")
 
     max_power = await inverter.get_max_power()
+    if max_power is None:
+        logger.error(f"Could not get max power limit")
+        
     logger.info(f"New_Power: {max_power}W")
                 
     # Set power status (ensure "ON" or other value is valid)
     set_power_status_response = await inverter.set_device_power_status("ON")
+    if set_power_status_response is None:
+        logger.error(f"Could not get power status")
+        
     logger.info(f"Commanded Power Status to: {'ON' if set_power_status_response == 0 else 'OFF'}")
 
     # Get current power status
     power_status = await inverter.get_device_power_status()
+    if power_status is None:
+        logger.error(f"Could not get device power status")
+        
     logger.info(f"New Power Status: {'ON' if power_status == 0 else 'OFF'}")
 
 
@@ -76,7 +93,7 @@ if __name__ == '__main__':
     if args.max_power is not None and (args.max_power < 30 or
                                        args.max_power > 800):
         logger.info(f'Input "{args.max_power}" is out of legal range.')
-        args.max_power = None
+        sys.exit(2)
         
     ez1m = EZ1M(args.ip, args.port)
 
@@ -84,7 +101,7 @@ if __name__ == '__main__':
         asyncio.run(main(ez1m, args.max_power))
         err = 0
     except ClientConnectorError:
-        logger.error('Cannot connect to smartmeter.')
+        logger.error('Cannot connect to inverter.')
         err = 10
     except KeyboardInterrupt: 
         err = 99

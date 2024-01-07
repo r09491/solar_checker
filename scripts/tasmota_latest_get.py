@@ -20,15 +20,18 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
+
 async def main(smartmeter):
+    text = 2*','
+    
     if await smartmeter.is_power_on():
         status = await smartmeter.get_status_sns()
-        text = f"{status.time},{status.power:.0f},{status.energy:.3f}\n"
-        sys.stdout.write(text)
-    else:
-        sys.stderr.write("TOSMOTA is not on power\n")
+        if status is not None:
+            text = f"{status.time},{status.power:.0f},{status.energy:.3f}"
 
+    sys.stdout.write(text + '\n')
 
+    
 def parse_arguments():
     """Parse command line arguments"""
 
@@ -58,7 +61,9 @@ if __name__ == '__main__':
         asyncio.run(main(sm))
         err = 0
     except ClientConnectorError:
-        logger.error('Cannot connect to smartmeter.')
+        """To be kept in sync with inverter output"""
+        sys.stdout.write(2*',' + '\n')
+        logger.warning('Cannot connect to smartmeter.')
         err = 10
     except KeyboardInterrupt: 
         err = 99

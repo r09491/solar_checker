@@ -28,27 +28,30 @@ class Smartmeter:
 
     async def get_status_sns(self) -> Return_Status_SNS | None:
         response = await self._request(command = "status", para = 8)
-        data = list(response["StatusSNS"].values())
-        return Return_Status_SNS(data[0], **data[-1]) if response else None
+        status_sns =  response["StatusSNS"] if response else None
+        values = list(status_sns.values()) if status_sns else None
+        return Return_Status_SNS(values[0], **values[-1]) if values else None
 
     
     async def get_power(self) -> float | None:
-        data = await self.get_status_sns()
-        return data.power if data else None
+        status_sns = await self.get_status_sns()
+        return status_sns.power if status_sns else None
     
     
     async def get_energy_total_lifetime(self) -> float | None:
-        data = await self.get_status_sns()
-        return data.energy if data else None
+        status_sns = await self.get_status_sns()
+        return status_sns.energy if status_sns else None
 
 
-    async def has_power(self) -> bool | None:
+    async def has_power(self) -> bool:
         response = await self._request(command = "status", para = 0)
-        data = response["Status"]["Power"]
-        return bool(data)
+        status = response["Status"] if response else None
+        power = status ["Power"] if status else None
+        return bool(power) if power else None
 
     
-    async def is_power_on(self) -> bool | None:
+    async def is_power_on(self) -> bool:
         response = await self._request(command = "status", para = 0)
-        data = response["Status"]["Power"] and response["Status"]["PowerOnState"]
-        return bool(data)
+        status = response["Status"] if response else None 
+        power_on = status ["Power"] and status["PowerOnState"] if status else None
+        return bool(power_on) if power_on else False

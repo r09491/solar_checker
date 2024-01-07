@@ -22,14 +22,16 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
 async def main(inverter):
-    output = await inverter.get_output_data()
+    text = 5*','
 
     if await inverter.is_power_on():
-        text = f"{output.p1:.0f},{output.e1:.3f},{output.te1:.3f},"
-        text += f"{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}\n"
-        sys.stdout.write(text)
-    else:
-        logger.error('Inverter is not on power.')
+        output = await inverter.get_output_data()
+        if output is not None:
+            text = f"{output.p1:.0f},{output.e1:.3f},{output.te1:.3f},"
+            text += f"{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}"
+
+    # To keep synchron output is always required            
+    sys.stdout.write(text + '\n')
 
 
 def parse_arguments():
@@ -64,7 +66,9 @@ if __name__ == '__main__':
         asyncio.run(main(ez1m))
         err = 0
     except ClientConnectorError:
-        logger.error('Cannot connect to inverter.')
+        """To be kept in sync with smartmeter output"""
+        sys.stdout.write(5*','+ '\n')
+        logger.warning('Cannot connect to inverter.')
         err = 10
     except KeyboardInterrupt: 
         err = 99
