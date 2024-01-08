@@ -46,13 +46,12 @@ on the internet.
 
 ## Installation
 
-- To use the apsystems and tosmota library, you need to have Python
-  >=3.11 installed on your system. I installed python 3.12 on a
-  raspberry. The libraries and the recording work fine. Unfortunately
-  to install numpy gcc 8.4 is required which is not available by
-  default. As a result the plot script has to be run on another
-  machine. Since I store my recordings on a Samba server this is no
-  problem.
+- To use the apsystems and tosmota library, you need to have
+  Python>=3.11 installed. I installed python 3.12 on a raspberry. The
+  libraries and the recording work fine. Unfortunately to install
+  numpy gcc 8.4 is required which is not available by default. As a
+  result the plot script has to be run on another machine. Since I
+  store my recordings on a Samba server this is no problem.
 - See the following guide to install the latest Python release:
   <https://www.python.org/downloads> <br><br>
 
@@ -72,9 +71,9 @@ For the recording see the two cron scripts and run them in cron.
 
 ---
 
-## Example
+## Examples
 
-The following example shows the setting of the maximum power limit of
+The following examples show the setting of the maximum power limit of
 the APsystem EZ1 micro inverter. Be advised that there might be
 restrictions covered by national laws. Especially in Germany the
 maximum power limit is still 600W.
@@ -88,7 +87,7 @@ ERROR:apsystems_max_power_set.py:Cannot connect to inverter.
 ~/solar_checker $
 ```
 
-Some times later it is brighter and the panels deliver at least some
+Some times later it becomes brighter and the panels deliver at least some
 power.
 
 ```bash
@@ -114,24 +113,23 @@ INFO:apsystems_max_power_set.py:New Power Status: ON
 Have a look at the current power and total energy consumed in your house!
 
 ```bash
-~/solar_checker/scripts $ tasmota_latest_get.py --ip tasmota| \awk -F',' '{printf("Power:%.0fW\nEnergy:%.0fkWh\n", $2,$3)}'
-Power:4W
-Energy:4227kWh
-~/solar_checker/scripts $ tasmota_latest_get.py --ip tasmota| awk -F',' '{printf("Power:%.0fW\nEnergy:%.0fkWh\n", $2,$3)}'
+~/solar_checker/scripts $ tasmota_latest_get.py --ip tasmota| \
+                             awk -F',' '{printf("Power:%.0fW\nEnergy:%.0fkWh\n", $2,$3)}'
 Power:4W
 Energy:4227kWh
 ~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems
 24,0.032,0.698,24,0.029,0.658
-~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems| awk -F',' '{printf("Channel1: %.0fW %.3fkWh %.3fkWh\n", $1, $2,$3)}'
+~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems| \
+                          awk -F',' '{printf("Channel1: %.0fW %.3fkWh %.3fkWh\n", $1, $2,$3)}'
 Channel1: 26W 0.034kWh 0.700kWh
-~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems| awk -F',' '{printf("Channel 1: %.0fW %.3fkWh %.3fkWh\nChannel 2: %.0fW %.3fkWh %.3fkWh\n",
-$1, $2,$3,$4,$5,$6)}'
+~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems| \
+                         awk -F',' '{printf("Channel 1: %.0fW %.3fkWh %.3fkWh\nChannel 2: %.0fW %.3fkWh %.3fkWh\n", $1,$2,$3,$4,$5,$6)}'
 Channel 1: 25W 0.035kWh 0.701kWh
 Channel 2: 24W 0.032kWh 0.661kWh
 ~/solar_checker/scripts $
 ```
 
-Have a look at the history!
+Finally Have a look at the daily  recordin!
 
 ```bash
 ~/solar_checker $ solar_checker_plot.sh
@@ -140,7 +138,7 @@ Have a look at the history!
 
 The green areas represent the power and energy produced by the
 panels. The blue areas represent the power and energy imported from
-the net. Oh dear! I wonder if my panels will pay off ever!
+the commerical net. Oh dear! I wonder if my panels will ever pay off!
 
 ![alt text](images/solar_checker_poor.png)
 ---
