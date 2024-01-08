@@ -23,12 +23,19 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 async def main(smartmeter):
     text = 2*','
-    
-    if await smartmeter.is_power_on():
-        status = await smartmeter.get_status_sns()
-        if status is not None:
-            text = f"{status.time},{status.power:.0f},{status.energy:.3f}"
 
+    try:
+        if await smartmeter.is_power_on():
+            status = await smartmeter.get_status_sns()
+            if status is not None:
+                text = f"{status.time},{status.power:.0f},{status.energy:.3f}"
+
+        err = 0
+    except ClientConnectorError:
+        logger.warning('Cannot connect to smartmeter.')
+        err = 10
+
+    """ There is always output required """
     sys.stdout.write(text + '\n')
 
     
@@ -58,13 +65,7 @@ if __name__ == '__main__':
     sm = Smartmeter(args.ip)
 
     try:
-        asyncio.run(main(sm))
-        err = 0
-    except ClientConnectorError:
-        """To be kept in sync with inverter output"""
-        sys.stdout.write(2*',' + '\n')
-        logger.warning('Cannot connect to smartmeter.')
-        err = 10
+        err = asyncio.run(main(sm))
     except KeyboardInterrupt: 
         err = 99
 

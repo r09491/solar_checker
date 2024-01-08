@@ -118,12 +118,8 @@ def check_powers(price, f = sys.stdin):
     ive2[np.isnan(ive2)] = 0.0
 
     """ ! All arrays are expected to have the same length ! """
-
-    if len(time) == len(smp) and len(time) == len(ivp1) and len(time) == len(ivp2) and \
-       len(time) == len(sme) and len(time) == len(ive1) and len(time) == len(ive2):
-        plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price)
-    else:
-        log.error(f'The smartmeter and inverter recordings are not synchronous.')
+    
+    plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price)
 
     return 0
 

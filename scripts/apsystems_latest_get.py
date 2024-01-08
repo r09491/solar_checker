@@ -21,19 +21,30 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def main(inverter):
+async def main(inverter) -> int:
     text = 5*','
 
-    if await inverter.is_power_on():
-        logger.debug("The APsystems inverter is powered.")
-        output = await inverter.get_output_data()
-        if output is not None:
-            logger.debug("The APsystems inverter provides power.")
-            text = f"{output.p1:.0f},{output.e1:.3f},{output.te1:.3f},"
-            text += f"{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}"
+    try:
+        if await inverter.is_power_on():
+            logger.debug("The APsystems inverter is powered.")
+            output = await inverter.get_output_data()
+            if output is not None:
+                logger.debug("The APsystems inverter provides output.")
+                text = f"{output.p1:.0f},{output.e1:.3f},{output.te1:.3f},"
+                text += f"{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}"
 
-    # To keep synchron output is always required            
+        err = 0
+    except ClientConnectorError:
+        logger.error('Cannot connect to inverter.')
+        err = 10
+    except TypeError:
+        logger.error('Unexpected exception TypeError')
+        err = 11
+
+    # To keep synchronous output is always required            
     sys.stdout.write(text + '\n')
+
+    return err
 
 
 def parse_arguments():
@@ -65,14 +76,8 @@ if __name__ == '__main__':
     ez1m = EZ1M(args.ip, args.port)
 
     try:
-        asyncio.run(main(ez1m))
-        err = 0
-    except ClientConnectorError:
-        """To be kept in sync with smartmeter output"""
-        sys.stdout.write(5*','+ '\n')
-        logger.warning('Cannot connect to inverter.')
-        err = 10
+        err = asyncio.run(main(ez1m))
     except KeyboardInterrupt: 
         err = 99
-
+       
     sys.exit(err)
