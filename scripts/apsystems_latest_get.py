@@ -25,8 +25,10 @@ async def main(inverter):
     text = 5*','
 
     if await inverter.is_power_on():
+        logger.debug("The APsystems inverter is powered.")
         output = await inverter.get_output_data()
         if output is not None:
+            logger.debug("The APsystems inverter provides power.")
             text = f"{output.p1:.0f},{output.e1:.3f},{output.te1:.3f},"
             text += f"{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}"
 

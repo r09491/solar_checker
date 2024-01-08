@@ -27,18 +27,18 @@ async def main(inverter, new_max_power):
         logger.error(f"Could not get max power limit")
         return
         
-    logger.info(f"Ol Max _Power Limit: {max_power}W")
+    logger.info(f"Current Max Power Limit: {max_power}W")
 
     if new_max_power is None:
         return
     
     # Set maximum power limit (ensure the value is within valid range)
     set_max_power_response = await inverter.set_max_power(new_max_power)
-    if set_power_response is None:
+    if set_max_power_response is None:
         logger.error(f"Could not set max power limit")
         return
         
-    logger.info(f"Commanded Power to: {set_power_response}W")
+    logger.info(f"Commanded Power: {set_max_power_response}W")
 
     max_power = await inverter.get_max_power()
     if max_power is None:
@@ -51,7 +51,7 @@ async def main(inverter, new_max_power):
     if set_power_status_response is None:
         logger.error(f"Could not get power status")
         
-    logger.info(f"Commanded Power Status to: {'ON' if set_power_status_response == 0 else 'OFF'}")
+    logger.info(f"Commanded Power Status: {'ON' if set_power_status_response == 0 else 'OFF'}")
 
     # Get current power status
     power_status = await inverter.get_device_power_status()
@@ -92,8 +92,12 @@ if __name__ == '__main__':
 
     if args.max_power is not None and (args.max_power < 30 or
                                        args.max_power > 800):
-        logger.info(f'Input "{args.max_power}" is out of legal range.')
+        logger.error(f'Input "{args.max_power}" is out of legal range.')
         sys.exit(2)
+
+    if args.max_power is not None and args.max_power > 600:
+        logger.info(f'The power limit for inverters in Germay is 600W.')
+        logger.info(f'Be advised to consult your lawyer!')
         
     ez1m = EZ1M(args.ip, args.port)
 

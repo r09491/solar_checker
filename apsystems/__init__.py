@@ -147,4 +147,4 @@ class EZ1M:
     
     async def is_power_on(self) -> bool:
         power_status = await self.get_device_power_status()
-        return  power_status == Status(0) if power_status else False
+        return  bool(power_status == Status(0)) if power_status is not None else False
