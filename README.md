@@ -78,7 +78,7 @@ the APsystem EZ1 micro inverter. Be advised that there might be
 restrictions covered by national laws. Especially in Germany the
 maximum power limit is still 600W.
 
-Currentl the sun is not shining and snow covers the panels. They do
+Currently the sun is not shining and snow covers the panels. They do
 not provide power to the inverter.
 
 ```bash
@@ -129,7 +129,7 @@ Channel 2: 24W 0.032kWh 0.661kWh
 ~/solar_checker/scripts $
 ```
 
-Finally Have a look at the daily  recordin!
+Finally Have a look at the daily  recordings!
 
 ```bash
 ~/solar_checker $ solar_checker_plot.sh

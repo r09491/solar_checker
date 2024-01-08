@@ -53,9 +53,9 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].grid(which='minor', linestyle='--', linewidth=1, axis='x')
     axes[0].minorticks_on()
     title = f'Power Check #'
-    if len(smp) > 0:
+    if len(smp) > 0 smp[-1] > 0:
         title += f' Tasmota {smp[-1]:.0f}={np.mean(smp):.0f}^{np.max(smp):.0f}W'
-    if len(ivp) > 0:
+    if len(ivp) > 0 and ivp[-1] > 0:
         title += f' | APsystems {ivp[-1]:.0f}={np.mean(ivp):.0f}^{np.max(ivp):.0f}W'
     axes[0].set_title(title, fontsize='x-large')
     axes[0].set_ylabel('Watts [W]')
@@ -75,9 +75,9 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[1].grid(which='minor', linestyle='--', linewidth=1, axis='x')
     axes[1].minorticks_on()
     title = f'Energy Check #'
-    if len(sme) > 0:
+    if len(sme) > 0 and {sme[-1] > 0:
         title += f' Tasmota {sme[-1]:.1f}kWh > {(sme[-1]*price):.2f}€'
-    if len(ive) > 0:
+    if len(ive) > 0 ive[-1] > 0:
         title += f' | APsystems {ive[-1]:.3f}kWh > {ive[-1]*price:.2f}€'
     axes[1].set_title(title, fontsize='x-large')
     axes[1].set_ylabel('Work [Wh]')

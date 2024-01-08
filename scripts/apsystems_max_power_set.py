@@ -96,7 +96,7 @@ if __name__ == '__main__':
         sys.exit(2)
 
     if args.max_power is not None and args.max_power > 600:
-        logger.info(f'The power limit for inverters in Germay is 600W.')
+        logger.info(f'The power limit for inverters in Germany is 600W.')
         logger.info(f'Be advised to consult your lawyer!')
         
     ez1m = EZ1M(args.ip, args.port)
