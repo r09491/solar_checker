@@ -26,9 +26,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-UPDATES_PER_H = 12 # Recording every 5 minutes
-
-
 def str2date(value):
     return datetime.fromisoformat(value)
 
@@ -36,7 +33,7 @@ def str2float(value):
     return float(value)
 
 
-def plot_powers(time, smp, ivp1, ivp2, price):
+def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
 
     dformatter = mdates.DateFormatter('%H:%M')
 
@@ -44,9 +41,11 @@ def plot_powers(time, smp, ivp1, ivp2, price):
 
     text = f'Solar Checker'
     fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
-        
-    axes[0].fill_between(time, smp+ivp1+ivp2, color='green', label='APSYSTEMS 1+2', alpha=0.5)
-    axes[0].fill_between(time, smp+ivp1, color='cyan', alpha=0.5)
+
+    ivp = ivp1 + ivp2
+
+    axes[0].fill_between(time, smp + ivp1 + ivp2, color='green', label='APSYSTEMS 1+2', alpha=0.5)
+    axes[0].fill_between(time, smp + ivp1, color='cyan', alpha=0.5)
     axes[0].fill_between(time, smp, color='blue', label='TASMOTA', alpha=0.5)
     axes[0].axhline(np.mean(smp), color='magenta', linewidth=2, label="MEAN")
     axes[0].legend(loc="upper left")
@@ -56,7 +55,6 @@ def plot_powers(time, smp, ivp1, ivp2, price):
     title = f'Power Check #'
     if len(smp) > 0:
         title += f' Tasmota {smp[-1]:.0f}={np.mean(smp):.0f}^{np.max(smp):.0f}W'
-    ivp = (ivp1+ivp2)[~np.isnan(ivp1+ivp2)]
     if len(ivp) > 0:
         title += f' | APsystems {ivp[-1]:.0f}={np.mean(ivp):.0f}^{np.max(ivp):.0f}W'
     axes[0].set_title(title, fontsize='x-large')
@@ -64,28 +62,23 @@ def plot_powers(time, smp, ivp1, ivp2, price):
     axes[0].xaxis.set_major_formatter(dformatter)
 
     
-    smpsum = smp.cumsum()/UPDATES_PER_H/1000   #kWh
-    ivp1sum = ivp1.cumsum()/UPDATES_PER_H/1000 #kWh
-    ivp2sum = ivp2.cumsum()/UPDATES_PER_H/1000 #kWh
+    ive = ive1 + ive2
 
-    """This is not ivp1sum + ivp2sum"""
-    ivpsum = ivp.cumsum()/UPDATES_PER_H/1000 #kWh
-
-    axes[1].fill_between(time, smpsum + + ivp1sum + + ivp2sum,
+    axes[1].fill_between(time, sme + ive1 + ive2,
                          color='green',label='APSYSTEMS 1+2', alpha=0.5)
-    axes[1].fill_between(time, smpsum + ivp1sum,
+    axes[1].fill_between(time, sme + ive1,
                          color='cyan', alpha=0.5)
-    axes[1].fill_between(time, smpsum,
+    axes[1].fill_between(time, sme,
                          color='blue',label='TASMOTA', alpha=0.5)
     axes[1].legend(loc="upper left")
     axes[1].grid(which='major', linestyle='-', linewidth=2, axis='both')
     axes[1].grid(which='minor', linestyle='--', linewidth=1, axis='x')
     axes[1].minorticks_on()
     title = f'Energy Check #'
-    if len(smpsum) > 0:
-        title += f' Tasmota {smpsum[-1]:.1f}kWh > {(smpsum[-1]*price):.2f}€'
-    if len(ivpsum) > 0:
-        title += f' | APsystems {ivpsum[-1]:.3f}kWh > {ivpsum[-1]*price:.2f}€'
+    if len(sme) > 0:
+        title += f' Tasmota {sme[-1]:.1f}kWh > {(sme[-1]*price):.2f}€'
+    if len(ive) > 0:
+        title += f' | APsystems {ive[-1]:.3f}kWh > {ive[-1]*price:.2f}€'
     axes[1].set_title(title, fontsize='x-large')
     axes[1].set_ylabel('Work [Wh]')
     axes[1].xaxis.set_major_formatter(dformatter)
@@ -106,12 +99,31 @@ def check_powers(price, f = sys.stdin):
     time = np.array(df.TIME.apply(str2date))
     """ The smartmeter power samples """
     smp = np.array(df.SMP.apply(str2float))    
-    """ The inverter power samples channel 1 """
+    """ The normalised inverter power samples channel 1 """
     ivp1 = np.array(df.IVP1.apply(str2float))
-    """ The inverter power samples channel 2 """
+    ivp1[np.isnan(ivp1)] = 0.0
+    """ The normalised inverter power samples channel 2 """
     ivp2 = np.array(df.IVP2.apply(str2float))
+    ivp2[np.isnan(ivp2)] = 0.0
 
-    plot_powers(time, smp, ivp1, ivp2, price)
+    """ The normalised smartmeter energy samples """
+    sme = np.array(df.SME.apply(str2float))
+    sme[~np.isnan(sme)] 
+    sme -= sme[0]
+    """ The normalised inverter energy samples channel 1 """
+    ive1 = np.array(df.IVE1.apply(str2float))
+    ive1[np.isnan(ive1)] = 0.0
+    """ The normalised inverter energy samples channel 2 """
+    ive2 = np.array(df.IVE2.apply(str2float))
+    ive2[np.isnan(ive2)] = 0.0
+
+    """ ! All arrays are expected to have the same length ! """
+
+    if len(time) == len(smp) and len(time) == len(ivp1) and len(time) == len(ivp2) and \
+       len(time) == len(sme) and len(time) == len(ive1) and len(time) == len(ive2):
+        plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price)
+    else:
+        log.error(f'The smartmeter and inverter recordings are not synchronous.')
 
     return 0
 
