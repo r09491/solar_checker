@@ -22,7 +22,7 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
 async def main(inverter) -> int:
-    text = 5*','
+    text = '0,0.000,0.000,0,0.000,0.000'
 
     try:
         if await inverter.is_power_on():

@@ -12,6 +12,8 @@ import sys
 import argparse
 import asyncio
 
+from datetime import datetime
+
 from tasmota import Smartmeter
 
 from aiohttp.client_exceptions import ClientConnectorError
@@ -21,13 +23,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def main(smartmeter):
-    text = 2*','
+async def main(smartmeter) -> int:
+    """ The text has to be preset in the case of an error """
+    text =  datetime.now().isoformat('T',"seconds") + ',0,0.000'
 
     try:
         if await smartmeter.is_power_on():
             status = await smartmeter.get_status_sns()
             if status is not None:
+                """ Override the preset """
                 text = f"{status.time},{status.power:.0f},{status.energy:.3f}"
 
         err = 0
@@ -37,6 +41,8 @@ async def main(smartmeter):
 
     """ There is always output required """
     sys.stdout.write(text + '\n')
+
+    return err
 
     
 def parse_arguments():

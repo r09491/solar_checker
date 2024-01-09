@@ -53,10 +53,10 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].grid(which='minor', linestyle='--', linewidth=1, axis='x')
     axes[0].minorticks_on()
     title = f'Power Check #'
-    if len(smp) > 0 and smp[-1] > 0:
+    if len(smp) > 0 and smp[-1] >= 0:
         title += f' Tasmota {smp[-1]:.0f}={np.mean(smp):.0f}^{np.max(smp):.0f}W'
-    if len(ivp) > 0 and ivp[-1] > 0:
-        title += f' | APsystems {ivp[-1]:.0f}={np.mean(ivp):.0f}^{np.max(ivp):.0f}W'
+    if len(ivp) > 0 and ivp[-1] >= 0:
+        title += f' | APsystems {ivp[-1]:.0f}={np.mean(ivp[ivp>0]):.0f}^{np.max(ivp):.0f}W'
     axes[0].set_title(title, fontsize='x-large')
     axes[0].set_ylabel('Watts [W]')
     axes[0].xaxis.set_major_formatter(dformatter)
@@ -75,9 +75,9 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[1].grid(which='minor', linestyle='--', linewidth=1, axis='x')
     axes[1].minorticks_on()
     title = f'Energy Check #'
-    if len(sme) > 0 and sme[-1] > 0:
+    if len(sme) > 0 and sme[-1] >= 0:
         title += f' Tasmota {sme[-1]:.1f}kWh > {(sme[-1]*price):.2f}€'
-    if len(ive) > 0 and ive[-1] > 0:
+    if len(ive) > 0 and ive[-1] >= 0:
         title += f' | APsystems {ive[-1]:.3f}kWh > {ive[-1]*price:.2f}€'
     axes[1].set_title(title, fontsize='x-large')
     axes[1].set_ylabel('Work [Wh]')
@@ -94,31 +94,38 @@ def check_powers(price, f = sys.stdin):
     sep = ','
     names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2'.split(',')
     df = pd.read_csv(f, sep = sep, names = names)
-    
+
+    """
+    The data contain invalid data (nan) due to errors during
+    recording.  The 'nan' are replaced by some plausile values: 0.0
+    for the power, the last valid recording for the energy.
+    """
+
     """ The timestamps """
     time = np.array(df.TIME.apply(str2date))
+
     """ The smartmeter power samples """
-    smp = np.array(df.SMP.apply(str2float))    
+    smp = np.array(df.SMP.apply(str2float))
     """ The normalised inverter power samples channel 1 """
     ivp1 = np.array(df.IVP1.apply(str2float))
-    ivp1[np.isnan(ivp1)] = 0.0
     """ The normalised inverter power samples channel 2 """
     ivp2 = np.array(df.IVP2.apply(str2float))
-    ivp2[np.isnan(ivp2)] = 0.0
+
 
     """ The normalised smartmeter energy samples """
     sme = np.array(df.SME.apply(str2float))
-    sme[~np.isnan(sme)] 
-    sme -= sme[0]
+    # Get rid of offset
+    sme[sme>=sme[0]] -= sme[0]
+    # Fill up the tail with latest valid value
     sme[np.argmax(sme)+1:] = sme[np.argmax(sme)]
 
     """ The normalised inverter energy samples channel 1 """
     ive1 = np.array(df.IVE1.apply(str2float))
-    ive1[np.isnan(ive1)] = 0.0
+    ive1[ive1>=ive1[0]] -= ive1[0]
     ive1[np.argmax(ive1)+1:] = ive1[np.argmax(ive1)]
     """ The normalised inverter energy samples channel 2 """
     ive2 = np.array(df.IVE2.apply(str2float))
-    ive2[np.isnan(ive2)] = 0.0
+    ive2[ive2>=ive2[0]] -= ive2[0]
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
     """ ! All arrays are expected to have the same length ! """
