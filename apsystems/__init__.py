@@ -47,10 +47,13 @@ class EZ1M:
         
     async def _request(self, endpoint: str) -> dict | None:
         url = f"{self.base_url}/{endpoint}"
-        async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
-            if not resp.ok:
-                raise HttpBadRequest(f"HTTP Error: {resp.status}")
-            return await resp.json()
+        try:
+            async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
+                if not resp.ok:
+                    raise HttpBadRequest(f"HTTP Error: {resp.status}")
+                return await resp.json()
+        except TimeoutError:
+            return None
 
         
     async def get_device_info(self) -> ReturnDeviceInfo | None:

@@ -20,10 +20,13 @@ class Smartmeter:
         
     async def _request(self, command: str, para: str |int) -> dict | None:
         url = f"{self.base_url}/cm?cmnd={command}+{para}"
-        async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
-            if not resp.ok:
-                raise HttpBadRequest(f"HTTP Error: {resp.status}")
-            return await resp.json()
+        try:
+            async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
+                if not resp.ok:
+                    raise HttpBadRequest(f"HTTP Error: {resp.status}")
+                return await resp.json()
+        except TimeoutError:
+            return None
 
 
     async def get_status_sns(self) -> Return_Status_SNS | None:
