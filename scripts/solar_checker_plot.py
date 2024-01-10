@@ -124,7 +124,6 @@ def check_powers(price, f = sys.stdin):
     ive1 -= ive1[0]
     ive1[ive1<0.0] = 0.0
     ive1[np.argmax(ive1)+1:] = ive1[np.argmax(ive1)]
-    
     """ The normalised inverter energy samples channel 2 """
     ive2 = np.array(df.IVE2.apply(str2float))
     ive2 -= ive2[0]
