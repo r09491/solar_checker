@@ -55,8 +55,6 @@ def show_slots(slots, starts, stops, f = sys.stdin):
 
     """ The timestamps """
     time = np.array(df.TIME.apply(iso2date))
-    #time = np.array(pd.to_datetime(df.TIME))
-    #print(type(time))
     
     """ The smartmeter power samples """
     smp = np.array(df.SMP.apply(str2float))
@@ -130,7 +128,7 @@ def main():
     stops = np.array([t for _, t in list(times.items())[1:]])
 
     for slot, start, stop in zip(slots, starts, stops):
-        text = f"Trying '{slot}'"
+        text = f"'{slot}'"
         text += f" from '{start.strftime('%H:%M')}'"
         text += f" to '{stop.strftime('%H:%M')}'"
         logger.info(text)
