@@ -3,8 +3,14 @@
 __doc__="""
 Checks the solar power input of micro inverters against the
 consumption measured by smartmeter in a houshold
+
+Plots the power output in logarithmic scale to emphasise lower values
+and the energy in linear scale.
+
+Plots the power output means for defined time slots to help in
+scheduling of battery outputs if they can.
 """
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __author__ = "r09491@t-online.de"
 
 import os
@@ -21,16 +27,32 @@ import matplotlib.dates as mdates
 
 from datetime import datetime, timedelta
 
+import warnings
+warnings.simplefilter("ignore")
+
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-def str2date(value):
-    return datetime.fromisoformat(value)
+def iso2date(value):
+    dt = datetime.fromisoformat(value)
+    return np.datetime64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
+
+def hm2date(value):
+    dt = datetime.strptime(value,"%H:%M")
+    return np.datetime64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
 def str2float(value):
     return float(value)
+
+
+def power_means(times, powers, slots = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]):
+    spowers = np.full_like(powers, 0.0)
+    for start, stop in zip(slots[:-1], slots[1:]):
+        wheres, = np.where((times >= hm2date(start)) & (times < hm2date(stop)))
+        spowers[wheres] = (powers[wheres]).mean()
+    return spowers
 
 
 def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
@@ -55,6 +77,8 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     
     timeon = time[isivpon]
 
+    smp_means = power_means( time, smp)
+    ivp_means = power_means( time, ivp)
 
     dformatter = mdates.DateFormatter('%H:%M')
 
@@ -66,11 +90,11 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].fill_between(time, smp + ivp1 + ivp2, color='green', label='APSYSTEMS 1+2', alpha=0.5)
     axes[0].fill_between(time, smp + ivp1, color='cyan', alpha=0.5)
     axes[0].fill_between(time, smp, color='blue', label='TASMOTA', alpha=0.5)
-    axes[0].axhline(smp_mean, color='magenta', lw=2, label="TASMOTA MEAN")
+    axes[0].plot(time, smp_means, color='magenta', lw=4, label="TASMOTA MEAN")
+    axes[0].plot(time, ivp_means, color='yellow', lw=4, label="APSYSTEMS MEAN")
     axes[0].grid(which='major', ls='-', lw=2, axis='both')
     axes[0].grid(which='minor', ls='--', lw=1, axis='both')
     axes[0].minorticks_on()
-
     
 
     title = f'Power Check #'
@@ -82,7 +106,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
         title += f' | APsystems {ivp[-1]:.0f}'
     if len(ivpon) > 0:
         title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-        axes[0].plot(timeon, ivpon_means, color='orange', lw=2, label="APSYSTEMS MEAN")
+        #axes[0].plot(timeon, ivpon_means, color='orange', lw=2)
 
     axes[0].set_title(title, fontsize='x-large')        
     axes[0].legend(loc="upper left")
@@ -132,7 +156,7 @@ def check_powers(price, f = sys.stdin):
     """
 
     """ The timestamps """
-    time = np.array(df.TIME.apply(str2date))
+    time = np.array(df.TIME.apply(iso2date))
 
     """ The smartmeter power samples """
     smp = np.array(df.SMP.apply(str2float))
@@ -161,7 +185,7 @@ def check_powers(price, f = sys.stdin):
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
     """ ! All arrays are expected to have the same length ! """
-    
+
     plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price)
 
     return 0
