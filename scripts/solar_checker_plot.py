@@ -37,7 +37,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
 
     dformatter = mdates.DateFormatter('%H:%M')
 
-    fig, axes = plt.subplots(nrows=2, figsize=(12,6))
+    fig, axes = plt.subplots(nrows=2, figsize=(12,8))
 
     text = f'Solar Checker'
     fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
@@ -47,18 +47,20 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].fill_between(time, smp + ivp1 + ivp2, color='green', label='APSYSTEMS 1+2', alpha=0.5)
     axes[0].fill_between(time, smp + ivp1, color='cyan', alpha=0.5)
     axes[0].fill_between(time, smp, color='blue', label='TASMOTA', alpha=0.5)
-    axes[0].axhline(np.mean(smp), color='magenta', linewidth=2, label="MEAN")
+    axes[0].axhline(np.mean(smp), color='magenta', lw=2, label="MEAN")
     axes[0].legend(loc="upper left")
-    axes[0].grid(which='major', linestyle='-', linewidth=2, axis='both')
-    axes[0].grid(which='minor', linestyle='--', linewidth=1, axis='x')
+    axes[0].grid(which='major', ls='-', lw=2, axis='both')
+    #axes[0].grid(which='minor', ls='--', lw=1, axis='x')
+    axes[0].grid(which='minor', ls='--', lw=1, axis='both')
     axes[0].minorticks_on()
     title = f'Power Check #'
     if len(smp) > 0 and smp[-1] >= 0:
         title += f' Tasmota {smp[-1]:.0f}={np.mean(smp):.0f}^{np.max(smp):.0f}W'
     if len(ivp) > 0 and ivp[-1] >= 0:
-        title += f' | APsystems {ivp[-1]:.0f}={np.mean(ivp[ivp>0]):.0f}^{np.max(ivp):.0f}W'
+        title += f' | APsystems {ivp[-1]:.0f}={np.mean(ivp[ivp>=0]):.0f}^{np.max(ivp):.0f}W'
     axes[0].set_title(title, fontsize='x-large')
     axes[0].set_ylabel('Watts [W]')
+    axes[0].set_yscale("log")
     axes[0].xaxis.set_major_formatter(dformatter)
 
     
@@ -71,8 +73,8 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[1].fill_between(time, sme,
                          color='blue',label='TASMOTA', alpha=0.5)
     axes[1].legend(loc="upper left")
-    axes[1].grid(which='major', linestyle='-', linewidth=2, axis='both')
-    axes[1].grid(which='minor', linestyle='--', linewidth=1, axis='x')
+    axes[1].grid(which='major', ls='-', lw=2, axis='both')
+    axes[1].grid(which='minor', ls='--', lw=1, axis='x')
     axes[1].minorticks_on()
     title = f'Energy Check #'
     if len(sme) > 0 and sme[-1] >= 0:
@@ -82,7 +84,8 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[1].set_title(title, fontsize='x-large')
     axes[1].set_ylabel('Work [Wh]')
     axes[1].xaxis.set_major_formatter(dformatter)
-        
+
+    
     fig.tight_layout(pad=2.0)
 
     ##fig.savefig(name)
