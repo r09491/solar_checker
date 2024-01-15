@@ -4,7 +4,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='solar_checker',
-      version='0.0.1',
+      version='0.0.2',
       description='Solar checker with APsystems and Tasmota API',
       url='https://github.com/r09491/solar_checker',
       author='r09491',
@@ -19,6 +19,7 @@ setup(name='solar_checker',
           './scripts/apsystems_max_power_set.py',
           './scripts/solar_checker_plot.py',
           './scripts/solar_checker_plot.sh',
+          './scripts/solar_checker_plot_anyday.sh',
           './scripts/solar_checker_plot_yesterday.sh',
           './scripts/solar_checker_slots.py',
           './scripts/solar_checker_slots.sh',
