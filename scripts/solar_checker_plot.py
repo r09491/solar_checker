@@ -35,6 +35,27 @@ def str2float(value):
 
 def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
 
+    smp_mean = smp.mean()
+    smp_max = smp.max()
+    
+    ivp = ivp1 + ivp2
+
+    isivpon = ivp>0
+
+    ivpon = ivp[isivpon]
+    ivpon_mean = ivpon.mean()
+    ivpon_max = ivpon.max() 
+
+    smpon = smp[isivpon]
+    smpon_mean = smpon.mean()
+    smpon_max = smpon.max() 
+
+    ivpon_means = np.full_like(ivpon, ivpon_mean)
+    smpon_means = np.full_like(smpon, smpon_mean)
+    
+    timeon = time[isivpon]
+
+
     dformatter = mdates.DateFormatter('%H:%M')
 
     fig, axes = plt.subplots(nrows=2, figsize=(12,8))
@@ -42,23 +63,29 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     text = f'Solar Checker'
     fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
 
-    ivp = ivp1 + ivp2
-
     axes[0].fill_between(time, smp + ivp1 + ivp2, color='green', label='APSYSTEMS 1+2', alpha=0.5)
     axes[0].fill_between(time, smp + ivp1, color='cyan', alpha=0.5)
     axes[0].fill_between(time, smp, color='blue', label='TASMOTA', alpha=0.5)
-    axes[0].axhline(np.mean(smp), color='magenta', lw=2, label="MEAN")
-    axes[0].legend(loc="upper left")
+    axes[0].axhline(smp_mean, color='magenta', lw=2, label="TASMOTA MEAN")
     axes[0].grid(which='major', ls='-', lw=2, axis='both')
-    #axes[0].grid(which='minor', ls='--', lw=1, axis='x')
     axes[0].grid(which='minor', ls='--', lw=1, axis='both')
     axes[0].minorticks_on()
+
+    
+
     title = f'Power Check #'
     if len(smp) > 0 and smp[-1] >= 0:
-        title += f' Tasmota {smp[-1]:.0f}={np.mean(smp):.0f}^{np.max(smp):.0f}W'
+        title += f' Tasmota {smp[-1]:.0f}'
+        title += f'={smp_mean:.0f}^{smp_max:.0f}W'
+        
     if len(ivp) > 0 and ivp[-1] >= 0:
-        title += f' | APsystems {ivp[-1]:.0f}={np.mean(ivp[ivp>=0]):.0f}^{np.max(ivp):.0f}W'
-    axes[0].set_title(title, fontsize='x-large')
+        title += f' | APsystems {ivp[-1]:.0f}'
+    if len(ivpon) > 0:
+        title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
+        axes[0].plot(timeon, ivpon_means, color='orange', lw=2, label="APSYSTEMS MEAN")
+
+    axes[0].set_title(title, fontsize='x-large')        
+    axes[0].legend(loc="upper left")
     axes[0].set_ylabel('Watts [W]')
     axes[0].set_yscale("log")
     axes[0].xaxis.set_major_formatter(dformatter)
