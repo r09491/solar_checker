@@ -84,7 +84,8 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
                          color='g', label='APSYSTEMS 2', alpha=0.5)
     axes[0].fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
                          color='b', label='TASMOTA', alpha=0.2)
-    axes[0].plot(time, total_means, color='magenta', lw=4, label="TOTAL MEAN")
+    axes[0].plot(time, total_means,
+                 color='m', lw=4, label="TOTAL MEAN")
     axes[0].grid(which='major', ls='-', lw=2, axis='both')
     axes[0].grid(which='minor', ls='--', lw=1, axis='both')
     axes[0].minorticks_on()
@@ -101,7 +102,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].set_title(title, fontsize='x-large')        
 
     axes[0].legend(loc="upper left")
-    axes[0].set_ylabel('Watts [W]')
+    axes[0].set_ylabel('Power [W]')
     axes[0].set_yscale("log")
     axes[0].xaxis.set_major_formatter(dformatter)
 
@@ -126,7 +127,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[1].set_title(title, fontsize='x-large')
 
     axes[1].legend(loc="upper left")
-    axes[1].set_ylabel('Work [Wh]')
+    axes[1].set_ylabel('Energy [Wh]')
     axes[1].xaxis.set_major_formatter(dformatter)
 
     

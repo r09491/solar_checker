@@ -39,7 +39,7 @@ The local API access needs to be activated once in the settings of the APsystems
 
 ## Setup Tasmota for your Smartmeter
 
-There are lot of instructions on how to setup Tasmota for a smartmeter
+There are lot of tutorialss on how to setup Tasmota for a smartmeter
 on the internet.
 
 ---
@@ -87,7 +87,7 @@ ERROR:apsystems_max_power_set.py:Cannot connect to inverter.
 ~/solar_checker $
 ```
 
-Some times later it becomes brighter and the panels deliver at least some
+Some time later it becomes brighter and the panels deliver at least some
 power.
 
 ```bash
@@ -142,15 +142,16 @@ the commerical net. Oh dear! I wonder if my panels will ever pay off!
 
 ![alt text](images/solar_checker_poor.png)
 
-A few days later on a cold January winter day with blue sky, no
-clouds, and temperatures down to -10 degrees! Things look better! I am
-happy with my new bifaciale panels starting harversting shortly before
-sun rise already! The inverter has to block their power output at 600W
-during noon! Propably 800W were possible without legal restrictions!
-At about 15:00 there is a gap for about a quarter of an hour caused by
-my neigbour's chimney about 50 m away. I reall have not been aware of
-any shade on my house up to now. But this will disappear in a few days
-when the sun rises higher. I donate too much energy. I need a storage.
+A few days later on a cold winter day in January with blue sky, no
+clouds, visbility 9999, and temperatures down to -10 degrees! Things
+look better! I am happy with my new bifaciale panels starting
+harversting shortly before sun rise already! The inverter has to block
+their power output at 600W during noon! Propably 800W were possible
+without legal restrictions!  At about 15:00 there is a gap for about a
+quarter of an hour caused by my neigbour's chimney about 50 m away. I
+was not aware of any shade on my house. But this will disappear in the
+next days when the sun rises higher. I donate too much energy. I need
+a storage.
 
 ![alt text](images/solar_checker_better.png)
 ---
