@@ -63,22 +63,11 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     ivp = ivp1 + ivp2
 
     isivpon = ivp>0
+    ivpon = ivp[isivpon] if isivpon.any() else None
+    ivpon_mean = ivpon.mean() if ivpon is not None else 0
+    ivpon_max = ivpon.max() if ivpon is not None else 0
 
-    ivpon = ivp[isivpon]
-    ivpon_mean = ivpon.mean()
-    ivpon_max = ivpon.max() 
-
-    smpon = smp[isivpon]
-    smpon_mean = smpon.mean()
-    smpon_max = smpon.max() 
-
-    ivpon_means = np.full_like(ivpon, ivpon_mean)
-    smpon_means = np.full_like(smpon, smpon_mean)
-    
-    timeon = time[isivpon]
-
-    smp_means = power_means( time, smp)
-    ivp_means = power_means( time, ivp)
+    total_means = power_means( time, smp + ivp)
 
     dformatter = mdates.DateFormatter('%H:%M')
 
@@ -90,13 +79,11 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].fill_between(time, smp + ivp1 + ivp2, color='green', label='APSYSTEMS 1+2', alpha=0.5)
     axes[0].fill_between(time, smp + ivp1, color='cyan', alpha=0.5)
     axes[0].fill_between(time, smp, color='blue', label='TASMOTA', alpha=0.5)
-    axes[0].plot(time, smp_means, color='magenta', lw=4, label="TASMOTA MEAN")
-    axes[0].plot(time, ivp_means, color='yellow', lw=4, label="APSYSTEMS MEAN")
+    axes[0].plot(time, total_means, color='magenta', lw=4, label="TOTAL MEAN")
     axes[0].grid(which='major', ls='-', lw=2, axis='both')
     axes[0].grid(which='minor', ls='--', lw=1, axis='both')
     axes[0].minorticks_on()
     
-
     title = f'Power Check #'
     if len(smp) > 0 and smp[-1] >= 0:
         title += f' Tasmota {smp[-1]:.0f}'
@@ -106,9 +93,9 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
         title += f' | APsystems {ivp[-1]:.0f}'
     if len(ivpon) > 0:
         title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-        #axes[0].plot(timeon, ivpon_means, color='orange', lw=2)
 
     axes[0].set_title(title, fontsize='x-large')        
+
     axes[0].legend(loc="upper left")
     axes[0].set_ylabel('Watts [W]')
     axes[0].set_yscale("log")
