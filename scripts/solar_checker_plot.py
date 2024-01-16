@@ -24,6 +24,7 @@ import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.patches import Rectangle
 
 from datetime import datetime, timedelta
 
@@ -68,6 +69,10 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     ivpon_mean = ivpon.mean() if ivpon is not None else 0
     ivpon_max = ivpon.max() if ivpon is not None else 0
 
+    timeivpon = time[isivpon]
+    ivpon600 = np.full_like(ivpon, 600)
+    ivpon800 = np.full_like(ivpon, 800)
+
     total_means = power_means( time, smp + ivp)
 
     dformatter = mdates.DateFormatter('%H:%M')
@@ -84,8 +89,13 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
                          color='g', label='APSYSTEMS 2', alpha=0.5)
     axes[0].fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
                          color='b', label='TASMOTA', alpha=0.2)
+
     axes[0].plot(time, total_means,
-                 color='m', lw=4, label="TOTAL MEAN")
+                 color='m', lw=2, label="TOTAL MEAN")
+
+    axes[0].fill_between(timeivpon, ivpon600, ivpon800,
+                         color='orange', label='LIMITS', alpha=0.6)
+    
     axes[0].grid(which='major', ls='-', lw=2, axis='both')
     axes[0].grid(which='minor', ls='--', lw=1, axis='both')
     axes[0].minorticks_on()
