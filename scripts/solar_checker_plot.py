@@ -77,12 +77,13 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     text = f'Solar Checker'
     fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
 
-    #axes[0].fill_between(time, smp + ivp1 + ivp2, color='green', label='APSYSTEMS 1+2', alpha=0.5)
-    #axes[0].fill_between(time, smp + ivp1, color='cyan', alpha=0.5)
-    #axes[0].fill_between(time, smp, color='blue', label='TASMOTA', alpha=0.5)
-    axes[0].fill_between(time, ivp1 + ivp2 + smp, color='blue', label='TASMOTA', alpha=0.1)
-    axes[0].fill_between(time, ivp1 + ivp2, color='green', label='APSYSTEMS 2', alpha=0.3)
-    axes[0].fill_between(time, ivp1, color='cyan',label='APSYSTEMS 1', alpha=0.6)
+
+    axes[0].fill_between(time, 0, ivp1,
+                         color='c',label='APSYSTEMS 1', alpha=0.6)
+    axes[0].fill_between(time, ivp1, ivp1 + ivp2,
+                         color='g', label='APSYSTEMS 2', alpha=0.5)
+    axes[0].fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
+                         color='b', label='TASMOTA', alpha=0.2)
     axes[0].plot(time, total_means, color='magenta', lw=4, label="TOTAL MEAN")
     axes[0].grid(which='major', ls='-', lw=2, axis='both')
     axes[0].grid(which='minor', ls='--', lw=1, axis='both')
@@ -97,7 +98,6 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
         title += f' | APsystems {ivp[-1]:.0f}'
     if len(ivpon) > 0:
         title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-
     axes[0].set_title(title, fontsize='x-large')        
 
     axes[0].legend(loc="upper left")
@@ -108,20 +108,13 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     
     ive = ive1 + ive2
 
-    #axes[1].fill_between(time, sme + ive1 + ive2,
-    #                     color='green',label='APSYSTEMS 1+2', alpha=0.5)
-    #axes[1].fill_between(time, sme + ive1,
-    #                     color='cyan', alpha=0.5)
-    #axes[1].fill_between(time, sme,
-    #                     color='blue',label='TASMOTA', alpha=0.5)
-    axes[1].fill_between(time, ive2 + ive1 + sme,
-                         color='blue',label='TASMOTA', alpha=0.1)
-    axes[1].fill_between(time, ive2 + ive1,
-                         color='green',label='APSYSTEMS 2', alpha=0.3)
-    axes[1].fill_between(time, ive1,
-                         color='cyan', label='APSYSTEMS 1',alpha=0.6)
+    axes[1].fill_between(time, 0, ive1,
+                         color='c', label='APSYSTEMS 1',alpha=0.6)
+    axes[1].fill_between(time, ive1, ive2 + ive1,
+                         color='g',label='APSYSTEMS 2', alpha=0.5)
+    axes[1].fill_between(time, ive2 + ive1, ive2 + ive1 + sme,
+                         color='b',label='TASMOTA', alpha=0.2)
 
-    axes[1].legend(loc="upper left")
     axes[1].grid(which='major', ls='-', lw=2, axis='both')
     axes[1].grid(which='minor', ls='--', lw=1, axis='x')
     axes[1].minorticks_on()
@@ -131,6 +124,8 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     if len(ive) > 0 and ive[-1] >= 0:
         title += f' | APsystems {ive[-1]:.3f}kWh ~ {ive[-1]*price:.2f}€'
     axes[1].set_title(title, fontsize='x-large')
+
+    axes[1].legend(loc="upper left")
     axes[1].set_ylabel('Work [Wh]')
     axes[1].xaxis.set_major_formatter(dformatter)
 
