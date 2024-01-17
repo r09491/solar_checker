@@ -18,7 +18,7 @@ class Smartmeter:
         self.timeout = timeout
 
         
-    async def _request(self, command: str, para: str |int) -> dict:
+    async def _request(self, command: str, para: str) -> dict:
         url = f"{self.base_url}/cm?cmnd={command}+{para}"
         try:
             async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
