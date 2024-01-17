@@ -39,21 +39,22 @@ The local API access needs to be activated once in the settings of the APsystems
 
 ## Setup Tasmota for your Smartmeter
 
-There are lot of tutorialss on how to setup Tasmota for a smartmeter
+There are lot of tutorials on how to setup Tasmota for a smartmeter
 on the internet.
 
 ---
 
 ## Installation
 
-- To use the apsystems and tosmota library, you need to have
-  Python>=3.11 installed. I installed python 3.12 on a raspberry. The
-  libraries and the recording work fine. Unfortunately to install
-  numpy gcc 8.4 is required which is not available by default. As a
-  result the plot script has to be run on another machine. Since I
-  store my recordings on a Samba server this is no problem.
-- See the following guide to install the latest Python release:
-  <https://www.python.org/downloads> <br><br>
+I installed the apsystems and the tosmota APIs on a standard raspberry
+system with python version 3.7.3. In order to use the provied scripts
+the python3-numpy, python3-pandas, python3-matplotlib packages have to
+be installed with apt in advance. I used 'sudo' for a system wide
+install avoiding to deal with local paths and local pip libraries in
+cron. You might have a different philosophy and use virtual
+environments.
+
+I install the repository also underer 'termux' on my Android smartphone.
 
 <ul>
 <li>Step 1: git clone the repository</li>
@@ -64,7 +65,7 @@ on the internet.
 ```bash
 git clone https://github.com/r09491/solar_checker.git
 cd solar_checker
-pip install .
+sudo pip3 install .
 ```
 
 For the recording see the two cron scripts and run them in cron.

@@ -45,7 +45,7 @@ class EZ1M:
         self.timeout = timeout
 
         
-    async def _request(self, endpoint: str) -> dict | None:
+    async def _request(self, endpoint: str) -> dict:
         url = f"{self.base_url}/{endpoint}"
         try:
             async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
@@ -56,7 +56,7 @@ class EZ1M:
             return None
 
         
-    async def get_device_info(self) -> ReturnDeviceInfo | None:
+    async def get_device_info(self) -> ReturnDeviceInfo:
         response = await self._request("getDeviceInfo")
         data = response["data"] if response and response.get("data") else None
         return (
@@ -73,7 +73,7 @@ class EZ1M:
         )
 
     
-    async def get_alarm_info(self) -> ReturnAlarmInfo | None:
+    async def get_alarm_info(self) -> ReturnAlarmInfo:
         response = await self._request("getAlarm")
         data = response["data"] if response and response.get("data") else None
         return (
@@ -88,35 +88,35 @@ class EZ1M:
         )
 
     
-    async def get_output_data(self) -> ReturnOutputData | None:
+    async def get_output_data(self) -> ReturnOutputData:
         response = await self._request("getOutputData")
         data = response["data"] if response and response.get("data") else None
         return ReturnOutputData(**data) if data else None
 
     
-    async def get_total_output(self) -> float | None:
+    async def get_total_output(self) -> float:
         data = await self.get_output_data()
         return float(data.p1 + data.p2) if data else None
 
     
-    async def get_total_energy_today(self) -> float | None:
+    async def get_total_energy_today(self) -> float:
         data = await self.get_output_data()
         return float(data.e1 + data.e2) if data else None
 
     
-    async def get_total_energy_lifetime(self) -> float | None:
+    async def get_total_energy_lifetime(self) -> float:
         data = await self.get_output_data()
         return float(data.te1 + data.te2) if data else None
 
     
-    async def get_max_power(self) -> int | None:
+    async def get_max_power(self) -> int:
         response = await self._request("getMaxPower")
         data = response["data"] if response and response.get("data") else None
         max_power = data["maxPower"] if data and data["maxPower"] != "" else None
         return int(max_power) if max_power else None
 
     
-    async def set_max_power(self, power_limit: int) -> int | None:
+    async def set_max_power(self, power_limit: int) -> int:
         if not 30 <= power_limit <= 800:
             raise ValueError(
                 f"Invalid setMaxPower value: expected int between '30' and '800', got '{power_limit}'"
@@ -127,14 +127,14 @@ class EZ1M:
         return int(max_power) if max_power else None
 
     
-    async def get_device_power_status(self) -> Status | None:
+    async def get_device_power_status(self) -> Status:
         response = await self._request("getOnOff")
         data = response["data"] if response and response.get("data") else None
         onoff = data["status"] if data and data["status"] != "" else None
         return Status(int(onoff)) if onoff else None
 
     
-    async def set_device_power_status(self, power_status: Status | None) -> Status | None:
+    async def set_device_power_status(self, power_status: Status) -> Status:
         status_map = {"0": "0", "ON": "0", "1": "1", "SLEEP": "1", "OFF": "1"}
         status_value = status_map.get(str(power_status))
         if status_value is None:

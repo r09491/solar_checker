@@ -47,7 +47,7 @@ async def main(inverter, new_max_power) -> int:
         logger.error(f"Could not get max power limit")
         return 12
     
-    logger.info(f"New_Power: {max_power}W")
+    logger.info(f"New Max Power Limit: {max_power}W")
                 
     # Set power status (ensure "ON" or other value is valid)
     set_power_status_response = await inverter.set_device_power_status("ON")

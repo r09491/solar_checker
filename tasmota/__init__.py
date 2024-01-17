@@ -18,7 +18,7 @@ class Smartmeter:
         self.timeout = timeout
 
         
-    async def _request(self, command: str, para: str |int) -> dict | None:
+    async def _request(self, command: str, para: str |int) -> dict:
         url = f"{self.base_url}/cm?cmnd={command}+{para}"
         try:
             async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
@@ -29,19 +29,19 @@ class Smartmeter:
             return None
 
 
-    async def get_status_sns(self) -> Return_Status_SNS | None:
+    async def get_status_sns(self) -> Return_Status_SNS:
         response = await self._request(command = "status", para = 8)
         status_sns =  response["StatusSNS"] if response else None
         values = list(status_sns.values()) if status_sns else None
         return Return_Status_SNS(values[0], **values[-1]) if values else None
 
     
-    async def get_power(self) -> float | None:
+    async def get_power(self) -> float:
         status_sns = await self.get_status_sns()
         return status_sns.power if status_sns else None
     
     
-    async def get_energy_total_lifetime(self) -> float | None:
+    async def get_energy_total_lifetime(self) -> float:
         status_sns = await self.get_status_sns()
         return status_sns.energy if status_sns else None
 
