@@ -24,12 +24,11 @@ import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.patches import Rectangle
 
 from datetime import datetime, timedelta
 
-import warnings
-warnings.simplefilter("ignore")
+#import warnings
+#warnings.simplefilter("ignore")
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -52,8 +51,8 @@ SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
 def power_means(times, powers, slots = SLOTS):
     spowers = np.full_like(powers, 0.0)
     for start, stop in zip(slots[:-1], slots[1:]):
-        wheres, = np.where((times >= hm2date(start)) & (times < hm2date(stop)))
-        spowers[wheres] = (powers[wheres]).mean()
+        wheres, = np.where((times >= hm2date(start)) & (times <= hm2date(stop)))
+        spowers[wheres] = powers[wheres].mean() if wheres.size > 0 else None
     return spowers
 
 
@@ -140,7 +139,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[1].set_ylabel('Energy [Wh]')
     axes[1].xaxis.set_major_formatter(dformatter)
 
-    
+
     fig.tight_layout(pad=2.0)
 
     ##fig.savefig(name)
