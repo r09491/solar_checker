@@ -34,5 +34,9 @@ alias tasmota_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_che
 			    	      --title 'Tasmota Smartmeter Lifetime Watt-Hours'"
 
 alias solar_checker_plot="solar_checker_plot.sh"
+alias solar_checker_plot_anyday="solar_checker_plot_anyday.sh"
 alias solar_checker_plot_yesterday="solar_checker_plot_yesterday.sh"
+alias solar_checker_slots="solar_checker_slots.sh"
+alias solar_checker_slots_anyday="solar_checker_slots_anyday.sh"
+alias solar_checker_slots_yesterday="solar_checker_slots_yesterday.sh"
 
