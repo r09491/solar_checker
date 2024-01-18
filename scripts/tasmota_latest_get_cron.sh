@@ -1,3 +1,5 @@
+### OBSOLETE
+
 ## CRONTAB (Adapt as necesssary)
 #SHELL=/bin/bash
 #PATH=/home/r09491/7WORK-3.12/.v3.12/bin:/usr/bin:/bin
