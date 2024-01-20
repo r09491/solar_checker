@@ -7,7 +7,7 @@ Microinverters and smartmeter sensors with Tasmoto. Based on these two
 APIs there are scripts to record their latest power data which in turn
 can be used for plots to visualise them. It facilitates the process to
 monitor a solar power station and to assess if it will pay off at a
-point of time,
+point of time.
 
 ---
 
@@ -54,7 +54,7 @@ install avoiding to deal with local paths and local pip libraries in
 cron. You might have a different philosophy and use virtual
 environments.
 
-I install the repository also underer 'termux' on my Android smartphone.
+I installed the repository also underer 'termux' on my Android smartphone.
 
 <ul>
 <li>Step 1: git clone the repository</li>
@@ -68,7 +68,10 @@ cd solar_checker
 sudo pip3 install .
 ```
 
-For the recording see the two cron scripts and run them in cron.
+For the recording in the script 'solar_checker_latest_once.sh' adapt
+the ip addresses and add it to 'cron'. Be sure to have the 'PATH and
+'SOLAR_CHECKER_STORE_DIR* environment variables set as documented in
+the script!
 
 ---
 
