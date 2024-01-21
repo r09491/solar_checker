@@ -20,7 +20,7 @@ from aiohttp.client_exceptions import ClientConnectorError
 
 from apsystems import Inverter
 from tasmota import Smartmeter
-from tuya import Smartplug
+from poortuya import Smartplug
 
 import logging
 logging.basicConfig(

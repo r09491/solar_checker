@@ -9,6 +9,7 @@ tinytuya repository on github.com.
 __version__ = "0.0.2"
 __author__ = "r09491@t-online.de"
 
+import sys
 import asyncio
 import tinytuya
 
@@ -49,25 +50,37 @@ class Smartplug:
         ) if dps is not None and dps['1'] else None
 
     async def get_status(self) -> Return_Status:
-        if sys.version.major == 3 and sys.version.minor >= 9: 
+        if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
             return await asyncio.to_thread(self._get_status)
         else:
             return await self._get_status()
 
     def _turn_on(self):
+        device = tinytuya.OutletDevice(
+            dev_id = self.id,
+            address = self.ip_address,
+            local_key = self.local_key,
+            version = self.version, )
+        status = device.status()
         device.turn_on()
 
     async def turn_on(self):
-        if sys.version.major == 3 and sys.version.minor >= 9: 
+        if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
             await asyncio.to_thread(self._turn_on)
         else:
             await self._turn_on()
         
     def _turn_off(self):
+        device = tinytuya.OutletDevice(
+            dev_id = self.id,
+            address = self.ip_address,
+            local_key = self.local_key,
+            version = self.version, )
+        status = device.status()
         device.turn_on()
 
     async def turn_off(self):
-        if sys.version.major == 3 and sys.version.minor >= 9: 
+        if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
             await asyncio.to_thread(self._turn_off)
         else:
             await self._turn_off()
