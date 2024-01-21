@@ -12,7 +12,7 @@ import sys
 import argparse
 import asyncio
 
-from apsystems import EZ1M
+from apsystems import Inverter
 
 from aiohttp.client_exceptions import ClientConnectorError
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         logger.info(f'The power limit for inverters in Germany is 600W.')
         logger.info(f'Be advised to consult your lawyer!')
         
-    ez1m = EZ1M(args.ip, args.port)
+    ez1m = Inverter(args.ip, args.port)
 
     try:
         err = asyncio.run(main(ez1m, args.max_power))

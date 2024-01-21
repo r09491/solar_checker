@@ -4,7 +4,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='solar_checker',
-      version='0.1.0',
+      version='0.1.1',
       description='Solar checker with APsystems and Tasmota API',
       url='https://github.com/r09491/solar_checker',
       author='r09491',
@@ -27,11 +27,13 @@ setup(name='solar_checker',
       packages=[
           'apsystems',
           'tasmota',
+          'poortuya',
       ],
       install_requires=[
           'aiohttp',
           'pandas',
           'matplotlib',
           'termgraph',
+          'tinytuya',
       ],
       zip_safe=False)

@@ -38,7 +38,7 @@ class ReturnOutputData:
     te2: float
 
 
-class EZ1M:
+class Inverter:
 
     def __init__(self, ip_address: str, port: int = 8050, timeout: int = 10):
         self.base_url = f"http://{ip_address}:{port}"

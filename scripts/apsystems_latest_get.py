@@ -12,7 +12,7 @@ import sys
 import argparse
 import asyncio
 
-from apsystems import EZ1M
+from apsystems import Inverter
 
 from aiohttp.client_exceptions import ClientConnectorError
 
@@ -73,10 +73,10 @@ if __name__ == '__main__':
         logger.error('IP address is missing.')
         sys.exit(1)
 
-    ez1m = EZ1M(args.ip, args.port)
+    iv = Inverter(args.ip, args.port)
 
     try:
-        err = asyncio.run(main(ez1m))
+        err = asyncio.run(main(iv))
     except KeyboardInterrupt: 
         err = 99
        
