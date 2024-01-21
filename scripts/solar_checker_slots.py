@@ -43,7 +43,7 @@ def str2float(value):
         
 def show_slots(slots, starts, stops, f = sys.stdin):
     sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2'.split(',')
+    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP'.split(',')
     df = pd.read_csv(f, sep = sep, names = names)
     
     """
@@ -65,13 +65,23 @@ def show_slots(slots, starts, stops, f = sys.stdin):
     """ The normalised inverter power sum """
     ivp = ivp1 + ivp2
 
+    """ The normalised smartplug power """
+    spp = np.array(df.SPP.apply(str2float))
+    if np.isnan(spp).any():
+        spp = None
+        
     for slot, start, stop in zip(slots, starts, stops):
         wheres, = np.where((time >= start) & (time < stop))
-        if len(wheres) == 0: continue
+        if wheres.size == 0: continue
+        
         smps, ivps = smp[wheres],ivp[wheres]
+        spps = spp[wheres] if spp is not None else None
+
         text = f"'{slot}'"
         text += f" > smp={smps.mean():.0f}^{smps.max():.0f}W"
         text += f" | ivp={ivps.mean():.0f}^{ivps.max():.0f}W"
+        if spps is not None:
+            text += f" | spp={spps.mean():.0f}^{spps.max():.0f}W"
         logger.info(text)
 
     return 0

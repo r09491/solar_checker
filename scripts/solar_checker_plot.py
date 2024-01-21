@@ -60,7 +60,7 @@ def power_means(times, powers, slots = SLOTS):
     return spowers
 
 
-def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
+def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
 
     smp_mean = smp.mean()
     smp_max = smp.max()
@@ -92,6 +92,10 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
                          color='b', label='TASMOTA', alpha=0.2)
 
+    if spp is not None:
+        axes[0].plot(time, spp,
+                     color='yellow', lw=2, label="PLUG")
+    
     axes[0].plot(time, total_means,
                  color='m', lw=2, label="TOTAL MEAN")
 
@@ -153,7 +157,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
         
 def check_powers(price, f = sys.stdin):
     sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2'.split(',')
+    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP'.split(',')
     df = pd.read_csv(f, sep = sep, names = names)
 
     """
@@ -201,6 +205,12 @@ def check_powers(price, f = sys.stdin):
         logger.error(f'Undefined IVE2 samples')
         return 6
 
+    """ The normalised smartplug power """
+    spp = np.array(df.SPP.apply(str2float))
+    if np.isnan(spp).any():
+        logger.warning(f'Undefined SPP samples')
+        spp = None
+    
     # Get rid of offsets and fill tails
 
     sme -= sme[0]
@@ -217,7 +227,7 @@ def check_powers(price, f = sys.stdin):
 
     """ ! All arrays are expected to have the same length ! """
 
-    plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price)
+    plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price)
 
     return 0
 
