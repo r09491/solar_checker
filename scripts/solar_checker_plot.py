@@ -99,10 +99,6 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
         axes[0].fill_between(timeivpon, ivpon600, ivpon800,
                     color='orange', label='LIMITS', alpha=0.6)
 
-    axes[0].grid(which='major', ls='-', lw=2, axis='both')
-    axes[0].grid(which='minor', ls='--', lw=1, axis='both')
-    axes[0].minorticks_on()
-    
     title = f'Power Check #'
     if smp.size > 0 and smp[-1] >= 0:
         title += f' Tasmota {smp[-1]:.0f}'
@@ -117,7 +113,12 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[0].legend(loc="upper left")
     axes[0].set_ylabel('Power [W]')
     axes[0].set_yscale("log")
+    axes[0].xaxis_date()
     axes[0].xaxis.set_major_formatter(dformatter)
+    axes[0].grid(which='major', ls='-', lw=2, axis='both')
+    axes[0].grid(which='minor', ls='--', lw=1, axis='both')
+    axes[0].minorticks_on()
+    
 
     ive = ive1 + ive2
 
@@ -128,9 +129,6 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
     axes[1].fill_between(time, ive2 + ive1, ive2 + ive1 + sme,
                          color='b',label='TASMOTA', alpha=0.2)
 
-    axes[1].grid(which='major', ls='-', lw=2, axis='both')
-    axes[1].grid(which='minor', ls='--', lw=1, axis='x')
-    axes[1].minorticks_on()
     title = f'Energy Check #'
     if sme.size > 0 and sme[-1] >= 0:
         title += f' Tasmota {sme[-1]:.1f}kWh ~ {(sme[-1]*price):.2f}€'
@@ -140,7 +138,11 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, price):
 
     axes[1].legend(loc="upper left")
     axes[1].set_ylabel('Energy [Wh]')
+    axes[1].xaxis_date()
     axes[1].xaxis.set_major_formatter(dformatter)
+    axes[1].grid(which='major', ls='-', lw=2, axis='both')
+    axes[1].grid(which='minor', ls='--', lw=1, axis='x')
+    axes[1].minorticks_on()
 
     fig.tight_layout(pad=2.0)
 
