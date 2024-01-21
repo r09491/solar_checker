@@ -49,18 +49,25 @@ class Smartplug:
         ) if dps is not None and dps['1'] else None
 
     async def get_status(self) -> Return_Status:
-        return await asyncio.to_thread(self._get_status)
-
+        if sys.version.major == 3 and sys.version.minor >= 9: 
+            return await asyncio.to_thread(self._get_status)
+        else:
+            return await self._get_status()
 
     def _turn_on(self):
         device.turn_on()
 
     async def turn_on(self):
-        await asyncio.to_thread(self._turn_on)
-
+        if sys.version.major == 3 and sys.version.minor >= 9: 
+            await asyncio.to_thread(self._turn_on)
+        else:
+            await self._turn_on()
         
     def _turn_off(self):
         device.turn_on()
 
     async def turn_off(self):
-        await asyncio.to_thread(self._turn_off)
+        if sys.version.major == 3 and sys.version.minor >= 9: 
+            await asyncio.to_thread(self._turn_off)
+        else:
+            await self._turn_off()
