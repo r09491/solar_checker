@@ -3,23 +3,11 @@
 ## Overview
 
 The Solar Checker Python library provides APIs for the APsystems EZ1
-Microinverters and smartmeter sensors with Tasmoto. Based on these two
-APIs there are scripts to record their latest power data which in turn
-can be used for plots to visualise them. It facilitates the process to
-monitor a solar power station and to assess if it will pay off at a
-point of time.
-
----
-
-## Features
-
-- **Get detailed device information**
-- **Retrieve alarm status information**
-- **Fetch output data** (power output, energy readings)
-- **Set and get maximum power limits** (30 W up to 800 W)
-- **Manage device power status** (sleep_mode/on/off)
-- **Calculate combined power output and total energy generated**
-
+Microinverters, Tasmota smartmeter and a poor Tuya library for
+smartplugs. Based on these three APIs there are scripts to record
+their latest power data which in turn can be used for plots to
+visualise them. It facilitates the process to monitor a solar power
+station and to assess if it will pay off at a point of time.
 
 ---
 
@@ -44,17 +32,32 @@ on the internet.
 
 ---
 
+## Setup Tuya for your Smartplug
+
+Install the 'tinytuya' package and run the magic 'python3 -m tinytuya
+scan'. Follow the interesting instructions in the repository!
+
+These will produce some json file to be used to setup the config file
+'.poortuya'.
+
+Ensure you have a proper '.poortuya' in your home directory!
+
+---
+
 ## Installation
 
-I installed the apsystems and the tosmota APIs on a standard raspberry
-system with python version 3.7.3. In order to use the provied scripts
-the python3-numpy, python3-pandas, python3-matplotlib packages have to
-be installed with apt in advance. I used 'sudo' for a system wide
-install avoiding to deal with local paths and local pip libraries in
-cron. You might have a different philosophy and use virtual
-environments.
+I installed the 'apsystems', the 'tosmota' and the 'poortuya' APIs on
+a standard raspberry buster system with python version 3.7.3. In order
+to use the provied scripts the python3-numpy, python3-pandas,
+python3-matplotlib packages have to be installed with 'apt' in
+advance. I used 'sudo' for a system wide install avoiding to deal with
+local paths and local pip libraries in cron. You might have a
+different philosophy and use virtual environments.
 
-I installed the repository also underer 'termux' on my Android smartphone.
+It should be installable on any Linux with python >= 3.7.1.
+
+I installed the repository also underer 'termux' on my Android
+smartphone.
 
 <ul>
 <li>Step 1: git clone the repository</li>
