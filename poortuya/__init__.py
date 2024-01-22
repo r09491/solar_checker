@@ -69,7 +69,7 @@ class Smartplug:
         if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
             return await asyncio.to_thread(self._get_status)
         else:
-            return await self._get_status()
+            return self._get_status()
 
         
     def _turn_on(self):
@@ -86,7 +86,7 @@ class Smartplug:
         if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
             await asyncio.to_thread(self._turn_on)
         else:
-            await self._turn_on()
+            self._turn_on()
 
             
     def _turn_off(self):
@@ -103,4 +103,4 @@ class Smartplug:
         if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
             await asyncio.to_thread(self._turn_off)
         else:
-            await self._turn_off()
+            self._turn_off()
