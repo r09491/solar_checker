@@ -27,7 +27,7 @@ The local API access needs to be activated once in the settings of the APsystems
 
 ## Setup Tasmota for your Smartmeter
 
-There are lot of tutorials on how to setup Tasmota for a smartmeter
+There are a lot of tutorials on how to setup Tasmota for a smartmeter
 on the internet.
 
 ---
@@ -35,12 +35,12 @@ on the internet.
 ## Setup Tuya for your Smartplug
 
 Install the 'tinytuya' package and run the magic 'python3 -m tinytuya
-scan'. Follow the interesting instructions in the repository!
+scan'. Follow the interesting instructions in that repository!
 
 These will produce some json file to be used to setup the config file
-'.poortuya'.
+'.poortuya'. There is a tepmplate in the directory 'poortuya'.
 
-Ensure you have a proper '.poortuya' in your home directory!
+Ensure you have a proper '.poortuya' is in your home directory!
 
 ---
 
@@ -48,7 +48,7 @@ Ensure you have a proper '.poortuya' in your home directory!
 
 I installed the 'apsystems', the 'tosmota' and the 'poortuya' APIs on
 a standard raspberry buster system with python version 3.7.3. In order
-to use the provied scripts the python3-numpy, python3-pandas,
+to use the scripts the python3-numpy, python3-pandas,
 python3-matplotlib packages have to be installed with 'apt' in
 advance. I used 'sudo' for a system wide install avoiding to deal with
 local paths and local pip libraries in cron. You might have a
