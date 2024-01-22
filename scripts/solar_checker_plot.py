@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 
 __doc__="""
-Checks the solar power input of micro inverters against the
-consumption measured by smartmeter in a houshold
+Checks the solar power input of micro APsystems inverters against the
+consumption measured by a Tasmota smartmeter in a houshold. The
+APsystems inverters are to be operated in direct local mode.
+
+Checks the input of APsystems inverters to an Antella smartplug
+against the consumption measured by a Tasmota smartmeter in a
+houshold. The plug may be present or absent.  If present has priority
+over APsystems measuremnents.
 
 Plots the power output in logarithmic scale to emphasise lower values
 and the energy in linear scale.
@@ -10,7 +16,7 @@ and the energy in linear scale.
 Plots the power output means for defined time slots to help in
 scheduling of battery outputs if they can.
 """
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __author__ = "r09491@t-online.de"
 
 import os
@@ -72,46 +78,69 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
     ivpon_mean = ivpon.mean() if ivpon is not None else 0
     ivpon_max = ivpon.max() if ivpon is not None else 0
 
+    issppon = spp>0
+    sppon = spp[issppon] if issppon.any() else None
+    sppon_mean = sppon.mean() if sppon is not None else 0
+    sppon_max = sppon.max() if sppon is not None else 0
+
     timeivpon = time[isivpon] if isivpon.any() else None
-    ivpon600 = np.full_like(ivpon, 600) 
-    ivpon800 = np.full_like(ivpon, 800)
+    timesppon = time[issppon] if issppon.any() else None
+    timeon = timesppon if timesppon.size > 0 else timeivpon 
+    on600 = np.full_like(sppon if issppon.any() else ivpon, 600) 
+    on800 = np.full_like(sppon if issppon.any() else ivpon, 800)
+    
+    total_means = power_means( time, smp + spp if issppon.any() else ivp)
 
-    total_means = power_means( time, smp + ivp)
-
+    
     dformatter = mdates.DateFormatter('%H:%M')
-
     fig, axes = plt.subplots(nrows=2, figsize=(12,8))
 
     text = f'Solar Checker'
     fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
 
-    axes[0].fill_between(time, 0, ivp1,
-                         color='c',label='APSYSTEMS 1', alpha=0.6)
-    axes[0].fill_between(time, ivp1, ivp1 + ivp2,
-                         color='g', label='APSYSTEMS 2', alpha=0.5)
-    axes[0].fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
-                         color='b', label='TASMOTA', alpha=0.2)
+    if sppon is not None:
+        axes[0].fill_between(time, 0, spp,
+                             color='yellow',label='PLUG', alpha=0.6)
+        axes[0].fill_between(time, spp, spp  + smp,
+                             color='b', label='HOUSE', alpha=0.2)
 
-    if spp is not None:
-        axes[0].plot(time, spp,
-                     color='yellow', lw=2, label="PLUG")
+        if ivpon is not None:
+            axes[0].plot(time, ivp1,
+                         color='c', lw=2, label='INVERTER 1', alpha=0.6)
+            axes[0].plot(time, ivp1 + ivp2,
+                     color='g', lw=2, label='INVERTER 2', alpha=0.6)
+
+    else:
+        axes[0].fill_between(time, 0, ivp1,
+                             color='c',label='INVERTER 1', alpha=0.6)
+        axes[0].fill_between(time, ivp1, ivp1 + ivp2,
+                         color='g', label='INVERTER 2', alpha=0.5)
+        axes[0].fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
+                             color='b', label='HOUSE', alpha=0.2)
     
-    axes[0].plot(time, total_means,
+    axes[0].plot(time, total_means, 
                  color='m', lw=2, label="TOTAL MEAN")
 
-    if timeivpon is not None:
-        axes[0].fill_between(timeivpon, ivpon600, ivpon800,
+    if timeon.size > 0:
+        axes[0].fill_between(timeon , on600, on800,
                     color='orange', label='LIMITS', alpha=0.6)
 
     title = f'Power Check #'
     if smp.size > 0 and smp[-1] >= 0:
-        title += f' Tasmota {smp[-1]:.0f}'
+        title += f' House {smp[-1]:.0f}'
         title += f'={smp_mean:.0f}^{smp_max:.0f}W'
-        
-    if ivp.size > 0 and ivp[-1] >= 0:
-        title += f' | APsystems {ivp[-1]:.0f}'
-    if ivpon is not None:
-        title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
+
+    if sppon is not None:
+        if spp.size > 0 and spp[-1] >= 0:
+            title += f' | Plug {spp[-1]:.0f}'
+        if sppon.size is not None:
+            title += f'={sppon_mean:.0f}^{sppon_max:.0f}W'
+    else:
+        if ivp.size > 0 and ivp[-1] >= 0:
+            title += f' | Inverter {ivp[-1]:.0f}'
+        if ivpon is not None:
+            title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
+            
     axes[0].set_title(title, fontsize='x-large')        
 
     axes[0].legend(loc="upper left")
@@ -124,20 +153,34 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
     axes[0].minorticks_on()
     
 
-    ive = ive1 + ive2
 
-    axes[1].fill_between(time, 0, ive1,
-                         color='c', label='APSYSTEMS 1',alpha=0.6)
-    axes[1].fill_between(time, ive1, ive2 + ive1,
-                         color='g',label='APSYSTEMS 2', alpha=0.5)
-    axes[1].fill_between(time, ive2 + ive1, ive2 + ive1 + sme,
-                         color='b',label='TASMOTA', alpha=0.2)
+    if sppon is not None:
+        spe = spp.cumsum()/1000/60 # kWh
+    
+        axes[1].fill_between(time, 0, spe,
+                             color='yellow', label='PLUG',alpha=0.6)
+        axes[1].fill_between(time, spe, spe + sme,
+                             color='b',label='HOUSE', alpha=0.2)
+    else:
+        ive = ive1 + ive2
+
+        axes[1].fill_between(time, 0, ive1,
+                             color='c', label='INVERTER 1',alpha=0.6)
+        axes[1].fill_between(time, ive1, ive2 + ive1,
+                             color='g',label='INVERTER 2', alpha=0.5)
+        axes[1].fill_between(time, ive2 + ive1, ive2 + ive1 + sme,
+                             color='b',label='HOUSE', alpha=0.2)
 
     title = f'Energy Check #'
     if sme.size > 0 and sme[-1] >= 0:
-        title += f' Tasmota {sme[-1]:.1f}kWh ~ {(sme[-1]*price):.2f}€'
-    if ive.size > 0 and ive[-1] >= 0:
-        title += f' | APsystems {ive[-1]:.3f}kWh ~ {ive[-1]*price:.2f}€'
+        title += f' House {sme[-1]:.1f}kWh ~ {(sme[-1]*price):.2f}€'
+
+    if sppon is not None:
+        if spe.size > 0 and spe[-1] >= 0:
+            title += f' | Plug {spe[-1]:.3f}kWh ~ {spe[-1]*price:.2f}€'
+    else:
+        if ive.size > 0 and ive[-1] >= 0:
+            title += f' | Inverter {ive[-1]:.3f}kWh ~ {ive[-1]*price:.2f}€'
     axes[1].set_title(title, fontsize='x-large')
 
     axes[1].legend(loc="upper left")
@@ -208,8 +251,8 @@ def check_powers(price, f = sys.stdin):
     """ The normalised smartplug power """
     spp = np.array(df.SPP.apply(str2float))
     if np.isnan(spp).any():
-        logger.warning(f'Undefined SPP samples')
-        spp = None
+        logger.error(f'Undefined SPP samples')
+        return 7
     
     # Get rid of offsets and fill tails
 

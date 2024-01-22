@@ -1,7 +1,7 @@
 # To run in interactive shells SOLAR_CHECKER_STORE_DIR is defined in '.bashrc'
-# (P = Power, EN = Energy current Day, EL = Energy Lifetime)
+# (PI = Power, EN = Energy current Day, EL = Energy Lifetime)
 alias apsystems_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
-  awk -F',' 'BEGIN{price=0.369}{printf(\"P %03.0f+%03.0f=%03.0fW  ED %.3f+%.3f=%.3fkWh|%.2f€  EL %.1f+%.1f=%.1fkWh|%.2f€\n\", \$4,\$7,\$4+\$7, \$5,\$8,\$5+\$8,(\$5+\$8)*price, \$6, \$9, \$6+\$9, (\$6+\$9)*price)}'"
+  awk -F',' 'BEGIN{price=0.369}{printf(\"PI %03.0f+%03.0f=%03.0fW  ED %.3f+%.3f=%.3fkWh|%.2f€  EL %.1f+%.1f=%.1fkWh|%.2f€\n\", \$4,\$7,\$4+\$7, \$5,\$8,\$5+\$8,(\$5+\$8)*price, \$6, \$9, \$6+\$9, (\$6+\$9)*price)}'"
 
 alias apsystems_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
           awk -F',' '{printf(\"%d,%f,%f\n\", NR, \$4, \$7)}' | \
@@ -19,9 +19,9 @@ alias apsystems_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_c
 			    	      --title 'Apsystems Inverter Lifetime Watt-Hours (Channel 1,Channel 2)'"
 
 
-#based on the energy at the start of the year (P = Power, EY = Energy current Year, EL = Energy Lifetime)
+#based on the energy at the start of the year (PH = Power, EY = Energy current Year, EL = Energy Lifetime)
 alias tasmota_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
-    awk -F',' 'BEGIN{start=4192;price=0.369}{printf(\"P %04.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh|%.2f€\n\",\$2, \$3-start, (\$3-start)*price, \$3, \$3*price)}'"
+    awk -F',' 'BEGIN{start=4192;price=0.369}{printf(\"PH %04.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh|%.2f€\n\",\$2, \$3-start, (\$3-start)*price, \$3, \$3*price)}'"
 
 alias tasmota_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
       			    awk -F',' '{ printf(\"%d,%f\n\", NR, \$2)}' | \
@@ -32,6 +32,18 @@ alias tasmota_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_che
       			    awk -F',' '{ printf(\"%d,%.3f\n\", NR, \$3/1000)}' | \
 			    termgraph --suffix 'kWh' \
 			    	      --title 'Tasmota Smartmeter Lifetime Watt-Hours'"
+
+
+alias tuya_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
+    awk -F',' 'BEGIN{}{printf(\"PP %04.0fW\n\",\$10)}'"
+
+alias tuya_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
+      			    awk -F',' '{printf(\"%d,%.3f\n\", NR, \$10)}' | \
+			    termgraph --suffix 'W' --title 'Tuya Smartplug Watts'"
+
+# (PI = Power Inverter, PP = Power Plug, PH = Power Home)
+alias solar_checker_watts_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
+  awk -F',' 'BEGIN{price=0.369}{printf(\"PI %03.0f+%03.0f=%03.0fW  PP %04.0fW  PH %04.0fW  PT %04.0fW  PP/PT %.0f\%\n\", \$4,\$7,\$4+\$7, \$10, \$2, \$10 + \$2, \$10/(\$10 + \$2)*100)}'"
 
 alias solar_checker_plot="solar_checker_plot.sh"
 alias solar_checker_plot_anyday="solar_checker_plot_anyday.sh"
