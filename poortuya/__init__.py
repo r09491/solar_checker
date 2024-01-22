@@ -10,6 +10,8 @@ __version__ = "0.0.2"
 __author__ = "r09491@t-online.de"
 
 import sys
+import os
+import json
 import asyncio
 import tinytuya
 
@@ -22,27 +24,41 @@ class Return_Status:
     voltage: float
 
     
+    
 class Smartplug:
 
-    def __init__(self, ip_address: str, port: int = 80, timeout: int = 10):
-        #TODO Read from file
-        self.id = "bf444d8065dfe2f9ba5mx5"
-        self.local_key = "f750965f93818cb6"
-        self.version = 3.3
+    def _get_config(self, name):
+        cjson = None
+        home = os.path.expanduser('~')
+        cnames = [".poortuya", os.path.join(home, ".poortuya" )]
+        for cn in cnames:
+            try:
+                with open(cn, "r") as cf:
+                    cjson = json.load(cf)
+                    break
+            except:
+                pass
 
-        self.ip_address = ip_address
-        self.port = port
+        return cjson[name] if cjson is not None else None 
+
+    
+    def __init__(self, name: str, timeout: int = 10):
+        self.config = self._get_config(name)
         self.timeout = timeout
 
         
     def _get_status(self) -> Return_Status:
         device = tinytuya.OutletDevice(
-            dev_id = self.id,
-            address = self.ip_address,
-            local_key = self.local_key,
-            version = self.version, )
-        status = device.status()
-        dps = status ['dps'] if 'dps' in status else None
+            dev_id = self.config["id"],
+            address = self.config["ip"],
+            local_key = self.config["local_key"],
+            version = self.config["version"],
+        ) if self.config is not None else None
+        
+        status = device.status() if device is not None else None
+        
+        dps = status ['dps'] if status is not None and 'dps' in status else None
+
         return Return_Status(
             dps['18'],    #mA
             dps['19']/10, #W
@@ -55,29 +71,33 @@ class Smartplug:
         else:
             return await self._get_status()
 
+        
     def _turn_on(self):
         device = tinytuya.OutletDevice(
-            dev_id = self.id,
-            address = self.ip_address,
-            local_key = self.local_key,
-            version = self.version, )
-        status = device.status()
-        device.turn_on()
+            dev_id = self.config["id"],
+            address = self.config["ip"],
+            local_key = self.config["local_key"],
+            version = self.config["version"],
+        ) if self.config is not None else None
+
+        return device.turn_on() if device is not None else None 
 
     async def turn_on(self):
         if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
             await asyncio.to_thread(self._turn_on)
         else:
             await self._turn_on()
-        
+
+            
     def _turn_off(self):
         device = tinytuya.OutletDevice(
-            dev_id = self.id,
-            address = self.ip_address,
-            local_key = self.local_key,
-            version = self.version, )
-        status = device.status()
-        device.turn_on()
+            dev_id = self.config["id"],
+            address = self.config["ip"],
+            local_key = self.config["local_key"],
+            version = self.config["version"],
+        ) if self.config is not None else None
+
+        return device.turn_off() if device is not None else None 
 
     async def turn_off(self):
         if sys.version_info.major == 3 and sys.version_info.minor >= 9: 

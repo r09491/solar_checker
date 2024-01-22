@@ -31,19 +31,20 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
 async def tuya_smartplug_latest_get(sp_obj) -> str:
-    logger.debug(f'tuya_smartplug_latest_get started')
+    logger.info(f'tuya_smartplug_latest_get started')
     text = '0'
 
     status = await sp_obj.get_status()
     if status is not None:
+        logger.debug("Tuya smartplug has data.")
         text = f'{status.power:.0f}'
 
-    logger.debug(f'tuya_smartplug_latest_get done')        
+    logger.info(f'tuya_smartplug_latest_get done')        
     return text
 
 
 async def tasmota_smartmeter_latest_get(sm_obj) -> str:
-    logger.debug(f'tasmota_smartmeter_latest_get started')
+    logger.info(f'tasmota_smartmeter_latest_get started')
     
     text = '0,0.000'
 
@@ -60,12 +61,12 @@ async def tasmota_smartmeter_latest_get(sm_obj) -> str:
     except ClientConnectorError:
         logger.warning('Cannot connect to smartmeter Tasmota.')
 
-    logger.debug(f'tasmota_smartmeter_latest_get done')        
+    logger.info(f'tasmota_smartmeter_latest_get done')        
     return text
 
 
 async def apsystems_inverter_latest_get(iv_obj) -> str:
-    logger.debug(f'apsystems_inverter_latest_get started')
+    logger.info(f'apsystems_inverter_latest_get started')
 
     text = '0,0.000,0.000,0,0.000,0.000'
 
@@ -83,7 +84,7 @@ async def apsystems_inverter_latest_get(iv_obj) -> str:
     except TypeError:
         logger.error('Unexpected exception TypeError')
 
-    logger.debug(f'apsystems_inverter_latest_get done')
+    logger.info(f'apsystems_inverter_latest_get done')
     return text
 
 
@@ -126,8 +127,8 @@ def parse_arguments():
     parser.add_argument('--iv_port', type = int, default = 8050,
                         help = "IP port of the APsystems inverter")
 
-    parser.add_argument('--sp_ip', type = str, required = True,
-                        help = "IP address of the Tuya smartplug")
+    parser.add_argument('--sp_name', type = str, required = True,
+                        help = "Name of the plug in the config file")
 
     return parser.parse_args()
 
@@ -146,8 +147,8 @@ if __name__ == '__main__':
 
     sm = Smartmeter(args.sm_ip)
     iv = Inverter(args.iv_ip, args.iv_port)
-    sp = Smartplug(args.sp_ip)
+    sp = Smartplug(args.sp_name)
     err = asyncio.run(main(sm, iv, sp))
 
-    logger.info(f'"MAIN" done {err}')
+    logger.info(f'"MAIN" done err = {err}')
     sys.exit(err)
