@@ -7,7 +7,7 @@ to be run before usage and therefor to be installed..  See the
 tinytuya repository on github.com.
 """
 __version__ = "0.0.2"
-__author__ = "r09491@t-online.de"
+__author__ = "r09491@gmail.com"
 
 import sys
 import os

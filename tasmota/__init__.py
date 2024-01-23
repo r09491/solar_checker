@@ -1,7 +1,7 @@
 __doc__=""" A python library for the Tasmota Smartmeter API
 """
 __version__ = "0.0.2"
-__author__ = "r09491@t-online.de"
+__author__ = "r09491@gmail.com"
 
 from dataclasses import dataclass
 

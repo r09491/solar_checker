@@ -17,7 +17,7 @@ Plots the power output means for defined time slots to help in
 scheduling of battery outputs if they can.
 """
 __version__ = "0.0.3"
-__author__ = "r09491@t-online.de"
+__author__ = "r09491@gmail.com"
 
 import os
 import sys

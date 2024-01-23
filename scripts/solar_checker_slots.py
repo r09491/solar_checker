@@ -10,7 +10,7 @@ line.
 This may be used to plan time slots for my Anker Solix 1600.
 """
 __version__ = "0.0.0"
-__author__ = "r09491@t-online.de"
+__author__ = "r09491@gmail.com"
 
 import os
 import sys
