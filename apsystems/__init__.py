@@ -1,3 +1,10 @@
+__doc__=""" A python library for the APsystems API in local mode
+
+Heavily influenced by the the github APsystems EZ1 repository
+"""
+__version__ = "0.0.2"
+__author__ = "r09491@t-online.de"
+
 from dataclasses import dataclass
 from enum import IntEnum
 

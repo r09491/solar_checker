@@ -101,7 +101,8 @@ async def main(sm_obj, iv_obj, sp_obj) -> int:
     )
 
     sys.stdout.write(nowiso + ',' + ','.join(results) + '\n')
-
+    sys.stdout.flush()
+    
     return 0
 
 

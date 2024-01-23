@@ -1,3 +1,8 @@
+__doc__=""" A python library for the Tasmota Smartmeter API
+"""
+__version__ = "0.0.2"
+__author__ = "r09491@t-online.de"
+
 from dataclasses import dataclass
 
 from aiohttp import ClientSession
