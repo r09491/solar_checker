@@ -49,7 +49,7 @@ if sys.version_info >= (3, 9):
     t64 = np.datetime64
     t64s = NDArray[t64]
 
-    tslots = list[str] 
+    timeslots = list[str] 
 else:
     from typing import Any, List
 
