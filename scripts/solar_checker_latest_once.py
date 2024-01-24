@@ -52,13 +52,17 @@ async def tasmota_smartmeter_latest_get(sm: Smartmeter) -> str:
 
     try:
         if await sm.is_power_on():
-            logger.debug("Tasmota smarmeter has power.")
+            logger.debug('Tasmota smarmeter is "ON".')
+
             status = await sm.get_status_sns()
             logger.debug("Tasmota smartmeter has data.")
             if status is not None:
                 # Sometimes there is an invalid time. Do not use the
                 # one of status!
                 text = f'{status.power:.0f},{status.energy:.3f}'
+
+        else:
+            logger.warning('The Tasmota Smartmeter is "OFF".')
 
     except ClientConnectorError:
         logger.warning('Cannot connect to smartmeter Tasmota.')
@@ -74,13 +78,17 @@ async def apsystems_inverter_latest_get(iv: Inverter) -> str:
 
     try:
         if await iv.is_power_on():
-            logger.debug('The APSytems EZ1M inverter has power.')
+            logger.debug('The APSytems EZ1M is "ON".')
+
             output = await iv.get_output_data()
             if output is not None:
                 logger.debug('The APSytems EZ1M inverter has data.')
                 text = f'{output.p1:.0f},{output.e1:.3f},{output.te1:.3f}'
                 text += f',{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}'
 
+        else:
+            logger.warning('The APSytems EZ1M is "OFF". Sun? Local?')
+            
     except ClientConnectorError:
         logger.warning('Cannot connect to inverter APSystems EZ1M. Sun?')
     except TypeError:

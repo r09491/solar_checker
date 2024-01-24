@@ -5,12 +5,19 @@ Heavily influenced by the the github APsystems EZ1 repository
 __version__ = "0.0.2"
 __author__ = "r09491@gmail.com"
 
-from typing import Optional, Any
-from dataclasses import dataclass
-from enum import IntEnum
-
 from aiohttp import ClientSession
 from aiohttp.http_exceptions import HttpBadRequest
+
+from enum import IntEnum
+from dataclasses import dataclass
+
+import sys
+if sys.version_info >= (3, 9): 
+    from typing import Optional, Any
+    ReturnRequest = Optional[dict[str, Any]]
+else:
+    from typing import Optional, Any, Dict
+    ReturnRequest = Optional[Dict[str, Any]]
 
 
 class Status(IntEnum):
@@ -53,19 +60,22 @@ class Inverter:
         self.timeout = timeout
 
         
-    async def _request(self, endpoint: str) -> Optional[dict[str, Any]]:
+    async def _request(self, endpoint: str) -> ReturnRequest:
         url = f"{self.base_url}/{endpoint}"
         try:
             async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
                 if not resp.ok:
                     raise HttpBadRequest(f"HTTP Error: {resp.status}")
                 return await resp.json() # type: ignore[no-any-return]
-        except TimeoutError:
+        except:
             return None
 
         
     async def get_device_info(self) -> Optional[ReturnDeviceInfo]:
-        response = await self._request("getDeviceInfo")
+        try:
+            response = await self._request("getDeviceInfo")
+        except:
+            respone = None
         data = response.get("data") if response else None
         return (
             ReturnDeviceInfo(
@@ -76,13 +86,15 @@ class Inverter:
                 minPower=int(data["minPower"]),
                 maxPower=int(data["maxPower"]),
             )
-            if data
-            else None
+            if data else None
         )
 
     
     async def get_alarm_info(self) -> Optional[ReturnAlarmInfo]:
-        response = await self._request("getAlarm")
+        try:
+            response = await self._request("getAlarm")
+        except:
+            response = None
         data = response.get("data") if response else None
         return (
             ReturnAlarmInfo(
@@ -96,7 +108,10 @@ class Inverter:
 
     
     async def get_output_data(self) -> Optional[ReturnOutputData]:
-        response = await self._request("getOutputData")
+        try:
+            response = await self._request("getOutputData")
+        except:
+            respone = None
         data = response.get("data") if response else None
         return ReturnOutputData(**data) if data else None
 
@@ -117,8 +132,11 @@ class Inverter:
 
     
     async def get_max_power(self) -> Optional[int]:
-        response = await self._request("getMaxPower")
-        data = response["data"] if response and response.get("data") else None
+        try:
+            response = await self._request("getMaxPower")
+        except:
+            respone = None
+        data = response.get("data") if response else None
         max_power = data.get("maxPower") if data  else None
         return int(max_power) if max_power else None
 
@@ -126,16 +144,22 @@ class Inverter:
     async def set_max_power(self, power_limit: int) -> Optional[int]:
         if not 30 <= power_limit <= 800:
             raise ValueError(
-                f"Invalid setMaxPower value: expected int between '30' and '800', got '{power_limit}'"
+                f"Invalid set_max_Power value: '{power_limit}'"
             )
-        request = await self._request(f"setMaxPower?p={power_limit}")
+        try:
+            request = await self._request(f"setMaxPower?p={power_limit}")
+        except:
+            reuest = None
         data = request.get("data") if request else None
         max_power = data.get("maxPower") if data else None
         return int(max_power) if max_power else None
 
     
     async def get_device_power_status(self) -> Optional[Status]:
-        response = await self._request("getOnOff")
+        try:
+            response = await self._request("getOnOff")
+        except:
+            response = None
         data = response.get("data") if response else None
         onoff = data.get("status") if data else None
         return Status(int(onoff)) if onoff else None
@@ -146,15 +170,20 @@ class Inverter:
         status_value = status_map.get(str(power_status))
         if status_value is None:
             raise ValueError(
-                f"Invalid power status: expected '0', 'ON' or '1','SLEEP' or 'OFF', got '{str(power_status)}"
-                + "'\n Set '0' or 'ON' to start the inverter | Set '1' or 'SLEEP' or 'OFF' to stop the inverter."
+                f"Invalid power status: '{str(power_status)}'"
             )
-        request = await self._request(f"setOnOff?status={status_value}")
+        try:
+            request = await self._request(f"setOnOff?status={status_value}")
+        except:
+            request = None
         data = request.get("data") if request else None
         onoff = data.get("status") if data else None
         return Status(int(onoff)) if onoff else None
 
     
     async def is_power_on(self) -> bool:
-        power_status = await self.get_device_power_status()
+        try:
+            power_status = await self.get_device_power_status()
+        except:
+            power_status = None
         return  bool(power_status == Status(0)) if power_status is not None else False
