@@ -85,7 +85,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
 
     timeivpon = time[isivpon] if isivpon.any() else None
     timesppon = time[issppon] if issppon.any() else None
-    timeon = timesppon if timesppon.size > 0 else timeivpon 
+    timeon = timesppon if timesppon is not None else timeivpon 
     on600 = np.full_like(sppon if issppon.any() else ivpon, 600) 
     on800 = np.full_like(sppon if issppon.any() else ivpon, 800)
     
@@ -121,7 +121,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
     axes[0].plot(time, total_means, 
                  color='m', lw=2, label="TOTAL MEAN")
 
-    if timeon.size > 0:
+    if timeon is not None:
         axes[0].fill_between(timeon , on600, on800,
                     color='orange', label='LIMITS', alpha=0.6)
 
