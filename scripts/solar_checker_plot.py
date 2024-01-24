@@ -25,7 +25,7 @@ import argparse
 
 import pandas as pd
 import numpy as np
-from numpy.typing import NDArray # mypy Crash!"
+
 
 import matplotlib
 #matplotlib.use('Agg')
@@ -40,6 +40,28 @@ from datetime import datetime, timedelta
 from typing import Any
 from dataclasses import dataclass
 
+if sys.version_info >= (3, 9): 
+    from numpy.typing import NDArray # mypy Crash!"
+
+    f64 = np.float64
+    f64s = NDArray[f64]
+
+    t64 = np.datetime64
+    t64s = NDArray[t64]
+
+    tslots = list[str] 
+else:
+    from typing import Any, List
+
+    f64 = np.float64
+    f64s = Any
+
+    t64 = np.datetime64
+    t64s = Any
+
+    timeslots = List[str] 
+
+
 import logging
 logging.basicConfig(
     level=logging.INFO,
@@ -48,11 +70,6 @@ logging.basicConfig(
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-f64 = np.float64
-f64s = NDArray[f64]
-
-t64 = np.datetime64
-t64s = NDArray[t64]
 
 def iso2date(value: str) -> t64:
     dt = datetime.fromisoformat(value)
@@ -68,7 +85,7 @@ def str2float(value: str) -> f64:
 
 SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
 def power_means(times: t64s,
-                powers: f64s, slots: list[str] = SLOTS) -> f64s:
+                powers: f64s, slots: timeslots = SLOTS) -> f64s:
     spowers = np.full_like(powers, 0.0)
     for start, stop in zip(slots[:-1], slots[1:]):
         wheres, = np.where((times >= hm2date(start)) & (times <= hm2date(stop)))
