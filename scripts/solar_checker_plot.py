@@ -25,6 +25,7 @@ import argparse
 
 import pandas as pd
 import numpy as np
+from numpy.typing import NDArray # mypy Crash!"
 
 import matplotlib
 #matplotlib.use('Agg')
@@ -36,6 +37,8 @@ from datetime import datetime, timedelta
 #import warnings
 #warnings.simplefilter("ignore")
 
+from typing import Any
+from dataclasses import dataclass
 
 import logging
 logging.basicConfig(
@@ -45,20 +48,21 @@ logging.basicConfig(
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-def iso2date(value):
+def iso2date(value: str) -> np.datetime64:
     dt = datetime.fromisoformat(value)
     return np.datetime64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
-def hm2date(value):
+def hm2date(value: str) -> np.datetime64:
     dt = datetime.strptime(value,"%H:%M")
     return np.datetime64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
-def str2float(value):
-    return float(value)
+def str2float(value: str) -> np.float64:
+    return np.float64(value)
 
 
 SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
-def power_means(times, powers, slots = SLOTS):
+def power_means(times: NDArray[np.datetime64],
+                powers: NDArray[np.float64], slots: list[str] = SLOTS) -> NDArray[np.float64]:
     spowers = np.full_like(powers, 0.0)
     for start, stop in zip(slots[:-1], slots[1:]):
         wheres, = np.where((times >= hm2date(start)) & (times <= hm2date(stop)))
@@ -66,7 +70,10 @@ def power_means(times, powers, slots = SLOTS):
     return spowers
 
 
-def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
+def plot_powers(time: NDArray[np.datetime64],
+                smp: NDArray[np.float64], ivp1: NDArray[np.float64], ivp2: NDArray[np.float64],
+                sme: NDArray[np.float64], ive1: NDArray[np.float64], ive2: NDArray[np.float64],
+                spp: NDArray[np.float64], price: np.float64) -> int:
 
     smp_mean = smp.mean()
     smp_max = smp.max()
@@ -92,7 +99,7 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
     total_means = power_means( time, smp + spp if issppon.any() else ivp)
 
     
-    dformatter = mdates.DateFormatter('%H:%M')
+    dformatter = mdates.DateFormatter('%H:%M') # type: ignore[no-untyped-call]
     fig, axes = plt.subplots(nrows=2, figsize=(12,8))
 
     text = f'Solar Checker'
@@ -191,14 +198,16 @@ def plot_powers(time, smp, ivp1, ivp2, sme, ive1, ive2, spp, price):
     axes[1].grid(which='minor', ls='--', lw=1, axis='x')
     axes[1].minorticks_on()
 
-    fig.tight_layout(pad=2.0)
+    fig.tight_layout(pad=2.0) # type: ignore[no-untyped-call]
 
     ##fig.savefig(name)
     ##plt.close(fig) 
     plt.show()
 
+    return 0
+
         
-def check_powers(price, f = sys.stdin):
+def check_powers(price: np.float64, f: Any = sys.stdin) -> int:
     sep = ','
     names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP'.split(',')
     df = pd.read_csv(f, sep = sep, names = names)
@@ -275,19 +284,29 @@ def check_powers(price, f = sys.stdin):
     return 0
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Check solar power input against power consumption in a house')
+@dataclass
+class Script_Arguments:
+    price: np.float64
 
-    parser.add_argument('--version', action = 'version', version = __version__)
+def parse_arguments() -> Script_Arguments:
 
-    parser.add_argument('--price', type = float, default = 0.369,
+    parser = argparse.ArgumentParser(
+        prog=os.path.basename(sys.argv[0]),
+        description='Check solar power input',
+        epilog=__doc__)
+        
+    parser.add_argument('--version',
+                        action = 'version', version = __version__)
+
+    parser.add_argument('--price', type = np.float64, default = 0.369,
                         help = "The price of energy per kWh")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    return Script_Arguments(args.price)
 
 
-def main():
-    args = parse_args()
+def main() -> int:
+    args = parse_arguments()
 
     err = 0
     

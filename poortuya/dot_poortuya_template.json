@@ -1,12 +1,12 @@
 # Rename to .poortuya
 
 { "plug1" : { "id" : "<id>",
-  	      "local_key" : "<local_key>",
               "ip" : "<ip>",
+  	      "local_key" : "<local_key>",
 	      "version" : "3.3"},
 	      
   "plug2" : { "id": "<id>",
-  	      "local_key": "<local_key>",
               "ip" : "<ip>",
+  	      "local_key": "<local_key>",
 	      "version" : "3.3"}	      
 }

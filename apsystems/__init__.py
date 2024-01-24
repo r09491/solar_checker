@@ -5,6 +5,7 @@ Heavily influenced by the the github APsystems EZ1 repository
 __version__ = "0.0.2"
 __author__ = "r09491@gmail.com"
 
+from typing import Optional, Any
 from dataclasses import dataclass
 from enum import IntEnum
 
@@ -52,20 +53,20 @@ class Inverter:
         self.timeout = timeout
 
         
-    async def _request(self, endpoint: str) -> dict:
+    async def _request(self, endpoint: str) -> Optional[dict[str, Any]]:
         url = f"{self.base_url}/{endpoint}"
         try:
             async with ClientSession() as ses, ses.get(url, timeout=self.timeout) as resp:
                 if not resp.ok:
                     raise HttpBadRequest(f"HTTP Error: {resp.status}")
-                return await resp.json()
+                return await resp.json() # type: ignore[no-any-return]
         except TimeoutError:
             return None
 
         
-    async def get_device_info(self) -> ReturnDeviceInfo:
+    async def get_device_info(self) -> Optional[ReturnDeviceInfo]:
         response = await self._request("getDeviceInfo")
-        data = response["data"] if response and response.get("data") else None
+        data = response.get("data") if response else None
         return (
             ReturnDeviceInfo(
                 deviceId=data["deviceId"],
@@ -80,9 +81,9 @@ class Inverter:
         )
 
     
-    async def get_alarm_info(self) -> ReturnAlarmInfo:
+    async def get_alarm_info(self) -> Optional[ReturnAlarmInfo]:
         response = await self._request("getAlarm")
-        data = response["data"] if response and response.get("data") else None
+        data = response.get("data") if response else None
         return (
             ReturnAlarmInfo(
                 og=Status(int(data["og"])),
@@ -90,58 +91,57 @@ class Inverter:
                 isce2=Status(int(data["isce2"])),
                 oe=Status(int(data["oe"])),
             )
-            if data
-            else None
+            if data else None
         )
 
     
-    async def get_output_data(self) -> ReturnOutputData:
+    async def get_output_data(self) -> Optional[ReturnOutputData]:
         response = await self._request("getOutputData")
-        data = response["data"] if response and response.get("data") else None
+        data = response.get("data") if response else None
         return ReturnOutputData(**data) if data else None
 
     
-    async def get_total_output(self) -> float:
+    async def get_total_output(self) -> Optional[float]:
         data = await self.get_output_data()
         return float(data.p1 + data.p2) if data else None
 
     
-    async def get_total_energy_today(self) -> float:
+    async def get_total_energy_today(self) -> Optional[float]:
         data = await self.get_output_data()
         return float(data.e1 + data.e2) if data else None
 
     
-    async def get_total_energy_lifetime(self) -> float:
+    async def get_total_energy_lifetime(self) -> Optional[float]:
         data = await self.get_output_data()
         return float(data.te1 + data.te2) if data else None
 
     
-    async def get_max_power(self) -> int:
+    async def get_max_power(self) -> Optional[int]:
         response = await self._request("getMaxPower")
         data = response["data"] if response and response.get("data") else None
-        max_power = data["maxPower"] if data and data["maxPower"] != "" else None
+        max_power = data.get("maxPower") if data  else None
         return int(max_power) if max_power else None
 
     
-    async def set_max_power(self, power_limit: int) -> int:
+    async def set_max_power(self, power_limit: int) -> Optional[int]:
         if not 30 <= power_limit <= 800:
             raise ValueError(
                 f"Invalid setMaxPower value: expected int between '30' and '800', got '{power_limit}'"
             )
         request = await self._request(f"setMaxPower?p={power_limit}")
-        data = request["data"] if request and request.get("data") else None
-        max_power = data["maxPower"] if data and data["maxPower"] != "" else None
+        data = request.get("data") if request else None
+        max_power = data.get("maxPower") if data else None
         return int(max_power) if max_power else None
 
     
-    async def get_device_power_status(self) -> Status:
+    async def get_device_power_status(self) -> Optional[Status]:
         response = await self._request("getOnOff")
-        data = response["data"] if response and response.get("data") else None
-        onoff = data["status"] if data and data["status"] != "" else None
+        data = response.get("data") if response else None
+        onoff = data.get("status") if data else None
         return Status(int(onoff)) if onoff else None
 
     
-    async def set_device_power_status(self, power_status: Status) -> Status:
+    async def set_device_power_status(self, power_status: Status) -> Optional[Status]:
         status_map = {"0": "0", "ON": "0", "1": "1", "SLEEP": "1", "OFF": "1"}
         status_value = status_map.get(str(power_status))
         if status_value is None:
@@ -150,8 +150,8 @@ class Inverter:
                 + "'\n Set '0' or 'ON' to start the inverter | Set '1' or 'SLEEP' or 'OFF' to stop the inverter."
             )
         request = await self._request(f"setOnOff?status={status_value}")
-        data = request["data"] if request and request.get("data") else None
-        onoff = data["status"] if data and data["status"] != "" else None
+        data = request.get("data") if request else None
+        onoff = data.get("status") if data else None
         return Status(int(onoff)) if onoff else None
 
     

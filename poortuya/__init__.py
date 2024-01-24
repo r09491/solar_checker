@@ -13,9 +13,17 @@ import sys
 import os
 import json
 import asyncio
-import tinytuya
+import tinytuya # type: ignore
 
+from typing import Optional, Any
 from dataclasses import dataclass
+
+@dataclass
+class Return_Config:
+    id: str
+    ip: str
+    local_key: str
+    version: str
 
 @dataclass
 class Return_Status:
@@ -27,7 +35,7 @@ class Return_Status:
     
 class Smartplug:
 
-    def _get_config(self, name):
+    def _get_config(self, name: str) -> Optional[Return_Config]:
         cjson = None
         home = os.path.expanduser('~')
         cnames = [".poortuya", os.path.join(home, ".poortuya" )]
@@ -39,7 +47,7 @@ class Smartplug:
             except:
                 pass
 
-        return cjson[name] if cjson is not None else None 
+        return Return_Config(**cjson[name]) if cjson else None 
 
     
     def __init__(self, name: str, timeout: int = 10):
@@ -47,17 +55,16 @@ class Smartplug:
         self.timeout = timeout
 
         
-    def _get_status(self) -> Return_Status:
+    def _get_status(self) -> Optional[Return_Status]:
         device = tinytuya.OutletDevice(
-            dev_id = self.config["id"],
-            address = self.config["ip"],
-            local_key = self.config["local_key"],
-            version = self.config["version"],
+            dev_id = self.config.id,
+            address = self.config.ip,
+            local_key = self.config.local_key,
+            version = self.config.version
         ) if self.config is not None else None
         
         status = device.status() if device is not None else None
-        
-        dps = status ['dps'] if status is not None and 'dps' in status else None
+        dps = status.get('dps') if status is not None else None
 
         return Return_Status(
             dps['18'],    #mA
@@ -65,42 +72,42 @@ class Smartplug:
             dps['20']/10, #V
         ) if dps is not None and dps['1'] else None
 
-    async def get_status(self) -> Return_Status:
-        if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
-            return await asyncio.to_thread(self._get_status)
+    async def get_status(self) -> Optional[Return_Status]:
+        if sys.version_info >= (3, 9): 
+            return await asyncio.to_thread(self._get_status) # type: ignore[unused-ignore]
         else:
             return self._get_status()
 
         
-    def _turn_on(self):
+    def _turn_on(self) -> Any:
         device = tinytuya.OutletDevice(
-            dev_id = self.config["id"],
-            address = self.config["ip"],
-            local_key = self.config["local_key"],
-            version = self.config["version"],
+            dev_id = self.config.id,
+            address = self.config.ip,
+            local_key = self.config.local_key,
+            version = self.config.version,
         ) if self.config is not None else None
 
         return device.turn_on() if device is not None else None 
 
-    async def turn_on(self):
-        if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
-            await asyncio.to_thread(self._turn_on)
+    async def turn_on(self) -> None:
+        if sys.version_info >= (3, 9): 
+            await asyncio.to_thread(self._turn_on) # # type: ignore[unused-ignore]
         else:
             self._turn_on()
 
             
-    def _turn_off(self):
+    def _turn_off(self) -> Any:
         device = tinytuya.OutletDevice(
-            dev_id = self.config["id"],
-            address = self.config["ip"],
-            local_key = self.config["local_key"],
-            version = self.config["version"],
+            dev_id = self.config.id,
+            address = self.config.ip,
+            local_key = self.config.local_key,
+            version = self.config.version,
         ) if self.config is not None else None
 
         return device.turn_off() if device is not None else None 
 
-    async def turn_off(self):
-        if sys.version_info.major == 3 and sys.version_info.minor >= 9: 
-            await asyncio.to_thread(self._turn_off)
+    async def turn_off(self) -> None:
+        if sys.version_info >= (3, 9): 
+            await asyncio.to_thread(self._turn_off) # type: ignore[unused-ignore]
         else:
             self._turn_off()
