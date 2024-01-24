@@ -48,21 +48,27 @@ logging.basicConfig(
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-def iso2date(value: str) -> np.datetime64:
+f64 = np.float64
+f64s = NDArray[f64]
+
+t64 = np.datetime64
+t64s = NDArray[t64]
+
+def iso2date(value: str) -> t64:
     dt = datetime.fromisoformat(value)
-    return np.datetime64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
+    return t64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
-def hm2date(value: str) -> np.datetime64:
+def hm2date(value: str) -> t64:
     dt = datetime.strptime(value,"%H:%M")
-    return np.datetime64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
+    return t64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
-def str2float(value: str) -> np.float64:
-    return np.float64(value)
+def str2float(value: str) -> f64:
+    return f64(value)
 
 
 SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
-def power_means(times: NDArray[np.datetime64],
-                powers: NDArray[np.float64], slots: list[str] = SLOTS) -> NDArray[np.float64]:
+def power_means(times: t64s,
+                powers: f64s, slots: list[str] = SLOTS) -> f64s:
     spowers = np.full_like(powers, 0.0)
     for start, stop in zip(slots[:-1], slots[1:]):
         wheres, = np.where((times >= hm2date(start)) & (times <= hm2date(stop)))
@@ -70,10 +76,10 @@ def power_means(times: NDArray[np.datetime64],
     return spowers
 
 
-def plot_powers(time: NDArray[np.datetime64],
-                smp: NDArray[np.float64], ivp1: NDArray[np.float64], ivp2: NDArray[np.float64],
-                sme: NDArray[np.float64], ive1: NDArray[np.float64], ive2: NDArray[np.float64],
-                spp: NDArray[np.float64], price: np.float64) -> int:
+def plot_powers(time: t64s,
+                smp: f64s, ivp1: f64s, ivp2: f64s,
+                sme: f64s, ive1: f64s, ive2: f64s,
+                spp: f64s, price: f64) -> int:
 
     smp_mean = smp.mean()
     smp_max = smp.max()
@@ -207,7 +213,7 @@ def plot_powers(time: NDArray[np.datetime64],
     return 0
 
         
-def check_powers(price: np.float64, f: Any = sys.stdin) -> int:
+def check_powers(price: f64, f: Any = sys.stdin) -> int:
     sep = ','
     names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP'.split(',')
     df = pd.read_csv(f, sep = sep, names = names)
@@ -286,7 +292,7 @@ def check_powers(price: np.float64, f: Any = sys.stdin) -> int:
 
 @dataclass
 class Script_Arguments:
-    price: np.float64
+    price: f64
 
 def parse_arguments() -> Script_Arguments:
 
@@ -298,7 +304,7 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--version',
                         action = 'version', version = __version__)
 
-    parser.add_argument('--price', type = np.float64, default = 0.369,
+    parser.add_argument('--price', type = f64, default = 0.369,
                         help = "The price of energy per kWh")
 
     args = parser.parse_args()
