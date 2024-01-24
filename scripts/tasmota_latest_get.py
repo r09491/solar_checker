@@ -18,18 +18,20 @@ from tasmota import Smartmeter
 
 from aiohttp.client_exceptions import ClientConnectorError
 
+from dataclasses import dataclass
+
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def main(smartmeter) -> int:
+async def main(sm: Smartmeter) -> int:
     """ The text has to be preset in the case of an error """
     text =  datetime.now().isoformat('T',"seconds") + ',0,0.000'
 
     try:
-        if await smartmeter.is_power_on():
-            status = await smartmeter.get_status_sns()
+        if await sm.is_power_on():
+            status = await sm.get_status_sns()
             if status is not None:
                 """ Override the preset """
                 text = f"{status.time},{status.power:.0f},{status.energy:.3f}"
@@ -44,8 +46,13 @@ async def main(smartmeter) -> int:
 
     return err
 
+
+@dataclass
+class Script_Arguments:
+    ip: str
+    port: int
     
-def parse_arguments():
+def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
@@ -56,9 +63,15 @@ def parse_arguments():
     parser.add_argument('--version', action = 'version', version = __version__)
 
     parser.add_argument('--ip', type = str,
-                        help = "IP address of the Tasmota sensor")
+                        help = "IP address of the Tasmota smartmeter")
 
-    return parser.parse_args()
+    parser.add_argument('--port', type = int, default = 80,
+                        help = "IP port of the Tasmota smartmeter")
+    
+    args = parser.parse_args()
+
+    return Script_Arguments(args.ip, args.port)
+
 
 
 if __name__ == '__main__':
@@ -68,7 +81,7 @@ if __name__ == '__main__':
         logger.error('IP address is missing.')
         sys.exit(1)
 
-    sm = Smartmeter(args.ip)
+    sm = Smartmeter(args.ip, args.port)
 
     try:
         err = asyncio.run(main(sm))
