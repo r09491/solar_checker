@@ -16,18 +16,20 @@ from apsystems import Inverter
 
 from aiohttp.client_exceptions import ClientConnectorError
 
+from dataclasses import dataclass
+
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def main(inverter) -> int:
+async def main(iv: Inverter) -> int:
     text = '0,0.000,0.000,0,0.000,0.000'
 
     try:
-        if await inverter.is_power_on():
+        if await iv.is_power_on():
             logger.debug("The APsystems inverter is powered.")
-            output = await inverter.get_output_data()
+            output = await iv.get_output_data()
             if output is not None:
                 logger.debug("The APsystems inverter provides output.")
                 text = f"{output.p1:.0f},{output.e1:.3f},{output.te1:.3f},"
@@ -43,11 +45,17 @@ async def main(inverter) -> int:
 
     # To keep synchronous output is always required            
     sys.stdout.write(text + '\n')
-
+    sys.stdout.flush()
+    
     return err
 
 
-def parse_arguments():
+@dataclass
+class Script_Arguments:
+    ip: str
+    port: int
+
+def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
@@ -62,8 +70,10 @@ def parse_arguments():
 
     parser.add_argument('--port', type = int, default = 8050,
                         help = "IP port of the APsystems inverter")
-    
-    return parser.parse_args()
+
+    args = parser.parse_args()
+
+    return Script_Arguments(args.ip, args.port)
 
 
 if __name__ == '__main__':

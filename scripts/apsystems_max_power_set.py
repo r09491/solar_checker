@@ -12,19 +12,21 @@ import sys
 import argparse
 import asyncio
 
-from apsystems import Inverter
+from apsystems import Inverter, Status
 
 from aiohttp.client_exceptions import ClientConnectorError
+
+from dataclasses import dataclass
 
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def main(inverter, new_max_power) -> int:
+async def main(iv: Inverter, new_max_power: int) -> int:
     err = 0
     
-    max_power = await inverter.get_max_power()
+    max_power = await iv.get_max_power()
     if max_power is None:
         logger.error(f"Could not get max power limit")
         return 10
@@ -35,14 +37,14 @@ async def main(inverter, new_max_power) -> int:
         return 0
     
     # Set maximum power limit (ensure the value is within valid range)
-    set_max_power_response = await inverter.set_max_power(new_max_power)
+    set_max_power_response = await iv.set_max_power(new_max_power)
     if set_max_power_response is None:
         logger.error(f"Could not set max power limit")
         return 11
         
     logger.info(f"Commanded Power: {set_max_power_response}W")
 
-    max_power = await inverter.get_max_power()
+    max_power = await iv.get_max_power()
     if max_power is None:
         logger.error(f"Could not get max power limit")
         return 12
@@ -50,7 +52,7 @@ async def main(inverter, new_max_power) -> int:
     logger.info(f"New Max Power Limit: {max_power}W")
                 
     # Set power status (ensure "ON" or other value is valid)
-    set_power_status_response = await inverter.set_device_power_status("ON")
+    set_power_status_response = await iv.set_device_power_status(Status(0))
     if set_power_status_response is None:
         logger.error(f"Could not get power status")
         return 13
@@ -58,7 +60,7 @@ async def main(inverter, new_max_power) -> int:
     logger.info(f"Commanded Power Status: {'ON' if set_power_status_response == 0 else 'OFF'}")
 
     # Get current power status
-    power_status = await inverter.get_device_power_status()
+    power_status = await iv.get_device_power_status()
     if power_status is None:
         logger.error(f"Could not get device power status")
         return 14
@@ -68,7 +70,13 @@ async def main(inverter, new_max_power) -> int:
     return err
 
 
-def parse_arguments():
+@dataclass
+class Script_Arguments:
+    ip: str
+    port: int
+    max_power: int
+
+def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
@@ -86,8 +94,10 @@ def parse_arguments():
     
     parser.add_argument('--max_power', type = int,
                         help = "The new maximum power of the inverter")
-    
-    return parser.parse_args()
+
+    args = parser.parse_args()
+
+    return Script_Arguments(args.ip, args.port, args.max_power)
 
 
 if __name__ == '__main__':
