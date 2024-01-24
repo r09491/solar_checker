@@ -22,6 +22,8 @@ from apsystems import Inverter
 from tasmota import Smartmeter
 from poortuya import Smartplug
 
+from dataclasses import dataclass
+
 import logging
 logging.basicConfig(
     level=logging.INFO,
@@ -30,11 +32,11 @@ logging.basicConfig(
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def tuya_smartplug_latest_get(sp_obj) -> str:
+async def tuya_smartplug_latest_get(sp: Smartplug) -> str:
     logger.info(f'tuya_smartplug_latest_get started')
     text = '0'
 
-    status = await sp_obj.get_status()
+    status = await sp.get_status()
     if status is not None:
         logger.debug("Tuya smartplug has data.")
         text = f'{status.power:.0f}'
@@ -43,15 +45,15 @@ async def tuya_smartplug_latest_get(sp_obj) -> str:
     return text
 
 
-async def tasmota_smartmeter_latest_get(sm_obj) -> str:
+async def tasmota_smartmeter_latest_get(sm: Smartmeter) -> str:
     logger.info(f'tasmota_smartmeter_latest_get started')
     
     text = '0,0.000'
 
     try:
-        if await sm_obj.is_power_on():
+        if await sm.is_power_on():
             logger.debug("Tasmota smarmeter has power.")
-            status = await sm_obj.get_status_sns()
+            status = await sm.get_status_sns()
             logger.debug("Tasmota smartmeter has data.")
             if status is not None:
                 # Sometimes there is an invalid time. Do not use the
@@ -65,15 +67,15 @@ async def tasmota_smartmeter_latest_get(sm_obj) -> str:
     return text
 
 
-async def apsystems_inverter_latest_get(iv_obj) -> str:
+async def apsystems_inverter_latest_get(iv: Inverter) -> str:
     logger.info(f'apsystems_inverter_latest_get started')
 
     text = '0,0.000,0.000,0,0.000,0.000'
 
     try:
-        if await iv_obj.is_power_on():
+        if await iv.is_power_on():
             logger.debug('The APSytems EZ1M inverter has power.')
-            output = await iv_obj.get_output_data()
+            output = await iv.get_output_data()
             if output is not None:
                 logger.debug('The APSytems EZ1M inverter has data.')
                 text = f'{output.p1:.0f},{output.e1:.3f},{output.te1:.3f}'
@@ -88,16 +90,16 @@ async def apsystems_inverter_latest_get(iv_obj) -> str:
     return text
 
 
-async def main(sm_obj, iv_obj, sp_obj) -> int:
+async def main(sm: Smartmeter, iv: Inverter, sp: Smartplug) -> int:
 
     # Tasmota sometimes returns with an invalid time. Ensure there is
     # a valid time!
     nowiso = datetime.now().isoformat('T',"seconds")
 
     results = await asyncio.gather(
-        tasmota_smartmeter_latest_get(sm_obj),
-        apsystems_inverter_latest_get(iv_obj),
-        tuya_smartplug_latest_get(sp_obj),
+        tasmota_smartmeter_latest_get(sm),
+        apsystems_inverter_latest_get(iv),
+        tuya_smartplug_latest_get(sp),
     )
 
     sys.stdout.write(nowiso + ',' + ','.join(results) + '\n')
@@ -106,7 +108,15 @@ async def main(sm_obj, iv_obj, sp_obj) -> int:
     return 0
 
 
-def parse_arguments():
+@dataclass
+class Script_Arguments:
+    sm_ip: str
+    sm_port: int
+    iv_ip: str
+    iv_port: int
+    sp_name: str
+    
+def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
@@ -131,7 +141,10 @@ def parse_arguments():
     parser.add_argument('--sp_name', type = str, required = True,
                         help = "Name of the plug in the config file")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    
+    return Script_Arguments(args.sm_ip, args.sm_port,
+                            args.iv_ip, args.iv_port, args.sp_name)
 
 
 if __name__ == '__main__':
