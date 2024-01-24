@@ -37,7 +37,7 @@ on the internet.
 Install the 'tinytuya' package and run the magic 'python3 -m tinytuya
 scan'. Follow the interesting instructions in that repository!
 
-These will produce some json file to be used to setup the config file
+These will produce some json files to be used to setup the config file
 '.poortuya'. There is a tepmplate in the directory 'poortuya'.
 
 Ensure you have a proper '.poortuya' is in your home directory!
@@ -56,7 +56,7 @@ different philosophy and use virtual environments.
 
 It should be installable on any Linux with python >= 3.7.1.
 
-I installed the repository also underer 'termux' on my Android
+I installed the repository also under 'termux' on my Android
 smartphone.
 
 <ul>
