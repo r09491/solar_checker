@@ -13,6 +13,8 @@ setup(name='solar_checker',
       long_description=long_description,
       scripts=[
           './scripts/apsystems_max_power_set.py',
+          './scripts/plug_latest_get.py',
+          './scripts/plug_switch_set.py',
           './scripts/solar_checker_latest_once.py',
           './scripts/solar_checker_latest_once.sh',
           './scripts/solar_checker_plot.py',

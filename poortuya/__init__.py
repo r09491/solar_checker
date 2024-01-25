@@ -27,6 +27,7 @@ class Return_Config:
 
 @dataclass
 class Return_Status:
+    closed: bool
     current: float
     power: float
     voltage: float
@@ -46,13 +47,13 @@ class Smartplug:
                     break
             except:
                 pass
-
         return Return_Config(**cjson[name]) if cjson else None 
 
     
-    def __init__(self, name: str, timeout: int = 10):
+    def __init__(self, name: str, timeout: int = 10, persist: bool = False):
         self.config = self._get_config(name)
         self.timeout = timeout
+        self.persist = persist
 
         
     def _get_status(self) -> Optional[Return_Status]:
@@ -60,54 +61,69 @@ class Smartplug:
             dev_id = self.config.id,
             address = self.config.ip,
             local_key = self.config.local_key,
-            version = self.config.version
-        ) if self.config is not None else None
-        
-        status = device.status() if device is not None else None
-        dps = status.get('dps') if status is not None else None
-
+            version = self.config.version,
+            connection_timeout = self.timeout,
+            persist = self.persist,
+        ) if self.config else None        
+        status = device.status() if device else None
+        dps = status.get('dps') if status else None
         return Return_Status(
+            dps['1'],     #closed True
             dps['18'],    #mA
             dps['19']/10, #W
             dps['20']/10, #V
-        ) if dps is not None and dps['1'] else None
+        ) if dps is not None else None
 
     async def get_status(self) -> Optional[Return_Status]:
         if sys.version_info >= (3, 9): 
             return await asyncio.to_thread(self._get_status) # type: ignore[unused-ignore]
         else:
             return self._get_status()
-
         
-    def _turn_on(self) -> Any:
+    async def is_switch_closed(self) -> Optional[bool]:
+        status = await self.get_status()
+        return status.closed if status else None
+        
+        
+    def _turn_on(self) -> Optional[bool]:
         device = tinytuya.OutletDevice(
             dev_id = self.config.id,
             address = self.config.ip,
             local_key = self.config.local_key,
             version = self.config.version,
-        ) if self.config is not None else None
+            connection_timeout = self.timeout,
+            persist = self.persist,
+        ) if self.config else None
+        result = device.turn_on() if device else None
+        dps = result.get('dps') if result else None
+        onoff = bool(dps['1']) if dps else None
+        return onoff
 
-        return device.turn_on() if device is not None else None 
 
-    async def turn_on(self) -> None:
+    async def turn_on(self) -> Optional[bool]:
         if sys.version_info >= (3, 9): 
-            await asyncio.to_thread(self._turn_on) # # type: ignore[unused-ignore]
+            return await asyncio.to_thread(self._turn_on) # # type: ignore[unused-ignore]
         else:
-            self._turn_on()
+            return self._turn_on()
 
-            
-    def _turn_off(self) -> Any:
+    
+    def _turn_off(self) -> Optional[bool]:
         device = tinytuya.OutletDevice(
             dev_id = self.config.id,
             address = self.config.ip,
             local_key = self.config.local_key,
             version = self.config.version,
-        ) if self.config is not None else None
+            connection_timeout = self.timeout,
+            persist = self.persist,
+        ) if self.config else None
+        result = device.turn_off() if device else None
+        dps = result.get('dps') if result else None
+        onoff = bool(dps['1']) if dps else None
+        return onoff
 
-        return device.turn_off() if device is not None else None 
-
-    async def turn_off(self) -> None:
+    async def turn_off(self) -> Optional[bool]:
         if sys.version_info >= (3, 9): 
-            await asyncio.to_thread(self._turn_off) # type: ignore[unused-ignore]
+            return await asyncio.to_thread(self._turn_off) # type: ignore[unused-ignore]
         else:
-            self._turn_off()
+            return self._turn_off()
+
