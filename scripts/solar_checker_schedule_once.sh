@@ -2,5 +2,4 @@
 
 SOLAR_CHECKER_ERROR=$SOLAR_CHECKER_STORE_DIR/solar_checker_error_$(date +\%y\%m\%d).log
 SOLAR_CHECKER_LATEST=$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_$(date +\%y\%m\%d).log
-#tail -n 15 $SOLAR_CHECKER_LATEST|solar_checker_schedule_once.py --plug_name plug1 2>> $SOLAR_CHECKER_ERROR
-tail -n 15 $SOLAR_CHECKER_LATEST|solar_checker_schedule_once.py --plug_name plug1
+tail -n 15 $SOLAR_CHECKER_LATEST|solar_checker_schedule_once.py --plug_name plug1 2>> $SOLAR_CHECKER_ERROR
