@@ -33,28 +33,46 @@ class Switch_Status(Enum):
     def __str__(self) -> str:
         return self.value
 
-async def tuya_smartplug_switch_set(sp: Smartplug, ss: Switch_Status) -> int:
+async def tuya_smartplug_switch_set(sp: Smartplug, ss: Switch_Status) -> Switch_Status:
     logger.info(f'tuya_smartplug_switch_set started')
-    closed = await sp.turn_on() if ss.value == "Closed" else await sp.turn_off()
-    logger.info(f'tuya_smartplug_switch_set {"Closed" if closed else "Open"} done')        
-    return 0
+    is_closed: bool = await (sp.turn_on() if ss.value == "Closed" else sp.turn_off())
+    logger.info(f'tuya_smartplug_switch_set done')        
+    ss : Switch_Status = 'Closed' if is_closed else 'Open'
+    logger.info(f'The switch status is "{ss}".')
+    return ss
 
-async def main(sp: Smartplug, ss: Switch_Status) -> int:
+async def tuya_smartplug_switch_get(sp: Smartplug) -> Switch_Status:
+    logger.info(f'tuya_smartplug_switch_get started')
+    is_closed: bool = await sp.is_switch_closed()
+    logger.info(f'tuya_smartplug_switch_get done')
+    ss : Switch_Status = 'Closed' if is_closed else 'Open'
+    logger.info(f'The switch status is "{ss}".')
+    return ss
 
-    try:
-        await tuya_smartplug_switch_set(sp,ss) 
-        err = 0
-    except ClientConnectorError:
-        logger.error('Cannot connect to smartplug.')
-        err = 10
+async def main(sp: Smartplug, ss: Switch_Status) -> Switch_Status:
+    if ss is None:
+        # Query the switch state
+        try:
+            switch_status = await tuya_smartplug_switch_get(sp) 
+        except ClientConnectorError:
+            logger.error('Cannot connect to smartplug.')
+            return None
 
-    return err
+    else:
+        # Set the switch state
+        try:
+            switch_status = await tuya_smartplug_switch_set(sp,ss) 
+        except ClientConnectorError:
+            logger.error('Cannot connect to smartplug.')
+            return None
+
+    return switch_status
 
 
 @dataclass
 class Script_Arguments:
     plug_name: str
-    switch_state: Switch_Status
+    switch_status: Switch_Status
 
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
@@ -69,13 +87,13 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--plug_name', type = str, required = True,
                         help = "Name of the Tuya smartplug")
 
-    parser.add_argument('--switch_state', type = Switch_Status,
-                        choices=list(Switch_Status), required = True,
+    parser.add_argument('--switch_status', type = Switch_Status,
+                        choices=list(Switch_Status), default = None,
                         help = "New state of the Tuya smartplug switch")
 
     args = parser.parse_args()
 
-    return Script_Arguments(args.plug_name, args.switch_state)
+    return Script_Arguments(args.plug_name, args.switch_status)
 
 
 if __name__ == '__main__':
@@ -85,10 +103,6 @@ if __name__ == '__main__':
         logger.error('Name of smartplug is  missing.')
         sys.exit(1)
 
-    if args.switch_state is None:
-        logger.error('State of smartplug switch is  missing.')
-        sys.exit(2)
-
     try:
         sp = Smartplug(args.plug_name)
     except KeyError:
@@ -96,8 +110,9 @@ if __name__ == '__main__':
         sys.exit(2)
 
     try:
-        err = asyncio.run(main(sp, args.switch_state))
+        switch_status = asyncio.run(main(sp, args.switch_status))
+        sys.stdout.write(switch_status + '\n')
     except KeyboardInterrupt: 
-        err = 0
+        pass
        
-    sys.exit(err)
+    sys.exit(0)

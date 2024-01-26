@@ -1,10 +1,10 @@
 __doc__=""" This is a poor Tuya libray to get the latest data from a
-tuya smartplug, to turn it on, to turn it off. It is tried to make the
-calls asychronous.
+tuya smartplug, to turn it on, or to turn it off. It is tried to make
+the calls asynchronously.
 
 It is heavily depenendent on the package tinytuya. Tinytuya wizard has
-to be run before usage and therefor to be installed..  See the
-tinytuya repository on github.com.
+to be run before usage and therefor to be installed.  See the tinytuya
+repository on github.com.
 """
 __version__ = "0.0.2"
 __author__ = "r09491@gmail.com"
@@ -32,8 +32,7 @@ class Return_Status:
     power: float
     voltage: float
 
-    
-    
+        
 class Smartplug:
 
     def _get_config(self, name: str) -> Optional[Return_Config]:
@@ -83,8 +82,8 @@ class Smartplug:
     async def is_switch_closed(self) -> Optional[bool]:
         status = await self.get_status()
         return status.closed if status else None
-        
-        
+
+    
     def _turn_on(self) -> Optional[bool]:
         device = tinytuya.OutletDevice(
             dev_id = self.config.id,
@@ -126,4 +125,3 @@ class Smartplug:
             return await asyncio.to_thread(self._turn_off) # type: ignore[unused-ignore]
         else:
             return self._turn_off()
-
