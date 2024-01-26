@@ -16,6 +16,7 @@ from poortuya import Smartplug
 
 from aiohttp.client_exceptions import ClientConnectorError
 
+from typing import Optional
 from dataclasses import dataclass
 
 import logging
@@ -33,23 +34,23 @@ class Switch_Status(Enum):
     def __str__(self) -> str:
         return self.value
 
-async def tuya_smartplug_switch_set(sp: Smartplug, ss: Switch_Status) -> Switch_Status:
+async def tuya_smartplug_switch_set(sp: Smartplug, ss_command: Switch_Status) -> Switch_Status:
     logger.info(f'tuya_smartplug_switch_set started')
-    is_closed: bool = await (sp.turn_on() if ss.value == "Closed" else sp.turn_off())
+    is_closed = await (sp.turn_on() if ss_command.value == "Closed" else sp.turn_off())
     logger.info(f'tuya_smartplug_switch_set done')        
-    ss : Switch_Status = 'Closed' if is_closed else 'Open'
-    logger.info(f'The switch status is "{ss}".')
-    return ss
+    ss_result = Switch_Status('Closed' if is_closed else 'Open')
+    logger.info(f'The switch status is "{ss_result}".')
+    return ss_result
 
 async def tuya_smartplug_switch_get(sp: Smartplug) -> Switch_Status:
     logger.info(f'tuya_smartplug_switch_get started')
-    is_closed: bool = await sp.is_switch_closed()
+    is_closed = await sp.is_switch_closed()
     logger.info(f'tuya_smartplug_switch_get done')
-    ss : Switch_Status = 'Closed' if is_closed else 'Open'
+    ss = Switch_Status('Closed' if is_closed else 'Open')
     logger.info(f'The switch status is "{ss}".')
     return ss
 
-async def main(sp: Smartplug, ss: Switch_Status) -> Switch_Status:
+async def main(sp: Smartplug, ss: Switch_Status) -> Optional[Switch_Status]:
     if ss is None:
         # Query the switch state
         try:
@@ -111,7 +112,7 @@ if __name__ == '__main__':
 
     try:
         switch_status = asyncio.run(main(sp, args.switch_status))
-        sys.stdout.write(switch_status + '\n')
+        sys.stdout.write(str(switch_status) + '\n')
     except KeyboardInterrupt: 
         pass
        

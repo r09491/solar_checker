@@ -172,5 +172,5 @@ if __name__ == '__main__':
     sp = Smartplug(args.sp_name)
     err = asyncio.run(main(sm, iv, sp))
 
-    logger.info(f'"MAIN" done err = {err}')
+    logger.info(f'"MAIN" done (err = {err})')
     sys.exit(err)
