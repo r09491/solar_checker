@@ -2,17 +2,17 @@
 
 __doc__="""Tries to make most of the available solar energies in my house.
 
-The balkony solar system consists of two 440 VAp solar panels, an
+The solar system on my consists of two 440 VAp solar panels, an
 Anker Solix 1600 powerbank, an APsystems EZ1M inverter, an Tuya
 Antella smartplug. The smartplug were not needed if the 'Local Mode'
 of the inverter were available and had not disappeared after not
-confirmed firmware change during the powerbank integration.
+agreed firmware change during the powerbank integration.
 
 The power imported from the net is measured by a Tasmota compatible
 Hitchi optical sensor attached to my distributor's measurement
 equipment. Only imported energy can be measured not the exported. As a
 result when the power is displayed as '0' there is more electricity
-produced than consumed. Ia call this lost.
+produced than consumed. I call this lost.
 
 The powerbank sometimes does not behave as one could expect from the
 configuration in the Anker app, especially in terms of power
@@ -141,9 +141,9 @@ async def main(sp: Smartplug,
 
     # What has to be done now?
     ss_desired = Switch_Status('Open' if is_to_open else
-                               'Closed' if is_to_closed else None)
+                               'Closed' if is_to_closed else ss_actual)
     
-    if ss_desired is not None and ss_actual != ss_desired:
+    if ss_actual != ss_desired:
         logger.info(f'The smartplug switch is desired to "{ss_desired}"')
         try:
             ss_result = await tuya_smartplug_switch_set(sp, ss_desired) 
