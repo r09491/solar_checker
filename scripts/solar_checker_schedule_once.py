@@ -2,23 +2,23 @@
 
 __doc__="""Tries to make most of the available solar energies in my house.
 
-The solar system on my consists of two 440 VAp solar panels, an
-Anker Solix 1600 powerbank, an APsystems EZ1M inverter, an Tuya
-Antella smartplug. The smartplug were not needed if the 'Local Mode'
-of the inverter were available and had not disappeared after not
-agreed firmware change during the powerbank integration.
+A solar system consists of two 440 VAp solar panels, an Anker Solix
+1600 powerbank, an APsystems EZ1M inverter, and a Tuya smartplug. The
+smartplug were not needed if the 'Local Mode' of the inverter were
+available and had not disappeared after firmware change during the
+powerbank integration.
 
 The power imported from the net is measured by a Tasmota compatible
-Hitchi optical sensor attached to my distributor's measurement
-equipment. Only imported energy can be measured not the exported. As a
-result when the power is displayed as '0' there is more electricity
-produced than consumed. I call this lost.
+Hitchi optical sensor attached to a distributor's measurement
+equipment. This can only measure imported energy. As a result when the
+power is displayed as '0' there is more electricity produced than
+consumed. This is called a lost.
 
 The powerbank sometimes does not behave as one could expect from the
 configuration in the Anker app, especially in terms of power
-delivery. Anyway the powerbank cannot provide less than 100W to the
-house if it provides something at all. Especially during the night the
-house requires less, sometimes even less than 50W. The difference is
+delivery. Anyway it cannot provide less than 100W to the house if it
+provides something at all. Especially during the night the house
+requires less, sometimes even less than 50W. The difference is
 lost. In this case propably also more power for the operating of the
 solar equipment is needed than required for house. At the end it will
 propably pay off to prevent the powerbank to deliver the 100W as long
@@ -26,21 +26,19 @@ as it is not empty. It may be cheaper to use energy from the net in
 these periods and keep the battery stored power for times when the
 equipment in the house can actually consume it.
 
-If the solar system cannot deliver power to the house it is stored
-in the powerbank.
-
 This script is designed to be run by cron every 15 minutes. It
 calculates the average of the consumed power in the house during the
-last 15 minutes from the recorded data read from stdin. If the average
-is below the 80W and the standard deviation below 40W then the solar
-system is prevented from importing the power into the house by opening
-the switch of the smartplug. Otherwise the switch remains closed or is
-closed again.
+last 15 minutes from the recorded data read from stdin. If the mean is
+below 'power_mean_open' and the standard deviation is within the range
+of the 'power_deviation ' then the solar system is prevented from
+importing the power into the house by opening the switch of the
+plug. If the mean is above 'power_mean_closed' and the standard
+deviation in the range of the 'power_deviation ' then the solar system
+is connected to house can provide power.
 
-In my house the selected mean and standard deviation guarantee that
-the switch remains open during the night and the battery is not
-dicharged. Otherwise more power were put into the net than my house
-requires.
+For example this can be used to keep the switch open during the night
+and the battery is not dicharged. Otherwise more power were put into
+the net than my house requires.
 """
 
 __version__ = "0.0.0"
@@ -202,11 +200,12 @@ def parse_arguments() -> Script_Arguments:
 
 
 if __name__ == '__main__':
-    logger.info(f'"MAIN" started')
     args = parse_arguments()
 
+    logger.info(f'Scheduling for switch "{args.plug_name}" started')
+    
     if args.power_mean_open > args.power_mean_closed:
-        logger.error(f'Contradicting powers "{args.power_mean_open}" > "{args.power_mean_closed}"')
+        logger.error(f'Contradicting power means "{args.power_mean_open}" > "{args.power_mean_closed}"')
         sys.exit(1)
     
     err = asyncio.run(main(Smartplug(args.plug_name),
@@ -216,5 +215,5 @@ if __name__ == '__main__':
                            args.power_samples,
                            sys.stdin))
 
-    logger.info(f'"MAIN" done (err = {err})')
+    logger.info(f'Scheduling for switch "{args.plug_name}" done (err = {err})')
     sys.exit(err)
