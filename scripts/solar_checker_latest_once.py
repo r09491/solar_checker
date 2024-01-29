@@ -156,7 +156,7 @@ def parse_arguments() -> Script_Arguments:
 
 
 if __name__ == '__main__':
-    logger.info(f'"MAIN" started')
+    logger.info(f'Recording latest started')
     args = parse_arguments()
 
     if args.sm_ip is None:
@@ -172,5 +172,5 @@ if __name__ == '__main__':
     sp = Smartplug(args.sp_name)
     err = asyncio.run(main(sm, iv, sp))
 
-    logger.info(f'"MAIN" done (err = {err})')
+    logger.info(f'Recording latest done (err={err})')
     sys.exit(err)

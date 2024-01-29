@@ -30,10 +30,10 @@ This script is designed to be run by cron every 15 minutes. It
 calculates the average of the consumed power in the house during the
 last 15 minutes from the recorded data read from stdin. If the mean is
 below 'power_mean_open' and the standard deviation is within the range
-of the 'power_deviation ' then the solar system is prevented from
+of the 'power_mean_deviation ' then the solar system is prevented from
 importing the power into the house by opening the switch of the
 plug. If the mean is above 'power_mean_closed' and the standard
-deviation in the range of the 'power_deviation ' then the solar system
+deviation in the range of the 'power_mean_deviation ' then the solar system
 is connected to house can provide power.
 
 For example this can be used to keep the switch open during the night
@@ -103,7 +103,7 @@ async def tuya_smartplug_switch_get(sp: Smartplug) -> Switch_Status:
 async def main(sp: Smartplug,
                power_mean_open: f64,
                power_mean_closed: f64,
-               power_deviation: f64,
+               power_mean_deviation: f64,
                power_samples: int, f: Any) -> int:
 
     sep = ','
@@ -123,19 +123,19 @@ async def main(sp: Smartplug,
     smp = np.array(df.SMP.apply(str2f64))
     """ The last records from the smartplug at inverter"""
     spp = np.array(df.SPP.apply(str2f64))
+
     """ The total power """
-    tp = smp + spp
-    
-    tp_mean, tp_std = tp.mean(), tp.std()
-    logger.info(f'Last records mean "{tp_mean:.0f}W", std "{tp_std:.0f}W"')
+    pt = spp + smp
+    pt_mean, pt_std = pt.mean(), pt.std()
+    logger.info(f'Last records mean "{pt_mean:.0f}W", std "{pt_std:.0f}W"')
 
     ss_actual = await tuya_smartplug_switch_get(sp)
     logger.info(f'The smartplug switch currently is "{ss_actual}"')
 
     # Switch to be Open if below average and standard deviation
-    is_to_open = tp_mean < power_mean_open and tp_std < power_deviation
-    # Switch to be Closed if below average and standard deviation
-    is_to_closed = tp_mean > power_mean_closed and tp_std < power_deviation
+    is_to_open =  pt_mean < power_mean_open and pt_std < power_mean_deviation
+    # Switch to be Closed if above average and standard deviation
+    is_to_closed =  pt_mean > power_mean_closed and pt_std < power_mean_deviation
 
     # What has to be done now?
     ss_desired = Switch_Status('Open' if is_to_open else
@@ -162,7 +162,7 @@ class Script_Arguments:
     plug_name: str
     power_mean_open: f64
     power_mean_closed: f64
-    power_deviation: f64
+    power_mean_deviation: f64
     power_samples: int
     
 def parse_arguments() -> Script_Arguments:
@@ -179,12 +179,12 @@ def parse_arguments() -> Script_Arguments:
                         help = "Name of the Tuya smartplug")
 
     parser.add_argument('--power_mean_open', type = f64, default = 100.0,
-                        help = "House power to disconnect the solar system from house")
+                        help = "Total power to disconnect the solar system from house")
 
     parser.add_argument('--power_mean_closed', type = f64, default = 100.0,
-                        help = "House power to connect the solar system from house")
+                        help = "Total power to connect the solar system from house")
 
-    parser.add_argument('--power_deviation', type = f64, default = 25.0,
+    parser.add_argument('--power_mean_deviation', type = f64, default = 25.0,
                         help = "Minimum power output deviation of powerbank")
 
     parser.add_argument('--power_samples', type = int, default = 15,
@@ -195,14 +195,14 @@ def parse_arguments() -> Script_Arguments:
     return Script_Arguments(args.plug_name,
                             args.power_mean_open,
                             args.power_mean_closed,
-                            args.power_deviation,
+                            args.power_mean_deviation,
                             args.power_samples)
 
 
 if __name__ == '__main__':
     args = parse_arguments()
 
-    logger.info(f'Scheduling for switch "{args.plug_name}" started')
+    logger.info(f'Switching of "{args.plug_name}" started')
     
     if args.power_mean_open > args.power_mean_closed:
         logger.error(f'Contradicting power means "{args.power_mean_open}" > "{args.power_mean_closed}"')
@@ -211,9 +211,9 @@ if __name__ == '__main__':
     err = asyncio.run(main(Smartplug(args.plug_name),
                            args.power_mean_open,
                            args.power_mean_closed,
-                           args.power_deviation,
+                           args.power_mean_deviation,
                            args.power_samples,
                            sys.stdin))
 
-    logger.info(f'Scheduling for switch "{args.plug_name}" done (err = {err})')
+    logger.info(f'Switching of "{args.plug_name}" done (err={err})')
     sys.exit(err)
