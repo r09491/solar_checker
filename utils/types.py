@@ -22,5 +22,5 @@ else:
     t64 = np.datetime64
     t64s = Any
 
-    stringss = List[str] 
+    strings = List[str] 
     timeslots = List[str] 
