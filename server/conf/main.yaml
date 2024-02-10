@@ -1,0 +1,8 @@
+host : 127.0.0.1
+port : 8080
+
+logdir : /home/r09491/storage/solar_checker
+logprefix : solar_checker_latest
+logdayformat : '%y%m%d'
+
+price : 0.369

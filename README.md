@@ -6,7 +6,8 @@ The Solar Checker Python library provides APIs for the APsystems EZ1
 Microinverters, Tasmota smartmeter and a poor Tuya library for
 smartplugs. Based on these three APIs there are scripts to record
 their latest power data which in turn can be used for plots to
-visualise them. It facilitates the process to monitor a solar power
+visualise them. Especially there is a HTTP server for displaying the
+recorded data. It facilitates the process to monitor a solar power
 station and to assess if it will pay off at a point of time.
 
 ---
@@ -161,4 +162,15 @@ next days when the sun rises higher. I donate too much energy. I need
 a storage.
 
 ![alt text](images/solar_checker_better.png)
+---
+
+## Disclaimer
+
+During the installation of the Anker Solix 1600 solarbank the firmware
+of the APsystems EZ1M was overidden in such a way that its 'Local Mode'
+is not available anymore. Testing of the inverter is not possible
+anymore and development is skipped until Anker, APsystems, and/or my
+dealer's support find a solution rather delegating responsibilty to
+the others.
+
 ---
