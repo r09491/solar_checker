@@ -5,8 +5,9 @@ import glob
 from datetime import datetime
 
 from pandas import read_csv
-
 import numpy as np
+
+import asyncio
 
 from .types import f64, f64s, t64, t64s, strings
     
