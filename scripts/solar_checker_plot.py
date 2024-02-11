@@ -26,7 +26,7 @@ import argparse
 import io
 import base64
 
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 #import warnings
@@ -36,7 +36,7 @@ from dataclasses import dataclass
 
 from utils.types import f64, f64s, t64, t64s, strings, timeslots
 from utils.samples import get_columns_from_csv
-from utils.plots import get_w_image, get_wh_image
+from utils.plots import get_w_image, get_wh_image, XSIZE, YSIZE
 
 
 import logging
@@ -68,16 +68,19 @@ def check_powers(price: f64) -> int:
     w = io.BytesIO(w)
     w = mpimg.imread(w, format='png')
 
-    fig, axes = plt.subplots(nrows = 2, figsize = (16,14))
+    fig, axes = plt.subplots(nrows = 2, sharex = True, figsize = (2*XSIZE,4*YSIZE))
 
     text = f'Solar Checker'
     fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
     fig.tight_layout(pad=2.0)
-    
-    axes[0].imshow(w, interpolation='nearest')
-    axes[0].axis('off')
-    axes[1].imshow(wh, interpolation='nearest')
-    axes[1].axis('off')
+
+    axes[0].clear()
+    axes[0].imshow(w)
+    axes[0].set_axis_off()
+
+    axes[1].clear()
+    axes[1].imshow(wh)
+    axes[1].set_axis_off()
 
     plt.show()
 

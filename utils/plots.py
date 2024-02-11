@@ -6,7 +6,7 @@ from io import BytesIO
 
 from datetime import datetime
 
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 import numpy as np
@@ -53,8 +53,7 @@ def get_w_image(time: t64s, smp: f64s, ivp1: f64s, ivp2: f64s, spp: f64s):
     
     total_means = power_means( time, smp + spp if issppon.any() else ivp)
 
-    fig = Figure(figsize=(XSIZE, YSIZE))
-    ax = fig.subplots()
+    fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
     
@@ -104,9 +103,9 @@ def get_w_image(time: t64s, smp: f64s, ivp1: f64s, ivp2: f64s, spp: f64s):
             
     ax.set_title(title, fontsize='x-large')        
 
-    ax.legend(loc="upper left")
+    ax.legend(loc='upper left')
     ax.set_ylabel('Power [W]')
-    ax.set_yscale("log")
+    ax.set_yscale('log')
     ax.xaxis_date()
     hm_formatter = mdates.DateFormatter('%H:%M')
     ax.xaxis.set_major_formatter(hm_formatter)
@@ -116,18 +115,17 @@ def get_w_image(time: t64s, smp: f64s, ivp1: f64s, ivp2: f64s, spp: f64s):
     
     # Save it to a temporary buffer.
     buf = BytesIO()
-    fig.savefig(buf, format="png")
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    return data
-
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+    
+    return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 
 def get_wh_image(time: t64s, sme: f64s, ive1: f64s, ive2: f64s, spp: f64s, price: f64):
     issppon = spp>0
     sppon = spp[issppon] if issppon.any() else None
 
-    fig = Figure(figsize=(XSIZE, YSIZE))
-    ax = fig.subplots()
+    fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
 
@@ -171,6 +169,7 @@ def get_wh_image(time: t64s, sme: f64s, ive1: f64s, ive2: f64s, spp: f64s, price
 
     # Save it to a temporary buffer.
     buf = BytesIO()
-    fig.savefig(buf, format="png")
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    return data
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+
+    return base64.b64encode(buf.getbuffer()).decode('ascii')
