@@ -5,8 +5,9 @@ import glob
 from datetime import datetime
 
 from pandas import read_csv
-
 import numpy as np
+
+import asyncio
 
 from .types import f64, f64s, t64, t64s, strings
     
@@ -28,7 +29,7 @@ def _get_logdays(logprefix: str, logdir: str) -> strings:
 
 async def get_logdays(logprefix: str, logdir: str) -> strings:
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_logdays) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(_get_logdays, **vars()) # type: ignore[unused-ignore]
     else:
         return _get_logdays(**vars())
     
@@ -50,11 +51,11 @@ def _get_columns_from_csv(
         logdir: str = None) -> dict:
 
     if logday is None and logprefix is None and logdir is None:
-        logger.debug(f'Reading power data from "stdin"')
+        logger.info(f'Reading CSV data from "stdin"')
         logfile = sys.stdin 
     else:
         logfile = os.path.join(logdir, f'{logprefix}_{logday}.log')
-        logger.debug(f'Reading power data from file "{logfile}"')
+        logger.info(f'Reading CSV data from file "{logfile}"')
         if not os.path.isfile(logfile):
             return None
         
@@ -121,7 +122,7 @@ def _get_columns_from_csv(
     ive2[ive2<0.0] = 0.0
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
-    logger.debug(f'Reading power data done')
+    logger.info(f'Reading CSV data done')
     
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
@@ -133,6 +134,6 @@ async def get_columns_from_csv(
         logprefix: str = None,
         logdir: str = None) -> dict:
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_columns_from_csv) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(_get_columns_from_csv, **vars()) # type: ignore[unused-ignore]
     else:
         return _get_columns_from_csv(**vars())

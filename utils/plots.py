@@ -8,6 +8,8 @@ from io import BytesIO
 
 from datetime import datetime
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.image as mpimg
@@ -70,8 +72,9 @@ def _get_w_image(time: t64s, smp: f64s,
     total_means = _power_means(
         time, smp + spp if issppon.any() else ivp, slots)
 
-    logger.debug('Encoding the power image "w" started')
-    
+    logger.info('Encoding the power image "w" started')
+
+    plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
@@ -136,15 +139,15 @@ def _get_w_image(time: t64s, smp: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.debug('Encoding the power image "w" done')
+    logger.info('Encoding the power image "w" done')
     
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_w_image(time: t64s, smp: f64s,
                       ivp1: f64s, ivp2: f64s,
                       spp: f64s, slots: timeslots = SLOTS):
-    if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_w_image) # type: ignore[unused-ignore]
+    if sys.version_info >= (3, 9):
+        return await asyncio.to_thread(_get_w_image,**vars()) # type: ignore[unused-ignore]
     else:
         return _get_w_image(**vars())
 
@@ -156,8 +159,9 @@ def _get_wh_image(time: t64s, sme: f64s,
     issppon = spp>0
     sppon = spp[issppon] if issppon.any() else None
 
-    logger.debug('Encoding the energy image "wh "started ')
-    
+    logger.info('Encoding the energy image "wh "started ')
+
+    plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
@@ -205,7 +209,7 @@ def _get_wh_image(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.debug('Encoding the energy image "wh" done')
+    logger.info('Encoding the energy image "wh" done')
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
@@ -213,6 +217,6 @@ async def get_wh_image(time: t64s, sme: f64s,
                        ive1: f64s, ive2: f64s,
                        spp: f64s, price: f64):
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_wh_image) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(_get_wh_image, **vars()) # type: ignore[unused-ignore]
     else:
         return _get_wh_image(**vars())

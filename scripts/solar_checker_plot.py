@@ -52,8 +52,8 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 async def get_w (
         time: t64s, smp: f64s,
         ivp1: f64s, ivp2: f64s, spp: f64s) -> Any:
-    w = await get_w_image(time, smp, ivp1, ivp2, spp)
     logger.info('Decoding power image')
+    w = await get_w_image(time, smp, ivp1, ivp2, spp)
     w = base64.b64decode(w)
     w = io.BytesIO(w)
     w = mpimg.imread(w, format='png')
@@ -65,8 +65,8 @@ async def get_wh (
         time: t64s, sme: f64s,
         ive1: f64s, ive2: f64s,
         spp: f64s, price: f64) -> Any:
-    wh = await get_wh_image(time, sme, ive1, ive2, spp, price)
     logger.info('Decoding energy image')
+    wh = await get_wh_image(time, sme, ive1, ive2, spp, price)
     wh = base64.b64decode(wh)
     wh = io.BytesIO(wh)
     wh = mpimg.imread(wh, format='png')
@@ -74,30 +74,35 @@ async def get_wh (
     return wh
 
 async def get_images(c: dict, price: f64) -> Any:
+    logger.info(f'get_images started')
 
     time, spp = c['TIME'], c['SPP']
     sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
 
-    results = await asyncio.gather(
+    w, wh = await asyncio.gather(
         get_w(time, smp, ivp1, ivp2, spp),
         get_wh(time, sme, ive1, ive2, spp, price),
     )
 
-    return results
+    logger.info(f'get_images done')
+    return w, wh
 
 
 async def check_powers(price: f64) -> int:
+
     # Read from stdin
     c = await get_columns_from_csv()
     if c is None:
         logger.error(f'No power input data available')
         return 1
 
+    plt.switch_backend('Agg')    
     w, wh = await get_images(c, price)
+    plt.switch_backend('TkAgg')
 
     logger.info('Plotting started')
-
+    
     fig, axes = plt.subplots(
         nrows = 2, sharex = True, figsize = (2*XSIZE,4*YSIZE))
 
