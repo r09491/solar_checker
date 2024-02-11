@@ -13,23 +13,28 @@ import numpy as np
 
 from .types import f64, f64s, t64, t64s, timeslots
 
+
+XSIZE, YSIZE = 9, 3
+
+SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
+
+
 def hm2date(value: str) -> t64:
     dt = datetime.strptime(value,"%H:%M")
     return t64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
-SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
 def power_means(times: t64s,
-                powers: f64s, slots: timeslots = SLOTS) -> f64s:
+                powers: f64s, slots: timeslots) -> f64s:
     spowers = np.full_like(powers, 0.0)
     for start, stop in zip(slots[:-1], slots[1:]):
         wheres, = np.where((times >= hm2date(start)) & (times <= hm2date(stop)))
         spowers[wheres] = powers[wheres].mean() if wheres.size > 0 else None
     return spowers
 
+def get_w_image(time: t64s, smp: f64s,
+                ivp1: f64s, ivp2: f64s,
+                spp: f64s, slots: timeslots = SLOTS):
 
-XSIZE, YSIZE = 9, 3
-
-def get_w_image(time: t64s, smp: f64s, ivp1: f64s, ivp2: f64s, spp: f64s):
     smp_mean = smp.mean()
     smp_max = smp.max()
     
@@ -51,7 +56,7 @@ def get_w_image(time: t64s, smp: f64s, ivp1: f64s, ivp2: f64s, spp: f64s):
     on600 = np.full_like(sppon if issppon.any() else ivpon, 600) 
     on800 = np.full_like(sppon if issppon.any() else ivpon, 800)
     
-    total_means = power_means( time, smp + spp if issppon.any() else ivp)
+    total_means = power_means( time, smp + spp if issppon.any() else ivp, slots)
 
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
@@ -121,7 +126,10 @@ def get_w_image(time: t64s, smp: f64s, ivp1: f64s, ivp2: f64s, spp: f64s):
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 
-def get_wh_image(time: t64s, sme: f64s, ive1: f64s, ive2: f64s, spp: f64s, price: f64):
+def get_wh_image(time: t64s, sme: f64s,
+                 ive1: f64s, ive2: f64s,
+                 spp: f64s, price: f64):
+    
     issppon = spp>0
     sppon = spp[issppon] if issppon.any() else None
 

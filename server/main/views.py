@@ -14,7 +14,8 @@ async def plot_power(request: web.Request) -> dict:
     logdir = conf['logdir']
     logprefix = conf['logprefix']
     logdayformat = conf['logdayformat']
-    price = conf['price']
+    price = conf['energy_price']
+    slots = conf['power_slots']
     
     try:
         logday = request.match_info['logday']
@@ -33,6 +34,6 @@ async def plot_power(request: web.Request) -> dict:
     wh = get_wh_image(time, sme, ive1, ive2, spp, price)
 
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
-    w = get_w_image(time, smp, ivp1, ivp2, spp)
+    w = get_w_image(time, smp, ivp1, ivp2, spp, slots)
     
     return {'logday': logday, 'w': w, 'wh': wh}
