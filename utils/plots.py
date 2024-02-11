@@ -1,6 +1,8 @@
 import os
 import sys
 
+import asyncio
+
 import base64
 from io import BytesIO
 
@@ -8,30 +10,39 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.image as mpimg
 
 import numpy as np
 
+from typing import Any
 from .types import f64, f64s, t64, t64s, timeslots
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 XSIZE, YSIZE = 9, 3
 
 SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
 
 
-def hm2date(value: str) -> t64:
+def _hm2date(value: str) -> t64:
     dt = datetime.strptime(value,"%H:%M")
     return t64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
-def power_means(times: t64s,
-                powers: f64s, slots: timeslots) -> f64s:
+def _power_means(times: t64s,
+                 powers: f64s,
+                 slots: timeslots) -> f64s:
     spowers = np.full_like(powers, 0.0)
     for start, stop in zip(slots[:-1], slots[1:]):
-        wheres, = np.where((times >= hm2date(start)) & (times <= hm2date(stop)))
+        wheres, = np.where((times >= _hm2date(start)) & (times <= _hm2date(stop)))
         spowers[wheres] = powers[wheres].mean() if wheres.size > 0 else None
     return spowers
 
-def get_w_image(time: t64s, smp: f64s,
+def _get_w_image(time: t64s, smp: f64s,
                 ivp1: f64s, ivp2: f64s,
                 spp: f64s, slots: timeslots = SLOTS):
 
@@ -56,39 +67,41 @@ def get_w_image(time: t64s, smp: f64s,
     on600 = np.full_like(sppon if issppon.any() else ivpon, 600) 
     on800 = np.full_like(sppon if issppon.any() else ivpon, 800)
     
-    total_means = power_means( time, smp + spp if issppon.any() else ivp, slots)
+    total_means = _power_means(
+        time, smp + spp if issppon.any() else ivp, slots)
 
+    logger.debug('Encoding the power image "w" started')
+    
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
     
-
     if sppon is not None:
         ax.fill_between(time, 0, spp,
-                             color='yellow',label='PLUG', alpha=0.6)
+                        color='yellow',label='PLUG', alpha=0.6)
         ax.fill_between(time, spp, spp  + smp,
-                             color='b', label='HOUSE', alpha=0.2)
+                        color='b', label='HOUSE', alpha=0.2)
 
         if ivpon is not None:
             ax.plot(time, ivp1,
-                         color='c', lw=2, label='INVERTER 1', alpha=0.6)
+                    color='c', lw=2, label='INVERTER 1', alpha=0.6)
             ax.plot(time, ivp1 + ivp2,
-                     color='g', lw=2, label='INVERTER 2', alpha=0.6)
+                    color='g', lw=2, label='INVERTER 2', alpha=0.6)
 
     else:
         ax.fill_between(time, 0, ivp1,
-                             color='c',label='INVERTER 1', alpha=0.6)
+                        color='c',label='INVERTER 1', alpha=0.6)
         ax.fill_between(time, ivp1, ivp1 + ivp2,
-                         color='g', label='INVERTER 2', alpha=0.5)
+                        color='g', label='INVERTER 2', alpha=0.5)
         ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
-                             color='b', label='HOUSE', alpha=0.2)
+                        color='b', label='HOUSE', alpha=0.2)
     
     ax.plot(time, total_means, 
-                 color='m', lw=2, label="TOTAL MEAN")
+            color='m', lw=2, label="TOTAL MEAN")
 
     if timeon is not None:
         ax.fill_between(timeon , on600, on800,
-                    color='orange', label='LIMITS', alpha=0.6)
+                        color='orange', label='LIMITS', alpha=0.6)
 
     title = f'Power Check #'
     if smp.size > 0 and smp[-1] >= 0:
@@ -122,17 +135,29 @@ def get_w_image(time: t64s, smp: f64s,
     buf = BytesIO()
     fig.savefig(buf, format='png')
     plt.close(fig)
+
+    logger.debug('Encoding the power image "w" done')
     
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
+async def get_w_image(time: t64s, smp: f64s,
+                      ivp1: f64s, ivp2: f64s,
+                      spp: f64s, slots: timeslots = SLOTS):
+    if sys.version_info >= (3, 9): 
+        return await asyncio.to_thread(_get_w_image) # type: ignore[unused-ignore]
+    else:
+        return _get_w_image(**vars())
 
-def get_wh_image(time: t64s, sme: f64s,
+
+def _get_wh_image(time: t64s, sme: f64s,
                  ive1: f64s, ive2: f64s,
                  spp: f64s, price: f64):
     
     issppon = spp>0
     sppon = spp[issppon] if issppon.any() else None
 
+    logger.debug('Encoding the energy image "wh "started ')
+    
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
@@ -180,4 +205,14 @@ def get_wh_image(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
+    logger.debug('Encoding the energy image "wh" done')
+
     return base64.b64encode(buf.getbuffer()).decode('ascii')
+
+async def get_wh_image(time: t64s, sme: f64s,
+                       ive1: f64s, ive2: f64s,
+                       spp: f64s, price: f64):
+    if sys.version_info >= (3, 9): 
+        return await asyncio.to_thread(_get_wh_image) # type: ignore[unused-ignore]
+    else:
+        return _get_wh_image(**vars())

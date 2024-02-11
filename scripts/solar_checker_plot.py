@@ -22,6 +22,7 @@ __author__ = "r09491@gmail.com"
 import os
 import sys
 import argparse
+import asyncio
 
 import io
 import base64
@@ -34,6 +35,7 @@ import matplotlib.image as mpimg
 
 from dataclasses import dataclass
 
+from typing import Any
 from utils.types import f64, f64s, t64, t64s, strings, timeslots
 from utils.samples import get_columns_from_csv
 from utils.plots import get_w_image, get_wh_image, XSIZE, YSIZE
@@ -47,28 +49,57 @@ logging.basicConfig(
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-def check_powers(price: f64) -> int:
-
-    # Read from stdin
-    c = get_columns_from_csv()
-    if c is None:
-        return 1
-    
-    time, spp = c['TIME'], c['SPP']
-    
-    sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
-    wh = get_wh_image(time, sme, ive1, ive2, spp, price)
-    wh = base64.b64decode(wh)
-    wh = io.BytesIO(wh)
-    wh = mpimg.imread(wh, format='png')
-
-    smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
-    w = get_w_image(time, smp, ivp1, ivp2, spp)
+async def get_w (
+        time: t64s, smp: f64s,
+        ivp1: f64s, ivp2: f64s, spp: f64s) -> Any:
+    w = await get_w_image(time, smp, ivp1, ivp2, spp)
+    logger.info('Decoding power image')
     w = base64.b64decode(w)
     w = io.BytesIO(w)
     w = mpimg.imread(w, format='png')
+    logger.info('Decoded power image')
+    return w
 
-    fig, axes = plt.subplots(nrows = 2, sharex = True, figsize = (2*XSIZE,4*YSIZE))
+
+async def get_wh (
+        time: t64s, sme: f64s,
+        ive1: f64s, ive2: f64s,
+        spp: f64s, price: f64) -> Any:
+    wh = await get_wh_image(time, sme, ive1, ive2, spp, price)
+    logger.info('Decoding energy image')
+    wh = base64.b64decode(wh)
+    wh = io.BytesIO(wh)
+    wh = mpimg.imread(wh, format='png')
+    logger.info('Decoded energy image')
+    return wh
+
+async def get_images(c: dict, price: f64) -> Any:
+
+    time, spp = c['TIME'], c['SPP']
+    sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
+    smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
+
+    results = await asyncio.gather(
+        get_w(time, smp, ivp1, ivp2, spp),
+        get_wh(time, sme, ive1, ive2, spp, price),
+    )
+
+    return results
+
+
+async def check_powers(price: f64) -> int:
+    # Read from stdin
+    c = await get_columns_from_csv()
+    if c is None:
+        logger.error(f'No power input data available')
+        return 1
+
+    w, wh = await get_images(c, price)
+
+    logger.info('Plotting started')
+
+    fig, axes = plt.subplots(
+        nrows = 2, sharex = True, figsize = (2*XSIZE,4*YSIZE))
 
     text = f'Solar Checker'
     fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
@@ -81,6 +112,8 @@ def check_powers(price: f64) -> int:
     axes[1].clear()
     axes[1].imshow(wh)
     axes[1].set_axis_off()
+
+    logger.info('Plotting done')
 
     plt.show()
 
@@ -114,7 +147,7 @@ def main() -> int:
     err = 0
     
     try:
-        err = check_powers(args.price)
+        err = asyncio.run(check_powers(args.price))
     except KeyboardInterrupt:
         pass
     except TypeError:

@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
     
     
-def get_logdays(logprefix: str, logdir: str) -> strings:
+def _get_logdays(logprefix: str, logdir: str) -> strings:
     pattern = os.path.join(logdir, f'{logprefix}_*.log')
     logpaths = glob.glob(pattern)
     logfiles = [os.path.basename(lp) for lp in logpaths]
@@ -26,6 +26,12 @@ def get_logdays(logprefix: str, logdir: str) -> strings:
     logdays = [ln.replace(f'{logprefix}_', '') for ln in lognames]
     return logdays
 
+async def get_logdays(logprefix: str, logdir: str) -> strings:
+    if sys.version_info >= (3, 9): 
+        return await asyncio.to_thread(_get_logdays) # type: ignore[unused-ignore]
+    else:
+        return _get_logdays(**vars())
+    
 
 def _iso2date(value: str) -> t64:
     dt = datetime.fromisoformat(value)
@@ -38,16 +44,17 @@ def _hm2date(value: str) -> t64:
 def _str2float(value: str) -> f64:
     return f64(value)
 
-def get_columns_from_csv(logday: str = None,
-                         logprefix: str = None,
-                         logdir: str = None) -> dict:
+def _get_columns_from_csv(
+        logday: str = None,
+        logprefix: str = None,
+        logdir: str = None) -> dict:
 
     if logday is None and logprefix is None and logdir is None:
-        """ Read from stdin """
+        logger.debug(f'Reading power data from "stdin"')
         logfile = sys.stdin 
     else:
-        """ Read from file """
         logfile = os.path.join(logdir, f'{logprefix}_{logday}.log')
+        logger.debug(f'Reading power data from file "{logfile}"')
         if not os.path.isfile(logfile):
             return None
         
@@ -114,7 +121,18 @@ def get_columns_from_csv(logday: str = None,
     ive2[ive2<0.0] = 0.0
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
+    logger.debug(f'Reading power data done')
+    
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
             'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2,
             'SPP' : spp}
+
+async def get_columns_from_csv(
+        logday: str = None,
+        logprefix: str = None,
+        logdir: str = None) -> dict:
+    if sys.version_info >= (3, 9): 
+        return await asyncio.to_thread(_get_columns_from_csv) # type: ignore[unused-ignore]
+    else:
+        return _get_columns_from_csv(**vars())

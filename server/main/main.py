@@ -11,10 +11,11 @@ import aiohttp_jinja2, jinja2
 
 from routes import setup_routes
 from settings import conf, BASE_DIR
-from utils.samples import get_logdays
+from utils.samples import _get_logdays
 
 def get_logdays_jinja2():
-    return get_logdays(conf['logprefix'], conf['logdir'])
+    """ !!!  Coroutines can not be used in templates !!! """
+    return _get_logdays(conf['logprefix'], conf['logdir'])
 
 def get_jinja2_loader() -> str:
     return jinja2.FileSystemLoader(str(BASE_DIR / 'main' / 'templates'))
