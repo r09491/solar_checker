@@ -1,0 +1,12 @@
+<h1> </h1>
+<h1>Log Years</h1>
+
+<div id='menu'>
+  {% for ly in get_logyears_jinja2() | sort | reverse %}
+     {% if ly == logyear %}
+        <a href='/plot_year/{{ly}}' style='background:#c0c0c0;'>{{ly}}</a>
+     {% else %}
+        <a href='/plot_year/{{ly}}'>{{ly}}</a>
+     {% endif %}
+  {% endfor %}
+</div>

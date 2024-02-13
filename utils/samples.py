@@ -25,6 +25,7 @@ def _get_logdays(logprefix: str, logdir: str) -> strings:
     logfiles = [os.path.basename(lp) for lp in logpaths]
     lognames = [os.path.splitext(lf)[0] for lf in logfiles]
     logdays = [ln.replace(f'{logprefix}_', '') for ln in lognames]
+    logdays.sort()
     return logdays
 
 async def get_logdays(logprefix: str, logdir: str) -> strings:
@@ -35,7 +36,10 @@ async def get_logdays(logprefix: str, logdir: str) -> strings:
     
 
 def _iso2date(value: str) -> t64:
-    dt = datetime.fromisoformat(value)
+    try:
+        dt = datetime.fromisoformat(value)
+    except:
+        return None
     return t64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
 def _hm2date(value: str) -> t64:
@@ -43,7 +47,10 @@ def _hm2date(value: str) -> t64:
     return t64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
 
 def _str2float(value: str) -> f64:
-    return f64(value)
+    try:
+        return f64(value)
+    except:
+        return None
 
 def _get_columns_from_csv(
         logday: str = None,
@@ -123,7 +130,6 @@ def _get_columns_from_csv(
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
     logger.info(f'Reading CSV data done')
-    
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
             'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2,
@@ -137,3 +143,24 @@ async def get_columns_from_csv(
         return await asyncio.to_thread(_get_columns_from_csv, **vars()) # type: ignore[unused-ignore]
     else:
         return _get_columns_from_csv(**vars())
+
+
+async def get_kwh_sum_from_csv(
+        logday: str = None,
+        logprefix: str = None,
+        logdir: str = None) -> dict:
+    c = await get_columns_from_csv(logday,logprefix, logdir)
+    return {'SME' : c['SMP'].sum()/60.0/1000.0 if c and 'SMP' in c else None,
+            'IVE1' : c['IVP1'].sum()/60.0/1000.0 if c and 'IVE1' in c else None,
+            'IVE2' : c['IVP2'].sum()/60.0/1000.0 if c and 'IVE2' in c else None,
+            'SPE' : c['SPP'].sum()/60.0/1000.0 if c and 'SPP' in c else None}
+
+async def get_kwh_cumsum_from_csv(
+        logday: str = None,
+        logprefix: str = None,
+        logdir: str = None) -> dict:
+    c = await get_columns_from_csv(logday,logprefix, logdir)
+    return {'SME' : c['SMP'].cumsum()/60.0/1000.0,
+            'IVE1' : c['IVP1'].cumsum()/60.0/1000.0,
+            'IVE2' : c['IVP2'].cumsum()/60.0/1000.0,
+            'SPE' : c['SPP'].cumsum()/60.0/1000.0}

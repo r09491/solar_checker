@@ -1,12 +1,12 @@
 <h1> </h1>
-<h1>Logdays</h1>
+<h1>Log Days</h1>
 
 <div id='menu'>
   {% for ld in get_logdays_jinja2() | sort | reverse %}
      {% if ld == logday %}
-        <a href='/plot_power/{{ld}}' style='background:#c0c0c0;'>{{ld}}</a>
+        <a href='/plot_day/{{ld}}' style='background:#c0c0c0;'>{{ld}}</a>
      {% else %}
-        <a href='/plot_power/{{ld}}'>{{ld}}</a>
+        <a href='/plot_day/{{ld}}'>{{ld}}</a>
      {% endif %}
   {% endfor %}
 </div>

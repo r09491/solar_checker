@@ -17,10 +17,10 @@ else:
     from typing import Any, List
 
     f64 = np.float64
-    f64s = Any
+    f64s = np.array
 
     t64 = np.datetime64
-    t64s = Any
+    t64s = np.array
 
     strings = List[str] 
     timeslots = List[str] 

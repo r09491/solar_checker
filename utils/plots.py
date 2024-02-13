@@ -152,22 +152,21 @@ async def get_w_image(time: t64s, smp: f64s,
         return _get_w_image(**vars())
 
 
-def _get_wh_image(time: t64s, sme: f64s,
-                 ive1: f64s, ive2: f64s,
-                 spp: f64s, price: f64):
+def _get_kwh_image(time: t64s, sme: f64s,
+                   ive1: f64s, ive2: f64s,
+                   spe: f64s, price: f64, time_format: str = '%H:%Mh'):
     
-    issppon = spp>0
-    sppon = spp[issppon] if issppon.any() else None
+    isspeon = spe>0
+    speon = spe[isspeon] if isspeon.any() else None
 
-    logger.info('Encoding the energy image "wh "started ')
+    logger.info('Encoding the energy image "kwh" started ')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
 
-    if sppon is not None:
-        spe = spp.cumsum()/1000/60 # kWh
+    if speon is not None:
     
         ax.fill_between(time, 0, spe,
                              color='yellow', label='PLUG',alpha=0.6)
@@ -185,21 +184,30 @@ def _get_wh_image(time: t64s, sme: f64s,
 
     title = f'Energy Check #'
     if sme.size > 0 and sme[-1] >= 0:
-        title += f' House {sme[-1]:.1f}kWh ~ {(sme[-1]*price):.2f}€'
-
-    if sppon is not None:
+        if time_format == '%H:%Mh': # Accumulated
+            title += f' House {sme[-1]:.1f}kWh ~ {(sme[-1]*price):.2f}€'
+        else:
+            title += f' House {sme.sum():.1f}kWh ~ {(sme.sum()*price):.2f}€'
+            
+    if speon is not None:
         if spe.size > 0 and spe[-1] >= 0:
-            title += f' | Plug {spe[-1]:.3f}kWh ~ {spe[-1]*price:.2f}€'
+            if time_format == '%H:%Mh': # Accumulated
+                title += f' | Plug {spe[-1]:.3f}kWh ~ {spe[-1]*price:.2f}€'
+            else:
+                title += f' | Plug {spe.sum():.3f}kWh ~ {spe.sum()*price:.2f}€'
     else:
         if ive.size > 0 and ive[-1] >= 0:
-            title += f' | Inverter {ive[-1]:.3f}kWh ~ {ive[-1]*price:.2f}€'
+            if time_format == '%H:%Mh': # Accumulated
+                title += f' | Inverter {ive[-1]:.3f}kWh ~ {ive[-1]*price:.2f}€'
+            else:
+                title += f' | Inverter {ive.sum():.3f}kWh ~ {ive.sum()*price:.2f}€'
     ax.set_title(title, fontsize='x-large')
 
     ax.legend(loc="upper left")
     ax.set_ylabel('Energy [Wh]')
     ax.xaxis_date()
-    hm_formatter = mdates.DateFormatter('%H:%Mh')
-    ax.xaxis.set_major_formatter(hm_formatter)
+    ax_formatter = mdates.DateFormatter(time_format)
+    ax.xaxis.set_major_formatter(ax_formatter)
     ax.grid(which='major', ls='-', lw=2, axis='both')
     ax.grid(which='minor', ls='--', lw=1, axis='x')
     ax.minorticks_on()
@@ -209,14 +217,14 @@ def _get_wh_image(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Encoding the energy image "wh" done')
+    logger.info('Encoding the energy image "kwh" done')
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
-async def get_wh_image(time: t64s, sme: f64s,
-                       ive1: f64s, ive2: f64s,
-                       spp: f64s, price: f64):
+async def get_kwh_image(time: t64s, sme: f64s,
+                        ive1: f64s, ive2: f64s,
+                        spe: f64s, price: f64, time_format: str = '%H:%Mh'):
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_wh_image, **vars()) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(_get_kwh_image, **vars()) # type: ignore[unused-ignore]
     else:
-        return _get_wh_image(**vars())
+        return _get_kwh_image(**vars())

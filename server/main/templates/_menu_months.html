@@ -1,0 +1,12 @@
+<h1> </h1>
+<h1>Log Months</h1>
+
+<div id='menu'>
+  {% for lm in get_logmonths_jinja2() | sort | reverse %}
+     {% if lm == logmonth %}
+        <a href='/plot_month/{{lm}}' style='background:#c0c0c0;'>{{lm}}</a>
+     {% else %}
+        <a href='/plot_month/{{lm}}'>{{lm}}</a>
+     {% endif %}
+  {% endfor %}
+</div>
