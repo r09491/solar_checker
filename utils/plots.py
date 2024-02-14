@@ -128,7 +128,7 @@ def _get_w_image(time: t64s, smp: f64s,
     ax.set_ylabel('Power [W]')
     ax.set_yscale('log')
     ax.xaxis_date()
-    hm_formatter = mdates.DateFormatter('%H:%M')
+    hm_formatter = mdates.DateFormatter('%H:%Mh')
     ax.xaxis.set_major_formatter(hm_formatter)
     ax.grid(which='major', ls='-', lw=2, axis='both')
     ax.grid(which='minor', ls='--', lw=1, axis='both')
@@ -204,7 +204,7 @@ def _get_kwh_image(time: t64s, sme: f64s,
     ax.set_title(title, fontsize='x-large')
 
     ax.legend(loc="upper left")
-    ax.set_ylabel('Energy [Wh]')
+    ax.set_ylabel('Energy [kWh]')
     ax.xaxis_date()
     ax_formatter = mdates.DateFormatter(time_format)
     ax.xaxis.set_major_formatter(ax_formatter)
