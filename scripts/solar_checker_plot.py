@@ -40,7 +40,7 @@ from dataclasses import dataclass
 from typing import Any
 from utils.types import f64, f64s, t64, t64s, strings, timeslots
 from utils.samples import get_columns_from_csv
-from utils.plots import get_w_image, get_kwh_line, XSIZE, YSIZE
+from utils.plots import get_w_line, get_kwh_line, XSIZE, YSIZE
 
 
 import logging
@@ -55,7 +55,7 @@ async def get_w (
         time: t64s, smp: f64s,
         ivp1: f64s, ivp2: f64s, spp: f64s) -> Any:
     logger.info('Decoding power image')
-    w = await get_w_image(time, smp, ivp1, ivp2, spp)
+    w = await get_w_line(time, smp, ivp1, ivp2, spp)
     w = base64.b64decode(w)
     w = io.BytesIO(w)
     w = mpimg.imread(w, format='png')

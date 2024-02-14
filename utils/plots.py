@@ -1,4 +1,3 @@
-import os
 import sys
 
 import asyncio
@@ -24,7 +23,8 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
     datefmt='%H:%M:%S',)
-logger = logging.getLogger(os.path.basename(sys.argv[0]))
+##logger = logging.getLogger(os.path.basename(__file__))
+logger = logging.getLogger(__file__)
 
 XSIZE, YSIZE = 9, 3
 
@@ -44,7 +44,7 @@ def _power_means(times: t64s,
         spowers[wheres] = powers[wheres].mean() if wheres.size > 0 else None
     return spowers
 
-def _get_w_image(time: t64s, smp: f64s,
+def _get_w_line(time: t64s, smp: f64s,
                 ivp1: f64s, ivp2: f64s,
                 spp: f64s, slots: timeslots = SLOTS):
 
@@ -72,7 +72,7 @@ def _get_w_image(time: t64s, smp: f64s,
     total_means = _power_means(
         time, smp + spp if issppon.any() else ivp, slots)
 
-    logger.info('Encoding the power image "w" started')
+    logger.info('Encoding the power line image "w" started')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -139,17 +139,17 @@ def _get_w_image(time: t64s, smp: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Encoding the power image "w" done')
+    logger.info('Encoding the power line image "w" done')
     
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
-async def get_w_image(time: t64s, smp: f64s,
+async def get_w_line(time: t64s, smp: f64s,
                       ivp1: f64s, ivp2: f64s,
                       spp: f64s, slots: timeslots = SLOTS):
     if sys.version_info >= (3, 9):
-        return await asyncio.to_thread(_get_w_image,**vars()) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(_get_w_line,**vars()) # type: ignore[unused-ignore]
     else:
-        return _get_w_image(**vars())
+        return _get_w_line(**vars())
 
 
 def _get_kwh_line(time: t64s, sme: f64s,
@@ -159,7 +159,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     isspeon = spe>0
     speon = spe[isspeon] if isspeon.any() else None
 
-    logger.info('Encoding the energy image "kwh" started ')
+    logger.info('Encoding the energy line image "kwh" started ')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -217,7 +217,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Encoding the energy image "kwh" done')
+    logger.info('Encoding the energy line image "kwh" done')
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
@@ -228,3 +228,72 @@ async def get_kwh_line(time: t64s, sme: f64s,
         return await asyncio.to_thread(_get_kwh_line, **vars()) # type: ignore[unused-ignore]
     else:
         return _get_kwh_line(**vars())
+
+
+def _get_kwh_bar(time: t64s, sme: f64s,
+                   ive1: f64s, ive2: f64s,
+                   spe: f64s, price: f64, time_format: str = '%H:%Mh'):
+    
+    isspeon = spe>0
+    speon = spe[isspeon] if isspeon.any() else None
+
+    logger.info('Encoding the energy line image "kwh" started ')
+
+    plt.switch_backend('Agg')
+    fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
+
+    ax.clear()
+
+    if speon is not None:
+        ax.bar(time, spe, bottom = 0,
+               color='yellow', label='PLUG', width=0.5, alpha=0.6)
+        ax.bar(time, sme, bottom=spe,
+               color='blue',label='HOUSE', width=0.5, alpha=0.2)
+        
+    else:
+        ive = ive1 + ive2
+
+        ax.bar(time, ive1, bottom = 0,
+               color='c', label='INVERTER 1', width=0.5, alpha=0.6)
+        ax.bar(time, ive2, bottom = ive1,
+               color='g',label='INVERTER 2', width=0.5, alpha=0.5)
+        ax.bar(time, sme, bottom = ive,
+               color='b',label='HOUSE', width=0.5, alpha=0.2)
+
+    title = f'Energy Check #'
+    if sme.size > 0 and sme[-1] >= 0:
+        title += f' House {sme.sum():.1f}kWh ~ {(sme.sum()*price):.2f}€'
+            
+    if speon is not None:
+        if spe.size > 0 and spe[-1] >= 0:
+            title += f' | Plug {spe.sum():.3f}kWh ~ {spe.sum()*price:.2f}€'
+    else:
+        if ive.size > 0 and ive[-1] >= 0:
+            title += f' | Inverter {ive.sum():.3f}kWh ~ {ive.sum()*price:.2f}€'
+    ax.set_title(title, fontsize='x-large')
+
+    ax.legend(loc="upper left")
+    ax.set_ylabel('Energy [kWh]')
+    ax.xaxis_date()
+    ax_formatter = mdates.DateFormatter(time_format)
+    ax.xaxis.set_major_formatter(ax_formatter)
+    ax.grid(which='major', ls='-', lw=1, axis='y')
+    ##ax.grid(which='minor', ls='--', lw=1, axis='x')
+    ##ax.minorticks_on()
+
+    # Save it to a temporary buffer.
+    buf = BytesIO()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+
+    logger.info('Encoding the energy line image "kwh" done')
+
+    return base64.b64encode(buf.getbuffer()).decode('ascii')
+
+async def get_kwh_bar(time: t64s, sme: f64s,
+                        ive1: f64s, ive2: f64s,
+                        spe: f64s, price: f64, time_format: str = '%H:%Mh'):
+    if sys.version_info >= (3, 9): 
+        return await asyncio.to_thread(_get_kwh_bar, **vars()) # type: ignore[unused-ignore]
+    else:
+        return _get_kwh_bar(**vars())
