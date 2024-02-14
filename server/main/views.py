@@ -9,7 +9,7 @@ import numpy as np
 from typing import Any, Optional
 from utils.types import f64, f64s, t64, t64s, timeslots
 from utils.samples import get_logdays, get_columns_from_csv, get_kwh_sum_from_csv
-from utils.plots import get_w_image, get_kwh_image
+from utils.plots import get_w_image, get_kwh_line
 
 
 @aiohttp_jinja2.template('plot_day.html')
@@ -39,7 +39,7 @@ async def plot_day(request: web.Request) -> dict:
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
     w, kwh = await asyncio.gather(
         get_w_image(time, smp, ivp1, ivp2, spp, slots),
-        get_kwh_image(time, sme, ive1, ive2, spp.cumsum()/1000/60, price),
+        get_kwh_line(time, sme, ive1, ive2, spp.cumsum()/1000/60, price),
     )
     return {'logday': logday, 'w': w, 'kwh': kwh}
 
@@ -95,7 +95,7 @@ async def plot_month(request: web.Request) -> dict:
         logmonth = datetime.strftime(datetime.now(), logdayformat[:-2])
 
     m = await get_kwh_month(logmonth, logprefix, logdir, logdayformat)        
-    mkwh  = await get_kwh_image(*m.values(), price, '%dd')
+    mkwh  = await get_kwh_line(*m.values(), price, '%dd')
     return {'logmonth': logmonth, 'kwh': mkwh}
 
 
@@ -147,7 +147,7 @@ async def plot_year(request: web.Request) -> dict:
         logyear = datetime.strftime(datetime.now(), logdayformat[:2])
 
     y = await get_kwh_year(logyear, logprefix, logdir, logdayformat)        
-    ykwh  = await get_kwh_image(*y.values(), price, '%mm')
+    ykwh  = await get_kwh_line(*y.values(), price, '%mm')
 
     return {'logyear': logyear, 'kwh': ykwh}
 

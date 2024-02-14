@@ -152,7 +152,7 @@ async def get_w_image(time: t64s, smp: f64s,
         return _get_w_image(**vars())
 
 
-def _get_kwh_image(time: t64s, sme: f64s,
+def _get_kwh_line(time: t64s, sme: f64s,
                    ive1: f64s, ive2: f64s,
                    spe: f64s, price: f64, time_format: str = '%H:%Mh'):
     
@@ -221,10 +221,10 @@ def _get_kwh_image(time: t64s, sme: f64s,
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
-async def get_kwh_image(time: t64s, sme: f64s,
+async def get_kwh_line(time: t64s, sme: f64s,
                         ive1: f64s, ive2: f64s,
                         spe: f64s, price: f64, time_format: str = '%H:%Mh'):
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_kwh_image, **vars()) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(_get_kwh_line, **vars()) # type: ignore[unused-ignore]
     else:
-        return _get_kwh_image(**vars())
+        return _get_kwh_line(**vars())

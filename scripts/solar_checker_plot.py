@@ -27,6 +27,8 @@ import asyncio
 import io
 import base64
 
+import matplotlib
+matplotlib.use('TkAgg', force=True)
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
@@ -38,7 +40,7 @@ from dataclasses import dataclass
 from typing import Any
 from utils.types import f64, f64s, t64, t64s, strings, timeslots
 from utils.samples import get_columns_from_csv
-from utils.plots import get_w_image, get_wh_image, XSIZE, YSIZE
+from utils.plots import get_w_image, get_kwh_line, XSIZE, YSIZE
 
 
 import logging
@@ -66,7 +68,7 @@ async def get_wh (
         ive1: f64s, ive2: f64s,
         spp: f64s, price: f64) -> Any:
     logger.info('Decoding energy image')
-    wh = await get_wh_image(time, sme, ive1, ive2, spp, price)
+    wh = await get_kwh_line(time, sme, ive1, ive2, spp, price)
     wh = base64.b64decode(wh)
     wh = io.BytesIO(wh)
     wh = mpimg.imread(wh, format='png')
