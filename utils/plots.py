@@ -231,8 +231,8 @@ async def get_kwh_line(time: t64s, sme: f64s,
 
 
 def _get_kwh_bar(time: t64s, sme: f64s,
-                   ive1: f64s, ive2: f64s,
-                   spe: f64s, price: f64, time_format: str = '%H:%Mh'):
+                 ive1: f64s, ive2: f64s, spe: f64s,
+                 price: f64, bar_width: f64, time_format: str):
     
     isspeon = spe>0
     speon = spe[isspeon] if isspeon.any() else None
@@ -246,19 +246,19 @@ def _get_kwh_bar(time: t64s, sme: f64s,
 
     if speon is not None:
         ax.bar(time, spe, bottom = 0,
-               color='yellow', label='PLUG', width=0.5, alpha=0.6)
+               color='yellow', label='PLUG', width=bar_width, alpha=0.6)
         ax.bar(time, sme, bottom=spe,
-               color='blue',label='HOUSE', width=0.5, alpha=0.2)
+               color='blue',label='HOUSE', width=bar_width, alpha=0.2)
         
     else:
         ive = ive1 + ive2
 
         ax.bar(time, ive1, bottom = 0,
-               color='c', label='INVERTER 1', width=0.5, alpha=0.6)
+               color='c', label='INVERTER 1', width=bar_width, alpha=0.6)
         ax.bar(time, ive2, bottom = ive1,
-               color='g',label='INVERTER 2', width=0.5, alpha=0.5)
+               color='g',label='INVERTER 2', width=bar_width, alpha=0.5)
         ax.bar(time, sme, bottom = ive,
-               color='b',label='HOUSE', width=0.5, alpha=0.2)
+               color='b',label='HOUSE', width=bar_width, alpha=0.2)
 
     title = f'Energy Check #'
     if sme.size > 0 and sme[-1] >= 0:
@@ -291,9 +291,10 @@ def _get_kwh_bar(time: t64s, sme: f64s,
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_kwh_bar(time: t64s, sme: f64s,
-                        ive1: f64s, ive2: f64s,
-                        spe: f64s, price: f64, time_format: str = '%H:%Mh'):
+                      ive1: f64s, ive2: f64s, spe: f64s,
+                      price: f64, bar_width: f64, time_format:str):
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_kwh_bar, **vars()) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(
+            _get_kwh_bar, **vars()) # type: ignore[unused-ignore]
     else:
         return _get_kwh_bar(**vars())
