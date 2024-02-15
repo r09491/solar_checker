@@ -265,10 +265,10 @@ def _get_kwh_bar(time: t64s, sme: f64s,
             
     if speon is not None:
         if spe.size > 0 and spe[-1] >= 0:
-            title += f' | Plug {spe.sum():.3f}kWh ~ {spe.sum()*price:.2f}€'
+            title += f' | Plug {spe.sum():.1f}kWh ~ {spe.sum()*price:.2f}€'
     else:
         if ive.size > 0 and ive[-1] >= 0:
-            title += f' | Inverter {ive.sum():.3f}kWh ~ {ive.sum()*price:.2f}€'
+            title += f' | Inverter {ive.sum():.1f}kWh ~ {ive.sum()*price:.2f}€'
     ax.set_title(title, fontsize='x-large')
 
     ax.legend(loc="upper left")
