@@ -249,6 +249,14 @@ def _get_kwh_bar(time: t64s, sme: f64s,
         ax.bar(time, sme, bottom=spe,
                color='blue',label='HOUSE', width=bar_width, alpha=0.2)
         
+        for x, yspe, ysme, ytot in zip(time, spe, sme, spe + sme):
+            if yspe > 1.0:
+                ax.text(x, yspe/2, f'{yspe:.1f}', ha = 'center',
+                        color = 'black', weight='bold', size=8)
+            if ysme > 1.0:
+                ax.text(x, ysme/2 + yspe, f'{ysme:.1f}', ha = 'center',
+                        color = 'black', weight='bold', size=8)
+            
     else:
         ive = ive1 + ive2
 
@@ -259,6 +267,17 @@ def _get_kwh_bar(time: t64s, sme: f64s,
         ax.bar(time, sme, bottom = ive,
                color='b',label='HOUSE', width=bar_width, alpha=0.2)
 
+        for x, yspe, ysme, ytot in zip(time, ive1, ive2, sme):
+            if yive1 > 1.0:
+                ax.text(x, yive1/2, f'{yive1:.1f}', ha = 'center',
+                        color = 'black', weight='bold', size=8)
+            if yive2 > 1.0:
+                ax.text(x, yive2/2 + yive1, f'{yive2:.1f}', ha = 'center',
+                        color = 'black', weight='bold', size=8)
+            if ysme > 1.0:
+                ax.text(x, ysme/2 + yive2 + yive1, f'{ysme:.1f}', ha = 'center',
+                        color = 'black', weight='bold', size=8)
+        
     title = f'Energy Check #'
     if sme.size > 0 and sme[-1] >= 0:
         title += f' House {sme.sum():.1f}kWh ~ {(sme.sum()*price):.2f}€'
