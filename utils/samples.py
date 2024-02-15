@@ -159,6 +159,53 @@ async def get_kwh_sum_from_csv(
             'IVE2' : c['IVP2'].sum()/60.0/1000.0 if c and 'IVE2' in c else 0.0,
             'SPE' : c['SPP'].sum()/60.0/1000.0 if c and 'SPP' in c else 0.0}
 
+
+async def get_kwh_sum_month(logmonth: str,
+                            logprefix: str,
+                            logdir: str,
+                            logdayformat:str) -> dict:
+
+    dt = datetime.strptime(logmonth, logdayformat[:-2])
+    first = t64(datetime(year=dt.year, month=dt.month, day=1), 'D')
+    last = t64(datetime(year=dt.year+dt.month//12, month=dt.month%12+1, day=1), 'D')                               
+    mtime = np.arange(first, last, dtype=t64)
+
+    msme = np.zeros(mtime.size, dtype=f64)
+    mive1 = np.zeros(mtime.size, dtype=f64)
+    mive2 = np.zeros(mtime.size, dtype=f64)
+    mspe  = np.zeros(mtime.size, dtype=f64)
+
+    for i, t in enumerate(mtime):
+        mld = t.astype(datetime).strftime(logdayformat)
+        m = await get_kwh_sum_from_csv(mld, logprefix, logdir)
+        msme[i], mive1[i], mive2[i], mspe[i] = m.values()
+
+    return {'TIME':mtime, 'SME':msme, 'IVE1':mive1, 'IVE2':mive2, 'SPE':mspe}
+
+
+async def get_kwh_sum_year(logyear: str,
+                           logprefix: str,
+                           logdir: str,
+                           logdayformat:str) -> list:
+
+    first = t64(datetime(year=2000+int(logyear), month=1, day=1), 'M')
+    last = t64(datetime(year=2000+int(logyear)+1, month=1, day=1), 'M')                
+    ytime = np.arange(first, last, dtype=t64)
+
+    ysme = np.zeros(ytime.size, dtype=f64)
+    yive1 = np.zeros(ytime.size, dtype=f64)
+    yive2 = np.zeros(ytime.size, dtype=f64)
+    yspe  = np.zeros(ytime.size, dtype=f64)
+
+    for i, t in enumerate(ytime):
+        ylm = t.astype(datetime).strftime(logdayformat)[:-2]
+        ym = await get_kwh_sum_month(ylm,logprefix,logdir,logdayformat)
+        yms = [v.sum() for v in list(ym.values())[1:]]
+        ysme[i], yive1[i], yive2[i], yspe[i] = yms
+
+    return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1, 'IVE2':yive2, 'SPE':yspe}        
+
+
 async def get_kwh_cumsum_from_csv(
         logday: str = None,
         logprefix: str = None,
@@ -168,3 +215,5 @@ async def get_kwh_cumsum_from_csv(
             'IVE1' : c['IVP1'].cumsum()/60.0/1000.0 if c and 'IVE1' in c else 0.0,
             'IVE2' : c['IVP2'].cumsum()/60.0/1000.0 if c and 'IVE2' in c else 0.0,
             'SPE' : c['SPP'].cumsum()/60.0/1000.0 if c and 'SPP' in c else 0.0}
+
+
