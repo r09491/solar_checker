@@ -7,16 +7,16 @@ import sys
 
 from aiohttp import web
 
-from settings import conf
+from settings import setup_conf
 from jinja import setup_jinja2
 from routes import setup_routes
 
 def main() -> int:
     app = web.Application()
+    setup_conf(app)
     setup_jinja2(app)
     setup_routes(app)
-    app['conf'] = conf    
-    web.run_app(app, host=conf['host'], port=conf['port'])
+    web.run_app(app, host=app['conf']['host'], port=app['conf']['port'])
     return 0
 
 if __name__ == '__main__':
