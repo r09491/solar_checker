@@ -23,7 +23,6 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
     datefmt='%H:%M:%S',)
-##logger = logging.getLogger(os.path.basename(__file__))
 logger = logging.getLogger(__file__)
 
 XSIZE, YSIZE = 9, 3
@@ -128,7 +127,7 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.set_ylabel('Power [W]')
     ax.set_yscale('log')
     ax.xaxis_date()
-    hm_formatter = mdates.DateFormatter('%H:%Mh')
+    hm_formatter = mdates.DateFormatter('%H:%M')
     ax.xaxis.set_major_formatter(hm_formatter)
     ax.grid(which='major', ls='-', lw=2, axis='both')
     ax.grid(which='minor', ls='--', lw=1, axis='both')

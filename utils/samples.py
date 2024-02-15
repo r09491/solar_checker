@@ -67,6 +67,7 @@ def _get_columns_from_csv(
         logfile = os.path.join(logdir, f'{logprefix}_{logday}.log')
         logger.info(f'Reading CSV data from file "{logfile}"')
         if not os.path.isfile(logfile):
+            logger.warning(f'CSV data file not found "{logfile}"')
             return None
         
     sep = ','
@@ -132,7 +133,7 @@ def _get_columns_from_csv(
     ive2[ive2<0.0] = 0.0
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
-    logger.info(f'Reading CSV data done')
+    logger.info(f'Reading CSV data "ok".')
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
             'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2,
@@ -166,19 +167,24 @@ async def get_kwh_sum_month(logmonth: str,
                             logdayformat:str) -> dict:
 
     dt = datetime.strptime(logmonth, logdayformat[:-2])
-    first = t64(datetime(year=dt.year, month=dt.month, day=1), 'D')
-    last = t64(datetime(year=dt.year+dt.month//12, month=dt.month%12+1, day=1), 'D')                               
+    first = t64(datetime(year=dt.year,
+                         month=dt.month, day=1), 'D')
+    last = t64(datetime(year=dt.year+dt.month//12,
+                        month=dt.month%12+1, day=1), 'D')                               
     mtime = np.arange(first, last, dtype=t64)
 
+    async def doer(t: t64) -> dict:
+        md = t.astype(datetime).strftime(logdayformat)
+        ms = await get_kwh_sum_from_csv(md, logprefix, logdir)
+        return ms.values()
+    results = await asyncio.gather(*[doer(t) for t in mtime])
+    
     msme = np.zeros(mtime.size, dtype=f64)
     mive1 = np.zeros(mtime.size, dtype=f64)
     mive2 = np.zeros(mtime.size, dtype=f64)
     mspe  = np.zeros(mtime.size, dtype=f64)
-
-    for i, t in enumerate(mtime):
-        mld = t.astype(datetime).strftime(logdayformat)
-        m = await get_kwh_sum_from_csv(mld, logprefix, logdir)
-        msme[i], mive1[i], mive2[i], mspe[i] = m.values()
+    for i, r in enumerate(results):
+        msme[i], mive1[i], mive2[i], mspe[i] = r
 
     return {'TIME':mtime, 'SME':msme, 'IVE1':mive1, 'IVE2':mive2, 'SPE':mspe}
 
@@ -188,20 +194,25 @@ async def get_kwh_sum_year(logyear: str,
                            logdir: str,
                            logdayformat:str) -> list:
 
-    first = t64(datetime(year=2000+int(logyear), month=1, day=1), 'M')
-    last = t64(datetime(year=2000+int(logyear)+1, month=1, day=1), 'M')                
+    dt = datetime.strptime(logyear, logdayformat[:2])
+    first = t64(datetime(year=dt.year, month=1, day=1), 'M')
+    last = t64(datetime(year=dt.year+1,month=1, day=1), 'M')
     ytime = np.arange(first, last, dtype=t64)
+
+    async def doer(t: t64) -> dict:
+        yd = t.astype(datetime).strftime(logdayformat)[:-2]
+        ys = await get_kwh_sum_month(yd,logprefix,logdir,logdayformat)
+        yss = [v.sum() for v in list(ys.values())[1:]]
+        return yss
+    results = await asyncio.gather(*[doer(t) for t in ytime])
 
     ysme = np.zeros(ytime.size, dtype=f64)
     yive1 = np.zeros(ytime.size, dtype=f64)
     yive2 = np.zeros(ytime.size, dtype=f64)
     yspe  = np.zeros(ytime.size, dtype=f64)
 
-    for i, t in enumerate(ytime):
-        ylm = t.astype(datetime).strftime(logdayformat)[:-2]
-        ym = await get_kwh_sum_month(ylm,logprefix,logdir,logdayformat)
-        yms = [v.sum() for v in list(ym.values())[1:]]
-        ysme[i], yive1[i], yive2[i], yspe[i] = yms
+    for i, r in enumerate(results):
+        ysme[i], yive1[i], yive2[i], yspe[i] = r
 
     return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1, 'IVE2':yive2, 'SPE':yspe}        
 

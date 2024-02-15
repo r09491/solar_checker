@@ -78,6 +78,6 @@ async def plot_year(request: web.Request) -> dict:
         logyear = datetime.strftime(datetime.now(), logdayformat[:2])
 
     y = await get_kwh_sum_year(logyear, logprefix, logdir, logdayformat)        
-    ykwh  = await get_kwh_bar(*y.values(), price, 10, '%m')
+    ykwh  = await get_kwh_bar(*y.values(), price, 10, '%b')
 
     return {'logyear': logyear, 'kwh': ykwh}
