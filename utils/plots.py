@@ -25,7 +25,7 @@ logging.basicConfig(
     datefmt='%H:%M:%S',)
 logger = logging.getLogger(__file__)
 
-XSIZE, YSIZE = 9, 3
+XSIZE, YSIZE = 9, 4
 
 SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
 

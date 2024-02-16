@@ -59,7 +59,7 @@ async def plot_month(request: web.Request) -> dict:
         logmonth = datetime.strftime(datetime.now(), logdayformat[:-2])
 
     m = await get_kwh_sum_month(logmonth, logprefix, logdir, logdayformat)        
-    mkwh  = await get_kwh_bar(*m.values(), price, 0.7, '%d')
+    mkwh  = await get_kwh_bar(*m.values(), price, 0.7, '%d%n%a')
     return {'logmonth': logmonth, 'kwh': mkwh}
 
 @aiohttp_jinja2.template('plot_year.html')
