@@ -72,7 +72,7 @@ def _get_w_line(time: t64s, smp: f64s,
     total_means = _power_means(
         time, smp + spp if issppon.any() else ivp, slots)
 
-    logger.info('Encoding the power line image "w" started')
+    logger.info('Plotting the power line image "w" started')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -80,8 +80,10 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.clear()
     
     if sppon is not None:
+        """ The inverter is connected by a smartplug """
+        
         ax.fill_between(time, 0, spp,
-                        color='yellow',label='PLUG', alpha=0.6)
+                        color='yellow',label='PLUG', alpha=0.7)
         ax.fill_between(time, spp, spp  + smp,
                         color='b', label='HOUSE', alpha=0.2)
 
@@ -92,19 +94,38 @@ def _get_w_line(time: t64s, smp: f64s,
                     color='g', lw=2, label='INVERTER 2', alpha=0.6)
 
     else:
+        """ The inverter is directly connected to the house """
+
         ax.fill_between(time, 0, ivp1,
                         color='c',label='INVERTER 1', alpha=0.6)
         ax.fill_between(time, ivp1, ivp1 + ivp2,
                         color='g', label='INVERTER 2', alpha=0.5)
         ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
                         color='b', label='HOUSE', alpha=0.2)
+
+
+    """ Plot the battery power of the solarbank """
+    if sbpb is not None:
+        ax.fill_between(time, 0, sbpb,
+                        color='magenta', label='BAT', alpha=0.2)
+
+    """ Plot the battery power input negative """
+    if sbpi is not None:
+        ax.fill_between(time[sbpb<0], sbpb[sbpb<0], -sbpi[sbpb<0],
+                        color='c', label='SUN', alpha=0.2)
+
+    """
+    if sbpo is not None:
+        ax.plot(time, -sbpo,
+                color='black', lw=1, alpha=0.3)
+    """
     
     ax.plot(time, total_means, 
             color='m', lw=2, label="TOTAL MEAN")
 
     if timeon is not None:
         ax.fill_between(timeon , on600, on800,
-                        color='orange', label='LIMITS', alpha=0.6)
+                        color='orange', label='LIMITS', alpha=0.3)
 
     title = f'Power Check #'
     if smp.size > 0 and smp[-1] >= 0:
@@ -126,7 +147,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
     ax.legend(loc='upper left')
     ax.set_ylabel('Power [W]')
-    ax.set_yscale('log')
+    ax.set_yscale('symlog')
     ax.xaxis_date()
     hm_formatter = mdates.DateFormatter('%H:%M')
     ax.xaxis.set_major_formatter(hm_formatter)
@@ -139,7 +160,7 @@ def _get_w_line(time: t64s, smp: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Encoding the power line image "w" done')
+    logger.info('Plotting the power line image "w" done')
     
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
@@ -160,7 +181,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     isspeon = spe>0
     speon = spe[isspeon] if isspeon.any() else None
 
-    logger.info('Encoding the energy line image "kwh" started ')
+    logger.info('Plotting the energy line image "kwh" started ')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -218,7 +239,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Encoding the energy line image "kwh" done')
+    logger.info('Plotting the energy line image "kwh" done')
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
@@ -238,7 +259,7 @@ def _get_kwh_bar(time: t64s, sme: f64s,
     isspeon = spe>0
     speon = spe[isspeon] if isspeon.any() else None
 
-    logger.info('Encoding the energy line image "kwh" started ')
+    logger.info('Plotting the energy line image "kwh" started ')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -306,7 +327,7 @@ def _get_kwh_bar(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Encoding the energy line image "kwh" done')
+    logger.info('Plotting the energy line image "kwh" done')
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
