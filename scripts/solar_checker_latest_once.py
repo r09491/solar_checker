@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 __doc__="""Gets the latest data from an Tasmota smartmeter, an
-APsystems inverter, a Tuya smartplug and writes them to stdout in a
-comma separated row. This script is designed to be called by cron.
+APsystems inverter, a Tuya smartplug, a Anker solarbank and writes
+them to stdout in a comma separated row. This script is designed to be
+called by cron.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __author__ = "r09491@gmail.com"
 
 
@@ -21,6 +22,7 @@ from aiohttp.client_exceptions import ClientConnectorError
 from apsystems import Inverter
 from tasmota import Smartmeter
 from poortuya import Smartplug
+from pooranker import Solarbank
 
 from dataclasses import dataclass
 
@@ -29,7 +31,23 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
     datefmt='%H:%M:%S',)
-logger = logging.getLogger(os.path.basename(sys.argv[0]))
+logger = logging.getLogger(os.path.basename(__name__))
+
+
+async def anker_solarbank_latest_get(sb: Solarbank) -> str:
+    logger.info(f'anker_solarbank_latest_get started')
+    text = '0.000,0.000,0.000,0.00'
+
+    pdata = await sb.get_power_data()
+    if pdata is not None:
+        logger.debug("Anker solarbank has data.")
+        text = f'{pdata.input_power:.0f}'
+        text += f',{pdata.output_power:.0f}'
+        text += f',{pdata.battery_power:.0f}'
+        text += f',{pdata.battery_soc:.2f}'
+
+    logger.info(f'anker_solarbank_latest_get done')        
+    return text
 
 
 async def tuya_smartplug_latest_get(sp: Smartplug) -> str:
@@ -98,7 +116,7 @@ async def apsystems_inverter_latest_get(iv: Inverter) -> str:
     return text
 
 
-async def main(sm: Smartmeter, iv: Inverter, sp: Smartplug) -> int:
+async def main(sm: Smartmeter, iv: Inverter, sp: Smartplug, sb: Solarbank) -> int:
 
     # Tasmota sometimes returns with an invalid time. Ensure there is
     # a valid time!
@@ -108,6 +126,7 @@ async def main(sm: Smartmeter, iv: Inverter, sp: Smartplug) -> int:
         tasmota_smartmeter_latest_get(sm),
         apsystems_inverter_latest_get(iv),
         tuya_smartplug_latest_get(sp),
+        anker_solarbank_latest_get(sb),
     )
 
     sys.stdout.write(nowiso + ',' + ','.join(results) + '\n')
@@ -123,13 +142,14 @@ class Script_Arguments:
     iv_ip: str
     iv_port: int
     sp_name: str
+    sb_sn:str
     
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
         prog=os.path.basename(sys.argv[0]),
-        description='Get the latest power values from Tasmota Smartmeter and APsystems EZ1M inverter',
+        description='Get the latest power values from various systems',
         epilog=__doc__)
 
     parser.add_argument('--version', action = 'version', version = __version__)
@@ -149,10 +169,14 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--sp_name', type = str, required = True,
                         help = "Name of the plug in the config file")
 
+    parser.add_argument('--sb_sn', type = str, required = True,
+                        help = "Serial number of the solarbank")
+    
     args = parser.parse_args()
     
     return Script_Arguments(args.sm_ip, args.sm_port,
-                            args.iv_ip, args.iv_port, args.sp_name)
+                            args.iv_ip, args.iv_port,
+                            args.sp_name, args.sb_sn)
 
 
 if __name__ == '__main__':
@@ -170,7 +194,8 @@ if __name__ == '__main__':
     sm = Smartmeter(args.sm_ip)
     iv = Inverter(args.iv_ip, args.iv_port)
     sp = Smartplug(args.sp_name)
-    err = asyncio.run(main(sm, iv, sp))
+    sb = Solarbank(args.sb_sn)
+    err = asyncio.run(main(sm, iv, sp, sb))
 
     logger.info(f'Recording latest done (err={err})')
     sys.exit(err)
