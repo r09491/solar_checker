@@ -3,12 +3,13 @@
 ## Overview
 
 The Solar Checker Python library provides APIs for the APsystems EZ1
-Microinverters, Tasmota smartmeter and a poor Tuya library for
-smartplugs. Based on these three APIs there are scripts to record
-their latest power data which in turn can be used for plots to
-visualise them. Especially there is a HTTP server for displaying the
-recorded data. It facilitates the process to monitor a solar power
-station and to assess if it will pay off at a point of time.
+Microinverters, Tasmota smartmeter, a poor Tuya library for
+smartplugs, a poor Anler library for the Solix solarbank. Based on
+these three APIs there are scripts to recordtheir latest power data
+which in turn can be used for plots to visualise them. Especially there is 
+a HTTP server for displaying the recorded data. It facilitates the process
+to monitor a solar power station and to assess if it will pay off at a point
+of time.
 
 ---
 
@@ -45,7 +46,7 @@ Ensure you have a proper '.poortuya' is in your home directory!
 
 ---
 
-## Setup Poorankerr for your Solarbank
+## Setup Pooranker for your Solarbank
 
 Install the anker-solix-api [repositiory](https://github.com/thomluther/anker-solix-api)
 
