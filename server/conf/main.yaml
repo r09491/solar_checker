@@ -8,3 +8,8 @@ logdayformat : '%y%m%d'
 power_slots : ['00:00', '07:30', '09:30', '11:00', '13:00', '17:30', '22:30', '23:59']
 
 energy_price : 0.369
+
+battery_full_wh : 1600
+battery_min_percent : 10
+battery_max_percent : 100
+

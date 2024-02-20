@@ -107,7 +107,7 @@ def _get_w_line(time: t64s, smp: f64s,
     """ Plot the battery power of the solarbank """
     if sbpb is not None:
         ax.fill_between(time, 0, sbpb,
-                        color='magenta', label='BAT', alpha=0.2)
+                        color='m', label='BAT', alpha=0.2)
 
     """ Plot the battery power input negative """
     if sbpi is not None:
@@ -121,7 +121,7 @@ def _get_w_line(time: t64s, smp: f64s,
     """
     
     ax.plot(time, total_means, 
-            color='m', lw=2, label="TOTAL MEAN")
+            color='m', lw=2, label="TOTAL MEAN", alpha=0.2)
 
     if timeon is not None:
         ax.fill_between(timeon , on600, on800,
@@ -165,9 +165,9 @@ def _get_w_line(time: t64s, smp: f64s,
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_w_line(time: t64s, smp: f64s,
-                     ivp1: f64s, ivp2: f64s, spp: f64s,
-                     sbpi: f64s, sbpo: f64s, sbpb: f64s,
-                     slots: timeslots = SLOTS):
+                    ivp1: f64s, ivp2: f64s, spp: f64s,
+                    sbpi: f64s, sbpo: f64s, sbpb: f64s, 
+                    slots: timeslots = SLOTS):
     if sys.version_info >= (3, 9):
         return await asyncio.to_thread(_get_w_line,**vars()) # type: ignore[unused-ignore]
     else:
@@ -175,8 +175,9 @@ async def get_w_line(time: t64s, smp: f64s,
 
 
 def _get_kwh_line(time: t64s, sme: f64s,
-                   ive1: f64s, ive2: f64s,
-                   spe: f64s, price: f64, time_format: str = '%H:%Mh'):
+                  ive1: f64s, ive2: f64s, spe: f64s,
+                  sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
+                  empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%H:%Mh'):
     
     isspeon = spe>0
     speon = spe[isspeon] if isspeon.any() else None
@@ -204,6 +205,14 @@ def _get_kwh_line(time: t64s, sme: f64s,
         ax.fill_between(time, ive2 + ive1, ive2 + ive1 + sme,
                              color='b',label='HOUSE', alpha=0.2)
 
+    if sbsb is not None:
+        ax.fill_between(time, 0, -sbsb,
+                        color='m', label='-BAT',alpha=0.3)
+
+        ax.axhline(-empty_kwh, color='r', ls='-', label='EMPTY')        
+        ax.axhline(-full_kwh, color='r', ls='-.', label='FULL')
+
+        
     title = f'Energy Check #'
     if sme.size > 0 and sme[-1] >= 0:
         if time_format == '%H:%Mh': # Accumulated
@@ -244,8 +253,10 @@ def _get_kwh_line(time: t64s, sme: f64s,
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_kwh_line(time: t64s, sme: f64s,
-                        ive1: f64s, ive2: f64s,
-                        spe: f64s, price: f64, time_format: str = '%H:%Mh'):
+                       ive1: f64s, ive2: f64s, spe: f64s,
+                       sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
+                       empty_kwh: f64s, full_kwh: f64s, price: f64,
+                       time_format: str = '%H:%Mh'):
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(_get_kwh_line, **vars()) # type: ignore[unused-ignore]
     else:

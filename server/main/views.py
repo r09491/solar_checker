@@ -19,6 +19,8 @@ async def plot_day(request: web.Request) -> dict:
 
     price = conf['energy_price']
     slots = conf['power_slots']
+    full_kwh = conf['battery_full_wh'] / 1000
+    empty_kwh = conf['battery_min_percent'] /100 * full_kwh
     
     logdir = conf['logdir']
     logprefix = conf['logprefix']
@@ -36,11 +38,16 @@ async def plot_day(request: web.Request) -> dict:
     time, spp = c['TIME'], c['SPP']
     sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb = c['SBPI'], c['SBPO'], c['SBPB']
+    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
     w, kwh = await asyncio.gather(
         get_w_line(time, smp, ivp1, ivp2, spp, sbpi, sbpo, sbpb, slots),
-        get_kwh_line(time, sme, ive1, ive2, spp.cumsum()/1000/60, price),
-    )
+        get_kwh_line(time, sme, ive1, ive2,
+            spp.cumsum()/1000/60 if spp is not None else None,
+            sbpi.cumsum()/1000/60 if sbpi is not None else None,
+            sbpo.cumsum()/1000/60 if sbpo is not None else None,
+            sbpb.cumsum()/1000/60 if sbpb is not None else None,
+            sbsb*full_kwh if sbsb is not None else None,
+            empty_kwh, full_kwh, price))
     return {'logday': logday, 'w': w, 'kwh': kwh}
 
 

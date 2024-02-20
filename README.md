@@ -33,7 +33,7 @@ on the internet.
 
 ---
 
-## Setup Tuya for your Smartplug
+## Setup Poortuya for your Smartplug
 
 Install the 'tinytuya' package and run the magic 'python3 -m tinytuya
 scan'. Follow the interesting instructions in that repository!
@@ -44,6 +44,14 @@ These will produce some json files to be used to setup the config file
 Ensure you have a proper '.poortuya' is in your home directory!
 
 ---
+
+## Setup Poorankerr for your Solarbank
+
+Install the anker-solix-api [repositiory](https://github.com/thomluther/anker-solix-api)
+
+if you want to install on a Raspberry with Python 3.7 clone the
+[fork](https://github.com/r09491/anker-solix-api.git) and run ''pip3
+install .'
 
 ## Installation
 
