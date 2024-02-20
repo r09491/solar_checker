@@ -71,7 +71,7 @@ def _get_columns_from_csv(
             return None
         
     sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP'.split(',')
+    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP,SBPI,SBPO,SBPB,SBSB'.split(',')
     df = read_csv(logfile, sep=sep, names=names)
 
     """ The timestamps """
@@ -118,6 +118,30 @@ def _get_columns_from_csv(
     if np.isnan(spp).any():
         logger.error(f'Undefined SPP samples')
         return None
+
+    """ The normalised solarbank power input """
+    sbpi = np.array(df.SBPI.apply(_str2float))
+    if np.isnan(sbpi).any():
+        logger.warn(f'Undefined SBPI samples')
+        sbpi = None
+
+    """ The normalised solarbank power output """
+    sbpo = np.array(df.SBPO.apply(_str2float))
+    if np.isnan(sbpo).any():
+        logger.warn(f'Undefined SBPO samples')
+        spbo = None
+
+    """ The normalised solarbank power battery """
+    sbpb = np.array(df.SBPB.apply(_str2float))
+    if np.isnan(sbpb).any():
+        logger.warn(f'Undefined SBPB samples')
+        sbpb =  None
+
+    """ The normalised solarbank power state of charge """
+    sbsb = np.array(df.SBSB.apply(_str2float))
+    if np.isnan(sbsb).any():
+        logger.warn(f'Undefined SBSB samples')
+        sbsb = None
     
     # Get rid of offsets and fill tails
 
@@ -136,8 +160,8 @@ def _get_columns_from_csv(
     logger.info(f'Reading CSV data "ok".')
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
-            'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2,
-            'SPP' : spp}
+            'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2, 'SPP' : spp,
+            'SBPI' : sbpi, 'SBPO' : sbpo, 'SBPB' : sbpb, 'SBSB' : sbsb}
 
 async def get_columns_from_csv(
         logday: str = None,

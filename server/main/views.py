@@ -33,12 +33,12 @@ async def plot_day(request: web.Request) -> dict:
     if c is None:
         return aiohttp_jinja2.render_template('error.html', request,
             {'error' : f"Samples logfile '{logday}' not found or not valid"})
-
     time, spp = c['TIME'], c['SPP']
     sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
+    sbpi, sbpo, sbpb = c['SBPI'], c['SBPO'], c['SBPB']
     w, kwh = await asyncio.gather(
-        get_w_line(time, smp, ivp1, ivp2, spp, slots),
+        get_w_line(time, smp, ivp1, ivp2, spp, sbpi, sbpo, sbpb, slots),
         get_kwh_line(time, sme, ive1, ive2, spp.cumsum()/1000/60, price),
     )
     return {'logday': logday, 'w': w, 'kwh': kwh}

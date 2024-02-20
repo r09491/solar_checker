@@ -44,8 +44,9 @@ def _power_means(times: t64s,
     return spowers
 
 def _get_w_line(time: t64s, smp: f64s,
-                ivp1: f64s, ivp2: f64s,
-                spp: f64s, slots: timeslots = SLOTS):
+                ivp1: f64s, ivp2: f64s, spp: f64s,
+                sbpi: f64s, sbpo: f64s, sbpb: f64s,
+                slots: timeslots = SLOTS):
 
     smp_mean = smp.mean()
     smp_max = smp.max()
@@ -143,8 +144,9 @@ def _get_w_line(time: t64s, smp: f64s,
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_w_line(time: t64s, smp: f64s,
-                      ivp1: f64s, ivp2: f64s,
-                      spp: f64s, slots: timeslots = SLOTS):
+                     ivp1: f64s, ivp2: f64s, spp: f64s,
+                     sbpi: f64s, sbpo: f64s, sbpb: f64s,
+                     slots: timeslots = SLOTS):
     if sys.version_info >= (3, 9):
         return await asyncio.to_thread(_get_w_line,**vars()) # type: ignore[unused-ignore]
     else:
