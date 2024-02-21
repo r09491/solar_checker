@@ -127,7 +127,7 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(timeon , on600, on800,
                         color='orange', label='LIMITS', alpha=0.3)
 
-    title = f'Power Check #'
+    title = f'Power #'
     if smp.size > 0 and smp[-1] >= 0:
         title += f' House {smp[-1]:.0f}'
         title += f'={smp_mean:.0f}^{smp_max:.0f}W'
@@ -213,7 +213,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
         ax.axhline(-full_kwh, color='r', ls='-.', label='FULL')
 
         
-    title = f'Energy Check #'
+    title = f'Energy #'
     if sme.size > 0 and sme[-1] >= 0:
         if time_format == '%H:%Mh': # Accumulated
             title += f' House {sme[-1]:.1f}kWh ~ {(sme[-1]*price):.2f}€'
