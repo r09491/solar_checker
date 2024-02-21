@@ -67,6 +67,11 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpion = sbpi[issbpion] if issbpion.any() else None
     sbpion_mean = sbpion.mean() if sbpion is not None else 0
     sbpion_max = sbpion.max() if sbpion is not None else 0
+
+    issbpoon = sbpo>0 # Have output 
+    sbpoon = sbpo[issbpoon] if issbpoon.any() else None
+    sbpoon_mean = sbpoon.mean() if sbpoon is not None else 0
+    sbpoon_max = sbpoon.max() if sbpoon is not None else 0
     
     issbpbon = sbpb<0 # Charging
     sbpbon = sbpb[issbpbon] if issbpbon.any() else None
@@ -81,6 +86,7 @@ def _get_w_line(time: t64s, smp: f64s,
     timeivpon = time[isivpon] if isivpon.any() else None
     timesppon = time[issppon] if issppon.any() else None
     timesbpbon = time[issbpbon] if issbpbon.any() else None
+    timesbpoon = time[issbpoon] if issbpoon.any() else None
     timeon = timesppon if timesppon is not None else timeivpon 
     on600 = np.full_like(sppon if issppon.any() else ivpon, 600) 
     on800 = np.full_like(sppon if issppon.any() else ivpon, 800)
@@ -99,9 +105,9 @@ def _get_w_line(time: t64s, smp: f64s,
         """ The inverter is connected by a smartplug """
         
         ax.fill_between(time, 0, spp,
-                        color='yellow',label='PLUG', alpha=0.7)
+                        color='yellow',label='PLUG', lw=0, alpha=0.7)
         ax.fill_between(time, spp, spp  + smp,
-                        color='b', label='HOUSE', alpha=0.2)
+                        color='b', label='HOUSE', lw=0, alpha=0.2)
 
         if ivpon is not None:
             ax.plot(time, ivp1,
@@ -123,21 +129,20 @@ def _get_w_line(time: t64s, smp: f64s,
     """ Plot the battery power of the solarbank """
     if sbpb is not None:
         ax.fill_between(time, 0, sbpb,
-                        color='m', label='BAT', alpha=0.2)
+                        color='m', label='BAT', lw=0, alpha=0.2)
 
-    """ Plot the battery power input negative """
+    """
     if sbpi is not None:
         ax.fill_between(time[issbpbon], sbpb[issbpbon], -sbpi[issbpbon],
                         color='c', label='SUN', alpha=0.2)
+    """
 
-    """
-    if sbpo is not None:
-        ax.plot(time, -sbpo,
-                color='black', lw=1, alpha=0.3)
-    """
-    
+    if sbpoon is not None:
+        ax.plot(time, sbpo,
+                color='black', lw=2, label="BANK", alpha=0.2)
+
     ax.plot(time, total_means, 
-            color='m', lw=2, label="TOTAL MEAN", alpha=0.2)
+            color='m', lw=2, label="MEAN", alpha=0.2)
 
     if timeon is not None:
         ax.fill_between(timeon , on600, on800,
@@ -159,19 +164,23 @@ def _get_w_line(time: t64s, smp: f64s,
         if ivpon is not None:
             title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
 
+    if sbpoon is not None:
+        title += f' | Bank {sbpo[-1]:.0f}'
+        title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
+            
     if sbpb is not None:
-            title += f' | Bat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
+            title += f'\nBat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
             title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
             title += f' | Bat- {sbpboff[-1] if sbpb[-1] > 0 else 0:.0f}'
             title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
     if sbpi is not None:
-            title += f'\nSun {sbpion[-1]:.0f}'
+            title += f' | Sun {sbpi[-1]:.0f}'
             title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
             
     ax.set_title(title)
     
-    ax.legend(loc='upper left')
+    ax.legend(loc='lower left')
     ax.set_ylabel('Power [W]')
     ax.set_yscale('symlog')
     ax.xaxis_date()
@@ -264,7 +273,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     
     ax.set_title(title)
 
-    ax.legend(loc="upper left")
+    ax.legend(loc="lower left")
     ax.set_ylabel('Energy [kWh]')
     ax.xaxis_date()
     ax_formatter = mdates.DateFormatter(time_format)
