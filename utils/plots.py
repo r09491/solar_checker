@@ -25,7 +25,7 @@ logging.basicConfig(
     datefmt='%H:%M:%S',)
 logger = logging.getLogger(__file__)
 
-XSIZE, YSIZE = 9, 4
+XSIZE, YSIZE = 10, 5
 
 SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
 
@@ -63,8 +63,24 @@ def _get_w_line(time: t64s, smp: f64s,
     sppon_mean = sppon.mean() if sppon is not None else 0
     sppon_max = sppon.max() if sppon is not None else 0
 
+    issbpion = sbpi>0 # Have sun 
+    sbpion = sbpi[issbpion] if issbpion.any() else None
+    sbpion_mean = sbpion.mean() if sbpion is not None else 0
+    sbpion_max = sbpion.max() if sbpion is not None else 0
+    
+    issbpbon = sbpb<0 # Charging
+    sbpbon = sbpb[issbpbon] if issbpbon.any() else None
+    sbpbon_mean = sbpbon.mean() if sbpbon is not None else 0
+    sbpbon_min = sbpbon.min() if sbpbon is not None else 0
+
+    issbpboff = sbpb>0 # Discharging
+    sbpboff = sbpb[issbpboff] if issbpboff.any() else None
+    sbpboff_mean = sbpboff.mean() if sbpboff is not None else 0
+    sbpboff_max = sbpboff.max() if sbpboff is not None else 0
+    
     timeivpon = time[isivpon] if isivpon.any() else None
     timesppon = time[issppon] if issppon.any() else None
+    timesbpbon = time[issbpbon] if issbpbon.any() else None
     timeon = timesppon if timesppon is not None else timeivpon 
     on600 = np.full_like(sppon if issppon.any() else ivpon, 600) 
     on800 = np.full_like(sppon if issppon.any() else ivpon, 800)
@@ -111,7 +127,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
     """ Plot the battery power input negative """
     if sbpi is not None:
-        ax.fill_between(time[sbpb<0], sbpb[sbpb<0], -sbpi[sbpb<0],
+        ax.fill_between(time[issbpbon], sbpb[issbpbon], -sbpi[issbpbon],
                         color='c', label='SUN', alpha=0.2)
 
     """
@@ -127,7 +143,7 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(timeon , on600, on800,
                         color='orange', label='LIMITS', alpha=0.3)
 
-    title = f'Power #'
+    title = f'# Power #\n'
     if smp.size > 0 and smp[-1] >= 0:
         title += f' House {smp[-1]:.0f}'
         title += f'={smp_mean:.0f}^{smp_max:.0f}W'
@@ -142,16 +158,26 @@ def _get_w_line(time: t64s, smp: f64s,
             title += f' | Inverter {ivp[-1]:.0f}'
         if ivpon is not None:
             title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-            
-    ax.set_title(title, fontsize='x-large')        
 
+    if sbpb is not None:
+            title += f' | Bat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
+            title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
+            title += f' | Bat- {sbpboff[-1] if sbpb[-1] > 0 else 0:.0f}'
+            title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
+
+    if sbpi is not None:
+            title += f'\nSun {sbpion[-1]:.0f}'
+            title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
+            
+    ax.set_title(title)
+    
     ax.legend(loc='upper left')
     ax.set_ylabel('Power [W]')
     ax.set_yscale('symlog')
     ax.xaxis_date()
     hm_formatter = mdates.DateFormatter('%H:%M')
     ax.xaxis.set_major_formatter(hm_formatter)
-    ax.grid(which='major', ls='-', lw=2, axis='both')
+    ax.grid(which='major', ls='-.', lw=2, axis='both')
     ax.grid(which='minor', ls='--', lw=1, axis='both')
     ax.minorticks_on()
     
@@ -209,11 +235,11 @@ def _get_kwh_line(time: t64s, sme: f64s,
         ax.fill_between(time, 0, -sbsb,
                         color='m', label='-BAT',alpha=0.3)
 
-        ax.axhline(-empty_kwh, color='r', ls='-', label='EMPTY')        
-        ax.axhline(-full_kwh, color='r', ls='-.', label='FULL')
+        ax.axhline(-empty_kwh, color='r', ls='-.', label='EMPTY')        
+        ax.axhline(-full_kwh, color='r', ls='--', label='FULL')
 
         
-    title = f'Energy #'
+    title = f'# Energy #\n'
     if sme.size > 0 and sme[-1] >= 0:
         if time_format == '%H:%Mh': # Accumulated
             title += f' House {sme[-1]:.1f}kWh ~ {(sme[-1]*price):.2f}€'
@@ -232,7 +258,11 @@ def _get_kwh_line(time: t64s, sme: f64s,
                 title += f' | Inverter {ive[-1]:.3f}kWh ~ {ive[-1]*price:.2f}€'
             else:
                 title += f' | Inverter {ive.sum():.3f}kWh ~ {ive.sum()*price:.2f}€'
-    ax.set_title(title, fontsize='x-large')
+
+    if sbsb is not None:
+            title += f' | Bat {sbsb[-1]*1000:.0f}W ~ {sbsb[-1]/full_kwh*100:.0f}%'
+    
+    ax.set_title(title)
 
     ax.legend(loc="upper left")
     ax.set_ylabel('Energy [kWh]')
