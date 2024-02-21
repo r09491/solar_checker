@@ -235,7 +235,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
         ax.fill_between(time, 0, -sbsb,
                         color='m', label='-BAT',alpha=0.3)
 
-        ax.axhline(-empty_kwh, color='r', ls='-.', label='EMPTY')        
+        ax.axhline(-empty_kwh, color='r', ls='-.', label='MIN')        
         ax.axhline(-full_kwh, color='r', ls='--', label='FULL')
 
         
@@ -260,7 +260,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
                 title += f' | Inverter {ive.sum():.3f}kWh ~ {ive.sum()*price:.2f}€'
 
     if sbsb is not None:
-            title += f' | Bat {sbsb[-1]*1000:.0f}W ~ {sbsb[-1]/full_kwh*100:.0f}%'
+            title += f' | Bat {sbsb[-1]*1000:.0f}Wh ~ {sbsb[-1]/full_kwh*100:.0f}%'
     
     ax.set_title(title)
 
@@ -270,7 +270,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     ax_formatter = mdates.DateFormatter(time_format)
     ax.xaxis.set_major_formatter(ax_formatter)
     ax.grid(which='major', ls='-', lw=2, axis='both')
-    ax.grid(which='minor', ls='--', lw=1, axis='x')
+    ax.grid(which='minor', ls='--', lw=1, axis='both')
     ax.minorticks_on()
 
     # Save it to a temporary buffer.
