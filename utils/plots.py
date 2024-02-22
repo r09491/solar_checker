@@ -273,7 +273,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     
     ax.set_title(title)
 
-    ax.legend(loc="lower left")
+    ax.legend(loc="upper left")
     ax.set_ylabel('Energy [kWh]')
     ax.xaxis_date()
     ax_formatter = mdates.DateFormatter(time_format)
@@ -363,7 +363,7 @@ def _get_kwh_bar(time: t64s, sme: f64s,
             title += f' | Inverter {ive.sum():.1f}kWh ~ {ive.sum()*price:.2f}€'
     ax.set_title(title, fontsize='x-large')
 
-    ax.legend(loc="upper left")
+    ax.legend(loc="upper right")
     ax.set_ylabel('Energy [kWh]')
     ax.xaxis_date()
     ax_formatter = mdates.DateFormatter(time_format)
