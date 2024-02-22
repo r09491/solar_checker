@@ -182,7 +182,8 @@ async def get_kwh_sum_from_csv(
     return {'SME' : c['SMP'].sum()/60.0/1000.0 if c and 'SMP' in c else 0.0,
             'IVE1' : c['IVP1'].sum()/60.0/1000.0 if c and 'IVE1' in c else 0.0,
             'IVE2' : c['IVP2'].sum()/60.0/1000.0 if c and 'IVE2' in c else 0.0,
-            'SPE' : c['SPP'].sum()/60.0/1000.0 if c and 'SPP' in c else 0.0}
+            'SPE' : c['SPP'].sum()/60.0/1000.0 if c and 'SPP' in c else 0.0,
+            'SBEO' : c['SBPO'].sum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}
 
 
 async def get_kwh_sum_month(logmonth: str,
@@ -207,10 +208,11 @@ async def get_kwh_sum_month(logmonth: str,
     mive1 = np.zeros(mtime.size, dtype=f64)
     mive2 = np.zeros(mtime.size, dtype=f64)
     mspe  = np.zeros(mtime.size, dtype=f64)
+    msbeo  = np.zeros(mtime.size, dtype=f64)
     for i, r in enumerate(results):
-        msme[i], mive1[i], mive2[i], mspe[i] = r
+        msme[i], mive1[i], mive2[i], mspe[i], msbeo[i] = r
 
-    return {'TIME':mtime, 'SME':msme, 'IVE1':mive1, 'IVE2':mive2, 'SPE':mspe}
+    return {'TIME':mtime, 'SME':msme, 'IVE1':mive1, 'IVE2':mive2, 'SPE':mspe, 'SBEO':msbeo}
 
 
 async def get_kwh_sum_year(logyear: str,
@@ -234,11 +236,12 @@ async def get_kwh_sum_year(logyear: str,
     yive1 = np.zeros(ytime.size, dtype=f64)
     yive2 = np.zeros(ytime.size, dtype=f64)
     yspe  = np.zeros(ytime.size, dtype=f64)
+    ysbeo  = np.zeros(ytime.size, dtype=f64)
 
     for i, r in enumerate(results):
-        ysme[i], yive1[i], yive2[i], yspe[i] = r
+        ysme[i], yive1[i], yive2[i], yspe[i], ysbeo[i] = r
 
-    return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1, 'IVE2':yive2, 'SPE':yspe}        
+    return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1, 'IVE2':yive2, 'SPE':yspe, 'SBEO':ysbeo}        
 
 
 async def get_kwh_cumsum_from_csv(
@@ -249,6 +252,7 @@ async def get_kwh_cumsum_from_csv(
     return {'SME' : c['SMP'].cumsum()/60.0/1000.0 if c and 'SMP' in c else 0.0,
             'IVE1' : c['IVP1'].cumsum()/60.0/1000.0 if c and 'IVE1' in c else 0.0,
             'IVE2' : c['IVP2'].cumsum()/60.0/1000.0 if c and 'IVE2' in c else 0.0,
-            'SPE' : c['SPP'].cumsum()/60.0/1000.0 if c and 'SPP' in c else 0.0}
+            'SPE' : c['SPP'].cumsum()/60.0/1000.0 if c and 'SPP' in c else 0.0,
+            'SBEO' : c['SBPO'].cumsum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}
 
 
