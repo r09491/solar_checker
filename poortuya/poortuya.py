@@ -60,12 +60,13 @@ class Smartplug:
         self.config = self._get_config(name)
         self.timeout = timeout
         self.persist = persist
-        
-    async def _get_status(self) -> Optional[Return_Status]:
+
+
+    async def get_status(self) -> Optional[Return_Status]:
         await asyncio.sleep(1) # Switch context. Allow others!
         """ 
-           This is blocking call if device not plugged in.
-           Timeout does not work. Also for calls below!
+        This is blocking call if device not plugged in.
+        Timeout does not work. Also for calls below!
         """
         device = tinytuya.OutletDevice(
             dev_id = self.config.id,
@@ -76,7 +77,8 @@ class Smartplug:
             persist = self.persist,
         ) if self.config else None
         await asyncio.sleep(1) # Switch context. Allow others!
-        status = device.status() if device else None
+
+        status = device.status() if device else None    
         dps = status.get('dps') if status else None
         return Return_Status(
             dps['1'],     #closed True
@@ -85,18 +87,13 @@ class Smartplug:
             dps['20']/10, #V
         ) if dps is not None else None
 
-    async def get_status(self) -> Optional[Return_Status]:
-        if sys.version_info >= (3, 9): 
-            return await asyncio.to_thread(self._get_status) # type: ignore[unused-ignore]
-        else:
-            return await self._get_status()
-        
+    
     async def is_switch_closed(self) -> Optional[bool]:
         status = await self.get_status()
         return status.closed if status else None
 
     
-    async def _turn_on(self) -> Optional[bool]:
+    async def turn_on(self) -> Optional[bool]:
         await asyncio.sleep(1)
         device = tinytuya.OutletDevice(
             dev_id = self.config.id,
@@ -112,15 +109,8 @@ class Smartplug:
         onoff = bool(dps['1']) if dps else None
         return onoff
 
-
-    async def turn_on(self) -> Optional[bool]:
-        if sys.version_info >= (3, 9): 
-            return await asyncio.to_thread(self._turn_on) # # type: ignore[unused-ignore]
-        else:
-            return await self._turn_on()
-
     
-    async def _turn_off(self) -> Optional[bool]:
+    async def turn_off(self) -> Optional[bool]:
         await asyncio.sleep(1)
         device = tinytuya.OutletDevice(
             dev_id = self.config.id,
@@ -135,9 +125,3 @@ class Smartplug:
         dps = result.get('dps') if result else None
         onoff = bool(dps['1']) if dps else None
         return onoff
-
-    async def turn_off(self) -> Optional[bool]:
-        if sys.version_info >= (3, 9): 
-            return await asyncio.to_thread(self._turn_off) # type: ignore[unused-ignore]
-        else:
-            return await self._turn_off()
