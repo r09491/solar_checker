@@ -2,7 +2,8 @@ import sys
 
 import numpy as np
 
-if sys.version_info >= (3, 9): 
+if sys.version_info >= (3, 9):
+    from typing import Any
     from numpy.typing import NDArray # mypy Crash!"
 
     f64 = np.float64
