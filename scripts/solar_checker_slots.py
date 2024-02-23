@@ -26,53 +26,36 @@ import numpy as np
 
 from datetime import datetime, timedelta
 
-from typing import Any
 from dataclasses import dataclass
+
+from utils.types import t64, t64s, timeslots, Any
+from utils.samples import _get_columns_from_csv
+
 
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
-
-def iso2date(value: str) -> np.datetime64:
-    dt = datetime.fromisoformat(value)
-    return np.datetime64(datetime(year=1900, month=1, day=1,
-                                  minute=dt.minute, hour=dt.hour))
-
-
-def str2float(value:str) -> float:
-    return float(value)
-
-
         
-def show_slots(slots: list[str],
-               starts: list[np.datetime64],
-               stops: list[np.datetime64], f: Any = sys.stdin) -> int:
-    sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP'.split(',')
-    df = pd.read_csv(f, sep = sep, names = names)
-    
-    """
-    The data contain invalid data (nan) due to errors during
-    recording.  The 'nan' are replaced by some plausile values: 0.0
-    for the power, the last valid recording for the energy.
-    """
+def show_slots(slots: timeslots,
+               starts: t64s,
+               stops: t64s) -> int:
 
+    c = _get_columns_from_csv()
 
-    """ The timestamps """
-    time = np.array(df.TIME.apply(iso2date))
-    
+    time = c['TIME']
+
     """ The smartmeter power samples """
-    smp = np.array(df.SMP.apply(str2float))
+    smp = c['SMP']
     """ The normalised inverter power samples channel 1 """
-    ivp1 = np.array(df.IVP1.apply(str2float))
+    ivp1 = c['IVP1']
     """ The normalised inverter power samples channel 2 """
-    ivp2 = np.array(df.IVP2.apply(str2float))
+    ivp2 = c['IVP2']
     """ The normalised inverter power sum """
     ivp = ivp1 + ivp2
 
     """ The normalised smartplug power """
-    spp = np.array(df.SPP.apply(str2float))
+    spp = c['SPP']
         
     for slot, start, stop in zip(slots, starts, stops):
         wheres, = np.where((time >= start) & (time < stop))
@@ -89,19 +72,19 @@ def show_slots(slots: list[str],
     return 0
 
 
-def hm2time(hm: str) -> np.datetime64:
-    return np.datetime64(datetime.strptime(hm, "%H:%M"))
+def hm2time(hm: str) -> t64s:
+    return t64(datetime.strptime(hm, "%H:%M"))
 
 
 @dataclass
 class Script_Arguments:
-    midnight: np.datetime64
-    morning: np.datetime64
-    noon: np.datetime64
-    afternoon: np.datetime64
-    evening: np.datetime64
-    night: np.datetime64
-    daystop: np.datetime64
+    midnight: t64
+    morning: t64
+    noon: t64
+    afternoon: t64
+    evening: t64
+    night: t64
+    daystop: t64
 
 def parse_args() -> Script_Arguments:
     description='Show some statistics for time slots'
