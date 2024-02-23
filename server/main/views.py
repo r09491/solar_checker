@@ -8,8 +8,20 @@ import numpy as np
 
 from typing import Any, Optional
 from utils.types import f64, f64s, t64, t64s, timeslots
-from utils.samples import get_columns_from_csv, get_kwh_sum_month, get_kwh_sum_year
-from utils.plots import get_w_line, get_kwh_line, get_kwh_bar
+from utils.samples import (get_columns_from_csv, 
+                           get_kwh_sum_month_unified,
+                           get_kwh_sum_year_unified)
+from utils.plots import (get_w_line,
+                         get_kwh_line,
+                         get_kwh_bar_unified)
+
+
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 
 @aiohttp_jinja2.template('plot_day.html')
@@ -54,6 +66,8 @@ async def plot_day(request: web.Request) -> dict:
 @aiohttp_jinja2.template('plot_month.html')
 async def plot_month(request: web.Request) -> dict:
 
+    __me__='plot_month'
+
     conf = request.app['conf']
     price = conf['energy_price']
     logdir = conf['logdir']
@@ -65,12 +79,21 @@ async def plot_month(request: web.Request) -> dict:
     except KeyError:
         logmonth = datetime.strftime(datetime.now(), logdayformat[:-2])
 
-    m = await get_kwh_sum_month(logmonth, logprefix, logdir, logdayformat)        
-    mkwh  = await get_kwh_bar(*m.values(), price, 0.7, '%d%n%a')
-    return {'logmonth': logmonth, 'kwh': mkwh}
+    logger.info(f'{__me__}: started "{logmonth}"')
+
+    umkwh = await get_kwh_sum_month_unified(
+        logmonth, logprefix, logdir, logdayformat)
+    
+    umplot  = await get_kwh_bar_unified(
+        *umkwh.values(), price, 0.7, '%d%n%a')
+
+    logger.info(f'{__me__}: done')
+    return {'logmonth': logmonth, 'kwh': umplot}
+
 
 @aiohttp_jinja2.template('plot_year.html')
 async def plot_year(request: web.Request) -> dict:
+    __me__='plot_year'
 
     conf = request.app['conf']
     logdir = conf['logdir']
@@ -84,7 +107,10 @@ async def plot_year(request: web.Request) -> dict:
     except KeyError:
         logyear = datetime.strftime(datetime.now(), logdayformat[:2])
 
-    y = await get_kwh_sum_year(logyear, logprefix, logdir, logdayformat)        
-    ykwh  = await get_kwh_bar(*y.values(), price, 14.0, '%b')
+    logger.info(f'{__me__}: started "{logyear}"')
+    
+    uykwh = await get_kwh_sum_year_unified(logyear, logprefix, logdir, logdayformat)        
+    uyplot  = await get_kwh_bar_unified(*uykwh.values(), price, 14.0, '%b')
 
-    return {'logyear': logyear, 'kwh': ykwh}
+    logger.info(f'{__me__}: done')
+    return {'logyear': logyear, 'kwh': uyplot}

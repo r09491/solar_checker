@@ -18,12 +18,14 @@ import numpy as np
 from typing import Any
 from .types import f64, f64s, t64, t64s, timeslots
 
+
 import logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
     datefmt='%H:%M:%S',)
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
+
 
 XSIZE, YSIZE = 10, 5
 
@@ -47,6 +49,9 @@ def _get_w_line(time: t64s, smp: f64s,
                 ivp1: f64s, ivp2: f64s, spp: f64s,
                 sbpi: f64s, sbpo: f64s, sbpb: f64s,
                 slots: timeslots = SLOTS):
+    __me__ ='_get_w_line'
+
+    logger.info(f'{__me__}: started')
 
     # ?Have data (smartmeter)
     issmpon = smp>0 if smp is not None else None 
@@ -114,7 +119,6 @@ def _get_w_line(time: t64s, smp: f64s,
         on800 = np.full_like(sbpion, 800) 
     slot_means = _power_means(time, totals, slots)
 
-    logger.info('Plotting the power line image "w" started')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -122,8 +126,8 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.clear()
     
     if sppon is not None:
-        """ The inverter is connected via a smartplug """
-
+        logger.info(f'{__me__}: using smartplug samples only')
+        
         ax.fill_between(time, 0, spp,
                         color='yellow',label='PLUG', lw=0, alpha=0.3)
         ax.fill_between(time, spp, spp  + smp,
@@ -136,7 +140,7 @@ def _get_w_line(time: t64s, smp: f64s,
                     color='g', lw=2, label='INV 2', alpha=0.6)
 
     elif ivpon is not None:
-        """ The inverter is directly connected to the house and ok"""
+        logger.info(f'{__me__}: using inverter samples only')
 
         ax.fill_between(time, 0, ivp1,
                         color='c',label='INV 1', alpha=0.6)
@@ -146,7 +150,8 @@ def _get_w_line(time: t64s, smp: f64s,
                         color='b', label='HOUSE', alpha=0.3)
 
     elif sbpoon is not None:
-        """ The solarbank output is used directly in spite of inverter """
+        logger.info(f'{__me__}: using solarbank samples only')
+        logger.warn(f'{__me__}: other power samples are ignored')
 
         ax.fill_between(time[issbpion], 0, sbpo[issbpion],
                         color='yellow',label='BYPASS', alpha=0.3)
@@ -154,11 +159,13 @@ def _get_w_line(time: t64s, smp: f64s,
                         color='b', label='HOUSE', alpha=0.3)
 
     elif smpon is not None:
-        """ Only the smartmeter in the house """
+        logger.info(f'{__me__}: using smartmeter samples only')
+        logger.warn(f'{__me__}: other power samples are not provided')
 
         ax.fill_between(time, 0, smp,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
 
+        
     """ Plot the battery power of the solarbank during charging"""
     if sbpb is not None:
         """ The solarbank output is used directly in spite of inverter """
@@ -213,9 +220,10 @@ def _get_w_line(time: t64s, smp: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Plotting the power line image "w" done')
-    
+    logger.info(f'{__me__}: done')
+
     return base64.b64encode(buf.getbuffer()).decode('ascii')
+
 
 async def get_w_line(time: t64s, smp: f64s,
                     ivp1: f64s, ivp2: f64s, spp: f64s,
@@ -231,6 +239,9 @@ def _get_kwh_line(time: t64s, sme: f64s,
                   ive1: f64s, ive2: f64s, spe: f64s,
                   sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
                   empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%H:%Mh'):
+    __me__ ='_get_kwh_line'
+
+    logger.info(f'{__me__}: started')
     
     issmeon = sme>0 if sme is not None else None
     smeon = sme[issmeon] if issmeon is not None and issmeon.any() else None
@@ -245,7 +256,6 @@ def _get_kwh_line(time: t64s, sme: f64s,
     issbeoon = sbeo>0 if sbeo is not None else None
     sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
     
-    logger.info('Plotting the energy line image "kwh" started ')
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -253,12 +263,16 @@ def _get_kwh_line(time: t64s, sme: f64s,
     ax.clear()
 
     if speon is not None:
+        logger.info(f'{__me__}: using smartplug samples only')
+
         ax.fill_between(time, 0, spe,
                              color='yellow', label='PLUG',alpha=0.3)
         ax.fill_between(time, spe, spe + sme,
                              color='b',label='HOUSE', alpha=0.3)
 
     elif iveon is not None:
+        logger.info(f'{__me__}: using inverter samples only')
+
         ax.fill_between(time, 0, ive1,
                              color='c', label='INV 1',alpha=0.6)
         ax.fill_between(time, ive1, ive2 + ive1,
@@ -267,12 +281,18 @@ def _get_kwh_line(time: t64s, sme: f64s,
                              color='b',label='HOUSE', alpha=0.3)
 
     elif sbeoon is not None:
+        logger.info(f'{__me__}: using solarbank samples only')
+        logger.warn(f'{__me__}: other energy samples are ignored')
+
         ax.fill_between(time, 0, sbeo,
                              color='yellow', label='BANK',alpha=0.3)
         ax.fill_between(time, sbeo, sbeo + sme,
                              color='b',label='HOUSE', alpha=0.3)
 
     elif smeon is not None:
+        logger.info(f'{__me__}: using smartmeter samples only')
+        logger.warn(f'{__me__}: other energy samples are notprovided')
+
         ax.fill_between(time, sme,
                         color='b',label='HOUSE', alpha=0.3)
 
@@ -327,7 +347,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Plotting the energy line image "kwh" done')
+    logger.info(f'{__me__}: done')
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
@@ -342,87 +362,50 @@ async def get_kwh_line(time: t64s, sme: f64s,
         return _get_kwh_line(**vars())
 
 
-def _get_kwh_bar(time: t64s, sme: f64s,
-                 ive1: f64s, ive2: f64s,
-                 spe: f64s, sbeo: f64s,
-                 price: f64, bar_width: f64, time_format: str):
-    
-    issmeon = sme>0 if sme is not None else None
-    smeon = sme[issmeon] if issmeon is not None and issmeon.any() else None
+def _get_kwh_bar_unified(
+        time: t64s, sme: f64s, panel: f64,
+        price: f64, bar_width: f64, time_format: str):
 
-    ive = ive1 + ive2 if ive1 is not None and ive1 is not None else None 
-    isiveon = ive>0 if ive is not None else None
-    iveon = ive[isiveon] if isiveon is not None and isiveon.any() else None
+    __me__='_get_kwh_bar_unified'
+    logger.info(f'{__me__}: started')
 
-    isspeon = spe>0 if spe is not None else None
-    speon = spe[isspeon] if isspeon is not None and isspeon.any() else None
-
-    issbeoon = sbeo>0 if sbeo is not None else None
-    sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
-    
-    logger.info('Plotting the energy line image "kwh" started ')
+    smeon = sme[sme>0] if sme is not None else None
+    panelon = panel[panel>0] if panel is not None else None
 
     plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
 
-    if speon is not None:
-        ax.bar(time, spe, bottom = 0,
-               color='yellow', label='PLUG', width=bar_width, alpha=0.3)
-        ax.bar(time, sme, bottom=spe,
+    if panelon is not None:
+        logger.info(f'{__me__}: using unified samples')
+
+        ax.bar(time, panel, bottom = 0,
+               color='yellow', label='PANEL', width=bar_width, alpha=0.3)
+        ax.bar(time, sme, bottom=panel,
                color='blue',label='HOUSE', width=bar_width, alpha=0.3)
         
-        for x, yspe, ysme, ytot in zip(time, spe, sme, spe + sme):
-            if yspe > 1.0:
-                ax.text(x, yspe/2, f'{yspe:.1f}', ha = 'center',
+        for x, ypanel, ysme, ytot in zip(time, panel, sme, panel + sme):
+            if ypanel > 1.0:
+                ax.text(x, ypanel/2, f'{ypanel:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
             if ysme > 1.0:
-                ax.text(x, ysme/2 + yspe, f'{ysme:.1f}', ha = 'center',
+                ax.text(x, ysme/2 + ypanel, f'{ysme:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
+
+    elif smeon is not None:
+        logger.info(f'{__me__}: using smartmeter samples only')
+
+        ax.fill_between(time, sme,
+                        color='b',label='HOUSE', alpha=0.3)
             
-    elif iveon is not None:
-        ax.bar(time, ive1, bottom = 0,
-               color='c', label='INV 1', width=bar_width, alpha=0.6)
-        ax.bar(time, ive2, bottom = ive1,
-               color='g',label='INV 2', width=bar_width, alpha=0.5)
-        ax.bar(time, sme, bottom = ive,
-               color='b',label='HOUSE', width=bar_width, alpha=0.3)
-
-        for x, yspe, ysme, ytot in zip(time, ive1, ive2, sme):
-            if yive1 > 1.0:
-                ax.text(x, yive1/2, f'{yive1:.1f}', ha = 'center',
-                        color = 'black', weight='bold', size=8)
-            if yive2 > 1.0:
-                ax.text(x, yive2/2 + yive1, f'{yive2:.1f}', ha = 'center',
-                        color = 'black', weight='bold', size=8)
-            if ysme > 1.0:
-                ax.text(x, ysme/2 + yive2 + yive1, f'{ysme:.1f}', ha = 'center',
-                        color = 'black', weight='bold', size=8)
-
-    elif sbeoon is not None:
-        ax.bar(time, sbeo, bottom = 0,
-               color='yellow', label='BANK', width=bar_width, alpha=0.3)
-        ax.bar(time, sme, bottom=sbeo,
-               color='blue',label='HOUSE', width=bar_width, alpha=0.3)
-        
-        for x, ysbeo, ysme, ytot in zip(time, sbeo, sme, sbeo + sme):
-            if ysbeo > 1.0:
-                ax.text(x, ysbeo/2, f'{ysbeo:.1f}', ha = 'center',
-                        color = 'black', weight='bold', size=8)
-            if ysme > 1.0:
-                ax.text(x, ysme/2 + ysbeo, f'{ysme:.1f}', ha = 'center',
-                        color = 'black', weight='bold', size=8)
                 
     title = f'Energy Check #'
     if smeon is not None:
-        title += f' House {sme.sum():.1f}kWh ~ {(sme.sum()*price):.2f}€'            
-    if speon is not None:
-        title += f' | Plug {spe.sum():.1f}kWh ~ {spe.sum()*price:.2f}€'
-    elif iveon is not None:
-        title += f' | Inv {ive.sum():.1f}kWh ~ {ive.sum()*price:.2f}€'
-    elif sbeoon is not None:
-        title += f' | Bank {sbeoon.sum():.1f}kWh ~ {sbeoon.sum()*price:.2f}€'
+        title += f' House {sme.sum():.1f}kWh ~ {(sme.sum()*price):.2f}€'   
+    if panelon is not None:
+        title += f' | Panel {panel.sum():.1f}kWh ~ {panel.sum()*price:.2f}€'
+
     ax.set_title(title, fontsize='x-large')
 
     ax.legend(loc="upper right")
@@ -437,16 +420,15 @@ def _get_kwh_bar(time: t64s, sme: f64s,
     fig.savefig(buf, format='png')
     plt.close(fig)
 
-    logger.info('Plotting the energy line image "kwh" done')
-
+    logger.info(f'{__me__}: done')
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
-async def get_kwh_bar(time: t64s, sme: f64s,
-                      ive1: f64s, ive2: f64s,
-                      spe: f64s, sbeo: f64s,
-                      price: f64, bar_width: f64, time_format:str):
+async def get_kwh_bar_unified(
+        time: t64s, sme: f64s, panel: f64s,
+        price: f64, bar_width: f64, time_format:str):
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(
-            _get_kwh_bar, **vars()) # type: ignore[unused-ignore]
+            _get_kwh_bar_unified, **vars()) # type: ignore[unused-ignore]
     else:
-        return _get_kwh_bar(**vars())
+        return _get_kwh_bar_unified(**vars())
+

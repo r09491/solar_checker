@@ -60,14 +60,17 @@ def _get_columns_from_csv(
         logprefix: str = None,
         logdir: str = None) -> dict:
 
+    __me__='_get_columns_from_csv'
+    logger.info(f'{__me__}: started "{logday}"')
+
     if logday is None and logprefix is None and logdir is None:
-        logger.info(f'Reading CSV data from "stdin"')
+        logger.info(f'{__me__}:Reading CSV data from "stdin"')
         logfile = sys.stdin 
     else:
         logfile = os.path.join(logdir, f'{logprefix}_{logday}.log')
         logger.info(f'Reading CSV data from file "{logfile}"')
         if not os.path.isfile(logfile):
-            logger.warning(f'CSV data file not found "{logfile}"')
+            logger.warning(f'{__me__}:CSV data file not found "{logfile}"')
             return None
         
     sep = ','
@@ -80,67 +83,67 @@ def _get_columns_from_csv(
     """ The smartmeter power samples """
     smp = np.array(df.SMP.apply(_str2float))
     if np.isnan(smp).any():
-        logger.error(f'Undefined SMP samples')
+        logger.error(f'{__me__}:Undefined SMP samples')
         return None
     
     """ The normalised inverter power samples channel 1 """
     ivp1 = np.array(df.IVP1.apply(_str2float))
     if np.isnan(ivp1).any():
-        logger.error(f'Undefined IVP1 samples')
+        logger.error(f'{__me__}:Undefined IVP1 samples')
         return None
 
     """ The normalised inverter power samples channel 2 """
     ivp2 = np.array(df.IVP2.apply(_str2float))
     if np.isnan(ivp2).any():
-        logger.error(f'Undefined IVP2 samples')
+        logger.error(f'{__me__}:Undefined IVP2 samples')
         return None
 
     """ The normalised smartmeter energy samples """
     sme = np.array(df.SME.apply(_str2float))
     if np.isnan(sme).any():
-        logger.error(f'Undefined SME samples')
+        logger.error(f'{__me__}:Undefined SME samples')
         return None
     
     """ The normalised inverter energy samples channel 1 """
     ive1 = np.array(df.IVE1.apply(_str2float))
     if np.isnan(ive1).any():
-        logger.error(f'Undefined IVE2 samples')
+        logger.error(f'{__me__}:Undefined IVE2 samples')
         return None
     
     """ The normalised inverter energy samples channel 2 """
     ive2 = np.array(df.IVE2.apply(_str2float))
     if np.isnan(ive2).any():
-        logger.error(f'Undefined IVE2 samples')
+        logger.error(f'{__me__}:Undefined IVE2 samples')
         return None
 
     """ The normalised smartplug power """
     spp = np.array(df.SPP.apply(_str2float))
     if np.isnan(spp).any():
-        logger.error(f'Undefined SPP samples')
+        logger.error(f'{__me__}:Undefined SPP samples')
         return None
 
     """ The normalised solarbank power input """
     sbpi = np.array(df.SBPI.apply(_str2float))
     if np.isnan(sbpi).any():
-        logger.warn(f'Undefined SBPI samples')
+        logger.warn(f'{__me__}:Undefined SBPI samples')
         sbpi = None
 
     """ The normalised solarbank power output """
     sbpo = np.array(df.SBPO.apply(_str2float))
     if np.isnan(sbpo).any():
-        logger.warn(f'Undefined SBPO samples')
+        logger.warn(f'{__me__}:Undefined SBPO samples')
         spbo = None
 
     """ The normalised solarbank power battery """
     sbpb = np.array(df.SBPB.apply(_str2float))
     if np.isnan(sbpb).any():
-        logger.warn(f'Undefined SBPB samples')
+        logger.warn(f'{__me__}:Undefined SBPB samples')
         sbpb =  None
 
     """ The normalised solarbank power state of charge """
     sbsb = np.array(df.SBSB.apply(_str2float))
     if np.isnan(sbsb).any():
-        logger.warn(f'Undefined SBSB samples')
+        logger.warn(f'{__me__}:Undefined SBSB samples')
         sbsb = None
     
     # Get rid of offsets and fill tails
@@ -157,7 +160,7 @@ def _get_columns_from_csv(
     ive2[ive2<0.0] = 0.0
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
-    logger.info(f'Reading CSV data "ok".')
+    logger.info(f'{__me__}: done')
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
             'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2, 'SPP' : spp,
@@ -173,23 +176,39 @@ async def get_columns_from_csv(
     else:
         return _get_columns_from_csv(**vars())
 
-
+"""
+Calculates the energy in kWH for each column in the record file    
+"""
 async def get_kwh_sum_from_csv(
         logday: str = None,
         logprefix: str = None,
         logdir: str = None) -> dict:
+
+    __me__='get_kwh_sum_month'
+    logger.info(f'{__me__}: started "{logday}"')
     c = await get_columns_from_csv(logday,logprefix, logdir)
+    logger.info(f'{__me__}: done')
     return {'SME' : c['SMP'].sum()/60.0/1000.0 if c and 'SMP' in c else 0.0,
-            'IVE1' : c['IVP1'].sum()/60.0/1000.0 if c and 'IVE1' in c else 0.0,
-            'IVE2' : c['IVP2'].sum()/60.0/1000.0 if c and 'IVE2' in c else 0.0,
+            'IVE1' : c['IVP1'].sum()/60.0/1000.0 if c and 'IVP1' in c else 0.0,
+            'IVE2' : c['IVP2'].sum()/60.0/1000.0 if c and 'IVP2' in c else 0.0,
             'SPE' : c['SPP'].sum()/60.0/1000.0 if c and 'SPP' in c else 0.0,
             'SBEO' : c['SBPO'].sum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}
 
 
+"""
+Calculates the energy in kWH for each day of the specified month. Each
+day has a list of energies. Dependent on the configuration not all
+items may have recorded data for each day. Data may be recorded on
+different and the same days with different devices. So one values may
+not show the complete accumulated energy.
+"""
 async def get_kwh_sum_month(logmonth: str,
                             logprefix: str,
                             logdir: str,
                             logdayformat:str) -> dict:
+
+    __me__='get_kwh_sum_month'
+    logger.info(f'{__me__}: started "{logmonth}"')
 
     dt = datetime.strptime(logmonth, logdayformat[:-2])
     first = t64(datetime(year=dt.year,
@@ -212,13 +231,63 @@ async def get_kwh_sum_month(logmonth: str,
     for i, r in enumerate(results):
         msme[i], mive1[i], mive2[i], mspe[i], msbeo[i] = r
 
-    return {'TIME':mtime, 'SME':msme, 'IVE1':mive1, 'IVE2':mive2, 'SPE':mspe, 'SBEO':msbeo}
+    logger.info(f'{__me__}: done')       
+    return {'TIME':mtime, 'SME':msme, 'IVE1':mive1,
+            'IVE2':mive2, 'SPE':mspe, 'SBEO':msbeo}
 
+"""
+Unifies the calculated energy results for each day of the specified
+month. For each day one device column is selected best representing
+the energy production at that day. If connected the smartplug has
+priority 1 if it directly connects an inverter to the house.  Priority
+2 has the inverter if data are available. Priority 3 has the
+solarbank.
+"""
+async def get_kwh_sum_month_unified(
+        logmonth: str,
+        logprefix: str,
+        logdir: str,
+        logdayformat:str) -> dict:
 
-async def get_kwh_sum_year(logyear: str,
-                           logprefix: str,
-                           logdir: str,
-                           logdayformat:str) -> list:
+    __me__='get_kwh_sum_month_unified'
+    logger.info(f'{__me__}: started "{logmonth}"')
+
+    mkwhs = await get_kwh_sum_month(
+        logmonth, logprefix, logdir, logdayformat)
+    mtime, msme, mive1, mive2, mspe, msbeo = mkwhs.values()
+
+    # 1.Prio
+    umkwhs = mspe.copy()
+
+    # 2.Prio 
+    mive = mive1 + mive2
+    isive = mive>0 & ~(umkwhs>0)
+    umkwhs[isive] = mive[isive]
+
+    # 3.Prio
+    issbeo = msbeo>0 & ~(umkwhs>0)
+    umkwhs[issbeo] = msbeo[issbeo]
+
+    logger.info(f'{__me__}: started')
+    return {'TIME':mtime, 'SME':msme, 'PANEL':umkwhs}
+    
+
+"""
+Calculates the energy in kWH for each month of the specified
+year. Each month has a list of energies. Dependent on the
+configuration not all items may have recorded data for each
+month. Data may be recorded on different month with different
+devices. During a month the energy may be recorded by different
+devices. So the columns may not show the complete energy.
+"""
+async def get_kwh_sum_year(
+        logyear: str,
+        logprefix: str,
+        logdir: str,
+        logdayformat:str) -> list:
+
+    __me__='get_kwh_sum_year'
+    logger.info(f'{__me__}: started "{logyear}"')
 
     dt = datetime.strptime(logyear, logdayformat[:2])
     first = t64(datetime(year=dt.year, month=1, day=1), 'M')
@@ -241,7 +310,45 @@ async def get_kwh_sum_year(logyear: str,
     for i, r in enumerate(results):
         ysme[i], yive1[i], yive2[i], yspe[i], ysbeo[i] = r
 
-    return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1, 'IVE2':yive2, 'SPE':yspe, 'SBEO':ysbeo}        
+    logger.info(f'{__me__}: done')        
+    return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1,
+            'IVE2':yive2, 'SPE':yspe, 'SBEO':ysbeo}        
+
+
+"""
+Unifies the Calculated energy in kWH for each month of the specified
+year.
+"""
+async def get_kwh_sum_year_unified(
+        logyear: str,
+        logprefix: str,
+        logdir: str,
+        logdayformat:str) -> list:
+
+    __me__='get_kwh_sum_year_unified'
+    logger.info(f'{__me__}: started "{logyear}"')
+
+    dt = datetime.strptime(logyear, logdayformat[:2])
+    first = t64(datetime(year=dt.year, month=1, day=1), 'M')
+    last = t64(datetime(year=dt.year+1,month=1, day=1), 'M')
+    ytime = np.arange(first, last, dtype=t64)
+
+    async def doer(t: t64) -> dict:
+        yd = t.astype(datetime).strftime(logdayformat)[:-2]
+        ys = await get_kwh_sum_month_unified(
+            yd, logprefix,logdir,logdayformat)
+        yss = [v.sum() for v in list(ys.values())[1:]]
+        return yss
+    results = await asyncio.gather(*[doer(t) for t in ytime])
+
+    ysme = np.zeros(ytime.size, dtype=f64)
+    ypanel = np.zeros(ytime.size, dtype=f64)
+
+    for i, r in enumerate(results):
+        ysme[i], ypanel[i] = r
+
+    logger.info(f'{__me__}: done')        
+    return {'TIME':ytime, 'SME':ysme, 'PANEL':ypanel}        
 
 
 async def get_kwh_cumsum_from_csv(
@@ -254,5 +361,3 @@ async def get_kwh_cumsum_from_csv(
             'IVE2' : c['IVP2'].cumsum()/60.0/1000.0 if c and 'IVE2' in c else 0.0,
             'SPE' : c['SPP'].cumsum()/60.0/1000.0 if c and 'SPP' in c else 0.0,
             'SBEO' : c['SBPO'].cumsum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}
-
-
