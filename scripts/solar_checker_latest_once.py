@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 __doc__="""Gets the latest data from an Tasmota smartmeter, an
-APsystems inverter, a Tuya smartplug, a Anker solarbank and writes
+APsystems inverter, a Tuya smartplug, an Anker solarbank and writes
 them to stdout in a comma separated row. This script is designed to be
 called by cron.
 """
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __author__ = "r09491@gmail.com"
 
 
@@ -56,9 +56,12 @@ async def tuya_smartplug_latest_get(sp: Smartplug) -> str:
 
     status = await sp.get_status()
     if status is not None:
-        logger.debug("Tuya smartplug has data.")
+        logger.debug("The Tuya smartplug has data.")
         text = f'{status.power:.0f}'
 
+    else:
+        logger.warning('The Tuya Smartplug is  "OFF". Plugged?')
+    
     logger.info(f'tuya_smartplug_latest_get done')        
     return text
 
