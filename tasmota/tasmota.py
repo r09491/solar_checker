@@ -88,10 +88,10 @@ class Smartmeter:
 
     
     async def is_power_on(self) -> bool:
-        ##try:
-        response = await self._request(command = "status", para = "0")
-        ##except:
-        ##    response = None
+        try:
+            response = await self._request(command = "status", para = "0")
+        except:
+            response = None
         status = response.get("Status") if response else None
         power_on = status.get("Power") and status.get("PowerOnState") if status else None
         return bool(power_on) if power_on else False

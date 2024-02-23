@@ -87,7 +87,7 @@ class Smartplug:
 
     async def get_status(self) -> Optional[Return_Status]:
         if sys.version_info >= (3, 9): 
-            return await asyncio.to_thread(await self._get_status) # type: ignore[unused-ignore]
+            return await asyncio.to_thread(self._get_status) # type: ignore[unused-ignore]
         else:
             return await self._get_status()
         
@@ -115,7 +115,7 @@ class Smartplug:
 
     async def turn_on(self) -> Optional[bool]:
         if sys.version_info >= (3, 9): 
-            return await asyncio.to_thread(await self._turn_on) # # type: ignore[unused-ignore]
+            return await asyncio.to_thread(self._turn_on) # # type: ignore[unused-ignore]
         else:
             return await self._turn_on()
 
@@ -138,6 +138,6 @@ class Smartplug:
 
     async def turn_off(self) -> Optional[bool]:
         if sys.version_info >= (3, 9): 
-            return await asyncio.to_thread(await self._turn_off) # type: ignore[unused-ignore]
+            return await asyncio.to_thread(self._turn_off) # type: ignore[unused-ignore]
         else:
             return await self._turn_off()
