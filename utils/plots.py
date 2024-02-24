@@ -60,7 +60,7 @@ def _get_w_line(time: t64s, smp: f64s,
     smp_max = smpon.max() if smpon is not None else 0
 
     # ?Have data (inverter)
-    ivp = ivp1 + ivp2 if ivp1 is not None and ivp1 is not None else None 
+    ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else None 
     isivpon = ivp>0 if ivp is not None else None
     ivpon = ivp[isivpon] if isivpon is not None and isivpon.any() else None
     ivpon_mean = ivpon.mean() if ivpon is not None else 0
@@ -200,8 +200,8 @@ def _get_w_line(time: t64s, smp: f64s,
     if sbpb is not None:
         title += f' | Bat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
-        #title += f' | Bat- {sbpboff[-1] if sbpb[-1] > 0 else 0:.0f}'
-        #title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
+        title += f' | Bat- {sbpboff[-1] if sbpb[-1] > 0 else 0:.0f}'
+        title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
     ax.set_title(title)
     
@@ -314,19 +314,19 @@ def _get_kwh_line(time: t64s, sme: f64s,
             
     if speon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f' | Plug {spe[-1]:.3f}kWh ~ {spe[-1]*price:.2f}€'
+            title += f' | Plug {spe[-1]:.1f}kWh ~ {spe[-1]*price:.2f}€'
         else:
-            title += f' | Plug {spe.sum():.3f}kWh ~ {spe.sum()*price:.2f}€'
+            title += f' | Plug {spe.sum():.1f}kWh ~ {spe.sum()*price:.2f}€'
     elif iveon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f' | Inv {ive[-1]:.3f}kWh ~ {ive[-1]*price:.2f}€'
+            title += f' | Inv {ive[-1]:.1f}kWh ~ {ive[-1]*price:.2f}€'
         else:
-            title += f' | Inv {ive.sum():.3f}kWh ~ {ive.sum()*price:.2f}€'
+            title += f' | Inv {ive.sum():.1f}kWh ~ {ive.sum()*price:.2f}€'
     elif sbeoon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f' | Bank {sbeo[-1]:.3f}kWh ~ {sbeo[-1]*price:.2f}€'
+            title += f' | Bank {sbeo[-1]:.1f}kWh ~ {sbeo[-1]*price:.2f}€'
         else:
-            title += f' | Bank {sbeo.sum():.3f}kWh ~ {sbeo.sum()*price:.2f}€'
+            title += f' | Bank {sbeo.sum():.1f}kWh ~ {sbeo.sum()*price:.2f}€'
         
     if sbsb is not None:
         title += f' | Bat {sbsb[-1]*1000:.0f}Wh ~ {sbsb[-1]/full_kwh*100:.0f}%'
