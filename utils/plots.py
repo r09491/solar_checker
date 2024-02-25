@@ -153,8 +153,8 @@ def _get_w_line(time: t64s, smp: f64s,
         logger.info(f'{__me__}: using solarbank samples only')
         logger.warn(f'{__me__}: other power samples are ignored')
 
-        ax.fill_between(time[issbpion], 0, sbpo[issbpion],
-                        color='yellow',label='BYPASS', alpha=0.3)
+        ax.fill_between(time, 0, sbpo,
+                        color='yellow', label='BANK', alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smp,
                         color='b', label='HOUSE', alpha=0.3)
 
