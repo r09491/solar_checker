@@ -43,7 +43,7 @@ alias tuya_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(da
 
 # (PI = Power Inverter, PP = Power Plug, PH = Power Home)
 alias solar_checker_watts_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
-  awk -F',' '{printf(\"%s PI %03.0f+%03.0f=%03.0fW  PP %03.0fW  PH %04.0fW  PP+PH=PT %04.0fW  PP/PT %3.0f%\n\", \$1, \$4,\$7,\$4+\$7, \$10, \$2, \$10 + \$2, \$10/(\$10 + \$2)*100)}'"
+  awk -F',' '{printf(\"%s PR %03.0fW PO %03.0fW PB %03.0fW  PI %03.0f+%03.0f=%03.0fW  PP %03.0fW  PH %04.0fW\n\", \$1, \$11, \$12, \$13, \$4,\$7,\$4+\$7, \$10, \$2)}'"
 
 alias solar_checker_plot="solar_checker_plot.sh"
 alias solar_checker_plot_anyday="solar_checker_plot_anyday.sh"
