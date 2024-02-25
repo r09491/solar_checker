@@ -193,12 +193,12 @@ def _get_w_line(time: t64s, smp: f64s,
     if sbpoon is not None:
         title += f' | Bank {sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
-          
     if sbpi is not None:
-        title += f'\nSun {sbpi[-1]:.0f}'
+        title += f' | Sun {sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
+        
     if sbpb is not None:
-        title += f' | Bat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
+        title += f'\nBat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
         title += f' | Bat- {sbpboff[-1] if sbpb[-1] > 0 else 0:.0f}'
         title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
