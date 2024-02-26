@@ -11,7 +11,8 @@ from utils.types import f64, f64s, t64, t64s, timeslots
 from utils.samples import (get_columns_from_csv, 
                            get_kwh_sum_month_unified,
                            get_kwh_sum_year_unified)
-from utils.plots import (get_w_line,
+from utils.plots import (get_blocks,
+                         get_w_line,
                          get_kwh_line,
                          get_kwh_bar_unified)
 
@@ -51,8 +52,15 @@ async def plot_day(request: web.Request) -> dict:
     sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
-    w, kwh = await asyncio.gather(
-        get_w_line(time, smp, ivp1, ivp2, spp, sbpi, sbpo, sbpb, slots),
+
+    blocks, w, kwh = await asyncio.gather(
+        get_blocks(time[-1], smp[-1], ivp1[-1], ivp2[-1],
+                   spp[-1] if spp is not None else 0,
+                   sbpi[-1] if sbpi is not None else 0,
+                   sbpo[-1] if sbpo is not None else 0,
+                   sbpb[-1] if sbpb is not None else 0),
+        get_w_line(time, smp, ivp1, ivp2,
+                   spp, sbpi, sbpo, sbpb, slots),
         get_kwh_line(time, sme, ive1, ive2,
             spp.cumsum()/1000/60 if spp is not None else None,
             sbpi.cumsum()/1000/60 if sbpi is not None else None,
@@ -60,7 +68,7 @@ async def plot_day(request: web.Request) -> dict:
             sbpb.cumsum()/1000/60 if sbpb is not None else None,
             sbsb*full_kwh if sbsb is not None else None,
             empty_kwh, full_kwh, price))
-    return {'logday': logday, 'w': w, 'kwh': kwh}
+    return {'logday': logday, 'blocks': blocks, 'w': w, 'kwh': kwh}
 
 
 @aiohttp_jinja2.template('plot_month.html')

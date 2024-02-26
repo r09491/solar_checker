@@ -11,7 +11,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import matplotlib.image as mpimg
+#import matplotlib.image as mpimg
+import matplotlib.patches as mpatches
 
 import numpy as np
 
@@ -44,6 +45,7 @@ def _power_means(times: t64s,
         wheres, = np.where((times >= _hm2date(start)) & (times <= _hm2date(stop)))
         spowers[wheres] = powers[wheres].mean() if wheres.size > 0 else None
     return spowers
+
 
 def _get_w_line(time: t64s, smp: f64s,
                 ivp1: f64s, ivp2: f64s, spp: f64s,
@@ -120,7 +122,7 @@ def _get_w_line(time: t64s, smp: f64s,
     slot_means = _power_means(time, totals, slots)
 
 
-    plt.switch_backend('Agg')
+    #plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
@@ -180,22 +182,25 @@ def _get_w_line(time: t64s, smp: f64s,
                         color='orange', label='LIMITS', alpha=0.4)
 
     title = f'# Power #\n'
-    if smpon is not None:
-        title += f' House {smp[-1]:.0f}'
-        title += f'={smp_mean:.0f}^{smp_max:.0f}W'
-
-    if sppon is not None:
-        title += f' | Plug {spp[-1]:.0f}'
-        title += f'={sppon_mean:.0f}^{sppon_max:.0f}W'
-    if ivpon is not None:
-        title += f' | Inv {ivp[-1]:.0f}'
-        title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-    if sbpoon is not None:
-        title += f' | Bank {sbpo[-1]:.0f}'
-        title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
     if sbpi is not None:
-        title += f' | Sun {sbpi[-1]:.0f}'
+        title += f'Sun {sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
+    if sbpoon is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'Solix {sbpo[-1]:.0f}'
+        title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
+    if ivpon is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'Inv {ivp[-1]:.0f}'
+        title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
+    if smpon is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'House {smp[-1]:.0f}'
+        title += f'={smp_mean:.0f}^{smp_max:.0f}W'
+    if sppon is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'Plug {spp[-1]:.0f}'
+        title += f'={sppon_mean:.0f}^{sppon_max:.0f}W'
         
     if sbpb is not None:
         title += f'\nBat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
@@ -257,7 +262,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
     
 
-    plt.switch_backend('Agg')
+    #plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
@@ -372,7 +377,7 @@ def _get_kwh_bar_unified(
     smeon = sme[sme>0] if sme is not None else None
     panelon = panel[panel>0] if panel is not None else None
 
-    plt.switch_backend('Agg')
+    #plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
@@ -432,3 +437,244 @@ async def get_kwh_bar_unified(
     else:
         return _get_kwh_bar_unified(**vars())
 
+
+def _get_blocks(time: t64, smp: f64,
+                ivp1: f64, ivp2: f64, spp: f64,
+                sbpi: f64, sbpo: f64, sbpb: f64):
+    __me__ ='_blocks'
+
+    logger.info(f'{__me__}: started')
+
+
+    """ If the local mode does not work the inverter still works.To
+    overcome solarbank output is assigned.  """
+    if ivp1 + ivp2 <= 0:
+        ivp1 = ivp2 = sbpo/2
+        ivp = ivp1 + ivp2
+
+    if np.isnan(ivp):
+        ivp = 0
+
+    fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
+
+    ax.axis('equal')
+    ax.axis('off')
+
+    # Kann be anything! Only for relations
+    BW, BH = 2, 2
+    
+    def _add_link_to_ax(ax: Any,
+                        xb0: int, yb0: int, gate0: str,
+                        xb1: int, yb1: int, gate1: str,
+                        text: str, color: str) -> None:
+        #From
+        
+        if gate0 == 'E':
+            x0, y0 = (2*xb0)*BW+BW/2, (2*yb0)*BH
+        elif gate0 == 'S':
+            x0, y0 = (2*xb0)*BW, (2*yb0)*BH-BH/2
+        elif gate0 == 'W':
+            x0, y0 = (2*xb0)*BW-BW/2, (2*yb0)*BH
+        elif gate0 == 'N':
+            x0, y0 = (2*xb0)*BW, (2*yb0)*BH+BH/2
+
+        # To
+        
+        if gate1 == 'E':
+            x1, y1 = (2*xb1)*BW+BW/2, (2*yb1)*BH
+        elif gate1 == 'S':
+            x1, y1 = (2*xb1)*BW, (2*yb1)*BH-BH/2
+        elif gate1 == 'W':
+            x1, y1 = (2*xb1)*BW-BW/2, (2*yb1)*BH
+        elif gate1 == 'N':
+            x1, y1 = (2*xb1)*BW, (2*yb1)*BH+BH/2
+
+        # Links
+
+        # Presets! Will be overridden
+        
+        xm, ym = (x0+x1)/2, (y0+y1)/2
+        ha, va = 'center', 'center'
+        
+        if gate0 == 'E':
+            if gate1 == 'E':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya = x0, ym
+            elif gate1 == 'S':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya, va = xm, y0, 'bottom'
+            elif gate1 == 'W':
+                ax.plot([x0,xm], [y0, y0], color=color, lw=1)
+                ax.plot([xm,xm], [y0, y1], color=color, lw=1)
+                ax.plot([xm,x1], [y1, y1], color=color, lw=1)
+                xa, ya, va = xm, y1, 'bottom' if y1>=0 else 'top'
+            elif gate1 == 'N':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya, va = xm, y0, 'bottom'
+        elif gate0 == 'S':
+            if gate1 == 'E':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya, ha = x0, ym, 'left'
+            elif gate1 == 'S':
+                ym = -BH
+                ax.plot([x0,x0], [y0, ym], color=color, lw=1)
+                ax.plot([x0,x1], [ym, ym], color=color, lw=1)
+                ax.plot([x1,x1], [ym, y1], color=color, lw=1)
+                xa, ya, va = xm, ym, 'bottom'
+            elif gate1 == 'W':
+                ax.plot([x0,x0], [y0, y1], color=color, lw=1)
+                ax.plot([x0,x1], [y1, y1], color=color, lw=1)
+                xa, ya, va = xm, y1, 'bottom'
+            elif gate1 == 'N':
+                ax.plot([x0,x0], [y0, y1], color=color, lw=1)
+                #ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya = x0, ym
+        elif gate0 == 'W':
+            if gate1 == 'E':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya = x0, ym
+            elif gate1 == 'S':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya = x0, ym
+            elif gate1 == 'W':
+                xm = (x0+x1)/2
+                ax.plot([x0,xm], [y0, y0], color=color, lw=1)
+                ax.plot([xm,xm], [y0, y1], color=color, lw=1)
+                ax.plot([xm,x1], [y1, y1], color=color, lw=1)
+                xa, ya = x0, ym
+            elif gate1 == 'N':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya = x0, ym
+        elif gate0 == 'N':
+            if gate1 == 'E':
+                ax.plot([x0,x0], [y0, y1], color=color, lw=1)
+                ax.plot([x1,x0], [y1, y1], color=color, lw=1)
+                xa, ya = x0, ym
+            elif gate1 == 'S':
+                ax.plot([x0,x0], [y0, ym], color=color, lw=1)
+                ax.plot([x0,x1], [ym, ym], color=color, lw=1)
+                ax.plot([x1,x1], [ym, y1], color=color, lw=1)
+                xa, ya = x0, ym
+            elif gate1 == 'W':
+                ax.plot([x0,x0], [y0, y1], color=color, lw=1)
+                ax.plot([x0,x1], [y1, y1], color=color, lw=1)
+                xa, ya, va = xm, y1, 'bottom'
+            elif gate1 == 'N':
+                ax.plot([x0,x1], [y0, y0], color=color, lw=1)
+                ax.plot([x1,x1], [y0, y1], color=color, lw=1)
+                xa, ya = x0, ym
+
+        ax.annotate(text, (xa, ya), color='black',
+                    weight='bold', fontsize=9, ha=ha, va=va, alpha=0.9)
+                
+
+    def _add_box_to_ax(ax: Any, xb: int, yb: int, text: str, color: str) -> None:
+        x, y = (2*xb)*BW-BW/2, (2*yb)*BH-BH/2
+        r = mpatches.Rectangle((x, y), BW, BH, facecolor=color,edgecolor='black',alpha=0.3)
+        ax.add_patch(r)
+        cx = x + r.get_width()/2.0
+        cy = y + r.get_height()/2.0
+        ax.annotate(text, (cx, cy), color='black', fontsize=9, ha='center', va='center')
+
+    panel_1 = (0,  1)
+    solix_mppt = (0,0)        
+    panel_2 = (0, -1)
+    solix_split = (1,0)        
+    solix_bat = (2, 1)
+    solix_out = (3, 0)
+    inv_mppt_1 = (4,1)
+    inv_mppt_2 = (4,-1)
+    inv_out = (4,0)
+    plug = (5,0)
+    house = (6,0)
+    net = (6,-1)
+    sinks = (6,1)
+    
+    _add_box_to_ax(ax, *panel_1, 'PANEL 1', 'green')
+    _add_box_to_ax(ax, *panel_2, 'PANEL 2', 'green')
+    _add_box_to_ax(ax, *solix_mppt, 'SOLIX\nMPPT', 'grey')
+    _add_box_to_ax(ax, *solix_split, 'SOLIX\nSPLIT', 'grey')
+    _add_box_to_ax(ax, *solix_out, 'SOLIX\nOUT', 'grey')
+    _add_box_to_ax(ax, *solix_bat, 'SOLIX\nBAT', 'grey')
+    _add_box_to_ax(ax, *house, 'HOUSE', 'white' if smp>0 else 'red')
+    _add_box_to_ax(ax, *net, 'NET', 'blue')
+    _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
+    _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
+    _add_box_to_ax(ax, *inv_out, 'INV\nOUT', 'cyan')
+    _add_box_to_ax(ax, *sinks, 'MANY\nSINKS', 'white')
+    if spp > 0:
+        _add_box_to_ax(ax, *plug, 'PLUG', 'brown')
+
+    if sbpi>0 :
+        _add_link_to_ax(ax, *panel_1, 'S', *solix_mppt, 'N',
+                    f'{sbpi/2:.0f}W', 'green')
+        _add_link_to_ax(ax, *panel_2, 'N', *solix_mppt, 'S',
+                    f'{sbpi/2:.0f}W', 'green')
+        _add_link_to_ax(ax, *solix_mppt, 'E', *solix_split, 'W',
+                        f'{sbpi:.0f}W', 'grey')
+    if sbpb<0 :
+        _add_link_to_ax(ax, *solix_split, 'N', *solix_bat, 'W',
+                        f'{-sbpb:.0f}W', 'm')
+    
+    if sbpb>0 :
+        _add_link_to_ax(ax, *solix_bat, 'E', *solix_out, 'N',
+                        f'{sbpb:.0f}W', 'm')
+    if sbpi>0:
+        _add_link_to_ax(ax, *solix_split, 'S', *solix_out, 'S',
+                        f'{sbpi+sbpb:.0f}W', 'grey')
+    if ivp1 > 0:
+        _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
+                        f'{ivp1:.0f}W', 'grey')
+        _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
+                        f'{ivp1:.0f}W', 'cyan')
+    if ivp2 > 0:
+        _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
+                        f'{ivp2:.0f}W', 'grey')
+        _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
+                        f'{ivp2:.0f}W', 'cyan')
+
+    if spp > 0:
+        if ivp > 0:
+            _add_link_to_ax(ax, *inv_out, 'E', *plug, 'W',
+                            f'{ivp:.0f}W', 'brown')
+            _add_link_to_ax(ax, *plug, 'E', *house, 'W',
+                            f'{ivp:.0f}W', 'brown')
+    else:
+        if ivp > 0:
+            _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
+                            f'{ivp:.0f}W', 'cyan')
+    if smp >= 0:
+        _add_link_to_ax(ax, *house, 'S', *net, 'N',
+                        f'{smp:.0f}W', 'blue')
+        _add_link_to_ax(ax, *house, 'N', *sinks, 'S',
+                        f'{smp+ivp:.0f}W', 'black')
+    else:
+        _add_link_to_ax(ax, *house, 'N', *sinks, 'S',
+                        f'{ivp:.0f}W', 'black')
+        
+    title = f'# System #'
+    #title += f'\nLast sample @ {type(time.astype(datetime))}'
+    ax.set_title(title)
+    
+    # Save it to a temporary buffer.
+    buf = BytesIO()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+
+    logger.info(f'{__me__}: done')
+    return base64.b64encode(buf.getbuffer()).decode('ascii')
+
+async def get_blocks(time: t64, smp: f64,
+                    ivp1: f64, ivp2: f64, spp: f64,
+                    sbpi: f64s, sbpo: f64s, sbpb: f64):
+    if sys.version_info >= (3, 9):
+        return await asyncio.to_thread(_get_w_line,**vars()) # type: ignore[unused-ignore]
+    else:
+        return _get_blocks(**vars())
