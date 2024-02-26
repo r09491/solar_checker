@@ -131,7 +131,7 @@ def _get_w_line(time: t64s, smp: f64s,
         logger.info(f'{__me__}: using smartplug samples only')
         
         ax.fill_between(time, 0, spp,
-                        color='yellow',label='PLUG', lw=0, alpha=0.3)
+                        color='grey',label='PLUG', lw=0, alpha=0.3)
         ax.fill_between(time, spp, spp  + smp,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
 
@@ -156,7 +156,7 @@ def _get_w_line(time: t64s, smp: f64s,
         logger.warn(f'{__me__}: other power samples are ignored')
 
         ax.fill_between(time, 0, sbpo,
-                        color='yellow', label='BANK', alpha=0.3)
+                        color='grey', label='BANK', alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smp,
                         color='b', label='HOUSE', alpha=0.3)
 
@@ -271,7 +271,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
         logger.info(f'{__me__}: using smartplug samples only')
 
         ax.fill_between(time, 0, spe,
-                             color='yellow', label='PLUG',alpha=0.3)
+                             color='grey', label='PLUG',alpha=0.3)
         ax.fill_between(time, spe, spe + sme,
                              color='b',label='HOUSE', alpha=0.3)
 
@@ -290,7 +290,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
         logger.warn(f'{__me__}: other energy samples are ignored')
 
         ax.fill_between(time, 0, sbeo,
-                             color='yellow', label='BANK',alpha=0.3)
+                             color='grey', label='BANK',alpha=0.3)
         ax.fill_between(time, sbeo, sbeo + sme,
                              color='b',label='HOUSE', alpha=0.3)
 
@@ -386,7 +386,7 @@ def _get_kwh_bar_unified(
         logger.info(f'{__me__}: using unified samples')
 
         ax.bar(time, panel, bottom = 0,
-               color='yellow', label='PANEL', width=bar_width, alpha=0.3)
+               color='grey', label='PANEL', width=bar_width, alpha=0.3)
         ax.bar(time, sme, bottom=panel,
                color='blue',label='HOUSE', width=bar_width, alpha=0.3)
         
@@ -660,7 +660,7 @@ def _get_blocks(time: t64, smp: f64,
                         f'{ivp:.0f}W', 'black')
         
     title = f'# System #'
-    #title += f'\nLast sample @ {type(time.astype(datetime))}'
+    title += f'\nLast Sample of the Day'
     ax.set_title(title)
     
     # Save it to a temporary buffer.
