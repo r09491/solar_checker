@@ -11,7 +11,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-#import matplotlib.image as mpimg
 import matplotlib.patches as mpatches
 
 import numpy as np

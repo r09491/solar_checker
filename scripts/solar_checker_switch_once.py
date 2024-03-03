@@ -53,7 +53,10 @@ import asyncio
 from aiohttp.client_exceptions import ClientConnectorError
 
 import numpy as np
-import pandas as pd
+
+from typing import Any, Optional
+from utils.types import f64, f64s, t64, t64s, timeslots
+from utils.samples import get_columns_from_csv
 
 from poortuya import Smartplug
 
@@ -75,11 +78,11 @@ class Switch_Status(Enum):
 
     def __str__(self) -> str:
         return self.value
-    
-f64 = np.float64
+
+"""
 def str2f64(value: str) -> f64:
     return f64(value)
-
+"""
 
 async def tuya_smartplug_switch_set(sp: Smartplug,
                                     ss_desired: Switch_Status) -> Switch_Status:
@@ -106,26 +109,35 @@ async def main(sp: Smartplug,
                power_mean_deviation: f64,
                power_samples: int, f: Any) -> int:
 
-    sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP'.split(',')
-    df = pd.read_csv(f, sep = sep, names = names).tail(power_samples)
-    logger.info(f'Using {df.shape[0]} records with {df.shape[1]} columns')
-
-    if df.shape[0] != power_samples:
-        logger.error(f'Wrong number of records "{df.shape[0]}"')
+    c = await get_columns_from_csv()
+    if c is None:
+        logger.info(f'Samples from stdin  not valid')
         return 10
-    if df.shape[1] != len(names):
-        logger.error(f'Wrong number of record columns "{df.shape[1]}"')
+
+
+    smp = c['SMP']
+    if smp.size != power_samples:
+        logger.error(f'Wrong number of records "{smp.size}"')
         return 11
 
-    
-    """ The last records from the house smartmeter """
-    smp = np.array(df.SMP.apply(str2f64))
-    """ The last records from the smartplug at inverter"""
-    spp = np.array(df.SPP.apply(str2f64))
+    sbpo = c['SBPO']
+    if sbpo.size != power_samples:
+        logger.error(f'Wrong number of records "{spbo.size}"')
+        return 12
+    pt = smp + sbpo
 
-    """ The total power """
-    pt = spp + smp
+    ivp = c['IVP1'] + c['IVP2']
+    if ivp.size != power_samples:
+        logger.error(f'Wrong number of records "{ivp.size}"')
+        return 13
+    pt = smp + ivp if (ivp>0).any() else pt
+
+    spph = c['SPPH']
+    if spph.size != power_samples:
+        logger.error(f'Wrong number of records "{spph.size}"')
+        return 14
+    pt = smp + spph if (spph>0).any() else pt 
+            
     pt_mean, pt_std = pt.mean(), pt.std()
     logger.info(f'Last records mean "{pt_mean:.0f}W", std "{pt_std:.0f}W"')
 
@@ -187,7 +199,7 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--power_mean_deviation', type = f64, default = 25.0,
                         help = "Minimum power output deviation of powerbank")
 
-    parser.add_argument('--power_samples', type = int, default = 15,
+    parser.add_argument('--power_samples', type = int, default = 10,
                         help = "Number of recorded samples to use")
     
     args = parser.parse_args()
