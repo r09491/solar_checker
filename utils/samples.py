@@ -74,7 +74,7 @@ def _get_columns_from_csv(
             return None
         
     sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPP,SBPI,SBPO,SBPB,SBSB'.split(',')
+    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPPH,SBPI,SBPO,SBPB,SBSB,SPP1,SPP2'.split(',')
     df = read_csv(logfile, sep=sep, names=names)
 
     """ The timestamps """
@@ -116,10 +116,10 @@ def _get_columns_from_csv(
         logger.error(f'{__me__}:Undefined IVE2 samples')
         return None
 
-    """ The normalised smartplug power """
-    spp = np.array(df.SPP.apply(_str2float))
-    if np.isnan(spp).any():
-        logger.error(f'{__me__}:Undefined SPP samples')
+    """ The normalised smartplug power home"""
+    spph = np.array(df.SPPH.apply(_str2float))
+    if np.isnan(spph).any():
+        logger.error(f'{__me__}:Undefined SPPH samples')
         return None
 
     """ The normalised solarbank power input """
@@ -145,7 +145,19 @@ def _get_columns_from_csv(
     if np.isnan(sbsb).any():
         logger.warn(f'{__me__}:Undefined SBSB samples')
         sbsb = None
-    
+
+    """ The normalised smartplug power switch 1 """
+    spp1 = np.array(df.SPP1.apply(_str2float))
+    if np.isnan(spp1).any():
+        logger.warn(f'{__me__}:Undefined SPP1 samples')
+        spp1 =  None
+
+    """ The normalised smartplug power switch 2 """
+    spp2 = np.array(df.SPP2.apply(_str2float))
+    if np.isnan(spp2).any():
+        logger.warn(f'{__me__}:Undefined SPP2 samples')
+        spp2 =  None
+        
     # Get rid of offsets and fill tails
 
     sme -= sme[0]
@@ -163,8 +175,9 @@ def _get_columns_from_csv(
     logger.info(f'{__me__}: done')
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
-            'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2, 'SPP' : spp,
-            'SBPI' : sbpi, 'SBPO' : sbpo, 'SBPB' : sbpb, 'SBSB' : sbsb}
+            'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2, 'SPPH' : spph,
+            'SBPI' : sbpi, 'SBPO' : sbpo, 'SBPB' : sbpb, 'SBSB' : sbsb,
+            'SPP1' : spp1, 'SPP2' : spp2}
 
 async def get_columns_from_csv(
         logday: str = None,
@@ -191,7 +204,7 @@ async def get_kwh_sum_from_csv(
     return {'SME' : c['SMP'].sum()/60.0/1000.0 if c and 'SMP' in c else 0.0,
             'IVE1' : c['IVP1'].sum()/60.0/1000.0 if c and 'IVP1' in c else 0.0,
             'IVE2' : c['IVP2'].sum()/60.0/1000.0 if c and 'IVP2' in c else 0.0,
-            'SPE' : c['SPP'].sum()/60.0/1000.0 if c and 'SPP' in c else 0.0,
+            'SPEH' : c['SPPH'].sum()/60.0/1000.0 if c and 'SPPH' in c else 0.0,
             'SBEO' : c['SBPO'].sum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}
 
 
@@ -226,14 +239,14 @@ async def get_kwh_sum_month(logmonth: str,
     msme = np.zeros(mtime.size, dtype=f64)
     mive1 = np.zeros(mtime.size, dtype=f64)
     mive2 = np.zeros(mtime.size, dtype=f64)
-    mspe  = np.zeros(mtime.size, dtype=f64)
+    mspeh  = np.zeros(mtime.size, dtype=f64)
     msbeo  = np.zeros(mtime.size, dtype=f64)
     for i, r in enumerate(results):
-        msme[i], mive1[i], mive2[i], mspe[i], msbeo[i] = r
+        msme[i], mive1[i], mive2[i], mspeh[i], msbeo[i] = r
 
     logger.info(f'{__me__}: done')       
     return {'TIME':mtime, 'SME':msme, 'IVE1':mive1,
-            'IVE2':mive2, 'SPE':mspe, 'SBEO':msbeo}
+            'IVE2':mive2, 'SPEH':mspeh, 'SBEO':msbeo}
 
 """
 Unifies the calculated energy results for each day of the specified
@@ -254,10 +267,10 @@ async def get_kwh_sum_month_unified(
 
     mkwhs = await get_kwh_sum_month(
         logmonth, logprefix, logdir, logdayformat)
-    mtime, msme, mive1, mive2, mspe, msbeo = mkwhs.values()
+    mtime, msme, mive1, mive2, mspeh, msbeo = mkwhs.values()
 
     # 1.Prio
-    umkwhs = mspe.copy()
+    umkwhs = mspeh.copy()
 
     # 2.Prio 
     mive = mive1 + mive2
@@ -304,15 +317,15 @@ async def get_kwh_sum_year(
     ysme = np.zeros(ytime.size, dtype=f64)
     yive1 = np.zeros(ytime.size, dtype=f64)
     yive2 = np.zeros(ytime.size, dtype=f64)
-    yspe  = np.zeros(ytime.size, dtype=f64)
+    yspeh  = np.zeros(ytime.size, dtype=f64)
     ysbeo  = np.zeros(ytime.size, dtype=f64)
 
     for i, r in enumerate(results):
-        ysme[i], yive1[i], yive2[i], yspe[i], ysbeo[i] = r
+        ysme[i], yive1[i], yive2[i], yspeh[i], ysbeo[i] = r
 
     logger.info(f'{__me__}: done')        
     return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1,
-            'IVE2':yive2, 'SPE':yspe, 'SBEO':ysbeo}        
+            'IVE2':yive2, 'SPEH':yspeh, 'SBEO':ysbeo}        
 
 
 """
@@ -359,5 +372,5 @@ async def get_kwh_cumsum_from_csv(
     return {'SME' : c['SMP'].cumsum()/60.0/1000.0 if c and 'SMP' in c else 0.0,
             'IVE1' : c['IVP1'].cumsum()/60.0/1000.0 if c and 'IVE1' in c else 0.0,
             'IVE2' : c['IVP2'].cumsum()/60.0/1000.0 if c and 'IVE2' in c else 0.0,
-            'SPE' : c['SPP'].cumsum()/60.0/1000.0 if c and 'SPP' in c else 0.0,
+            'SPEH' : c['SPPH'].cumsum()/60.0/1000.0 if c and 'SPPH' in c else 0.0,
             'SBEO' : c['SBPO'].cumsum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}

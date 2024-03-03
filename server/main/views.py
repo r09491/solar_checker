@@ -48,21 +48,25 @@ async def plot_day(request: web.Request) -> dict:
     if c is None:
         return aiohttp_jinja2.render_template('error.html', request,
             {'error' : f"Samples logfile '{logday}' not found or not valid"})
-    time, spp = c['TIME'], c['SPP']
+
+    time, spph = c['TIME'], c['SPPH']
     sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
-
+    spp1, spp2 = c['SPP1'], c['SPP2']
+    
     blocks, w, kwh = await asyncio.gather(
         get_blocks(time[-1], smp[-1], ivp1[-1], ivp2[-1],
-                   spp[-1] if spp is not None else 0,
+                   spph[-1] if spph is not None else 0,
                    sbpi[-1] if sbpi is not None else 0,
                    sbpo[-1] if sbpo is not None else 0,
-                   sbpb[-1] if sbpb is not None else 0),
+                   sbpb[-1] if sbpb is not None else 0,
+                   spp1[-1] if spp1 is not None else 0,
+                   spp2[-1] if spp2 is not None else 0),
         get_w_line(time, smp, ivp1, ivp2,
-                   spp, sbpi, sbpo, sbpb, slots),
+                   spph, sbpi, sbpo, sbpb, slots),
         get_kwh_line(time, sme, ive1, ive2,
-            spp.cumsum()/1000/60 if spp is not None else None,
+            spph.cumsum()/1000/60 if spph is not None else None,
             sbpi.cumsum()/1000/60 if sbpi is not None else None,
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpb.cumsum()/1000/60 if sbpb is not None else None,

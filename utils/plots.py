@@ -48,7 +48,7 @@ def _power_means(times: t64s,
 
 
 def _get_w_line(time: t64s, smp: f64s,
-                ivp1: f64s, ivp2: f64s, spp: f64s,
+                ivp1: f64s, ivp2: f64s, spph: f64s,
                 sbpi: f64s, sbpo: f64s, sbpb: f64s,
                 slots: timeslots = SLOTS):
     __me__ ='_get_w_line'
@@ -69,10 +69,10 @@ def _get_w_line(time: t64s, smp: f64s,
     ivpon_max = ivpon.max() if ivpon is not None else 0
 
     # ?Have power ( smartplug)
-    issppon = spp>0 if spp is not None else None
-    sppon = spp[issppon] if issppon is not None and issppon.any() else None
-    sppon_mean = sppon.mean() if sppon is not None else 0
-    sppon_max = sppon.max() if sppon is not None else 0
+    isspphon = spph>0 if spph is not None else None
+    spphon = spph[isspphon] if isspphon is not None and isspphon.any() else None
+    spphon_mean = spphon.mean() if spphon is not None else 0
+    spphon_max = spphon.max() if spphon is not None else 0
 
     # ?Have sun (solarbank)
     issbpion = sbpi>0  if sbpi is not None else None
@@ -99,18 +99,18 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpboff_max = sbpboff.max() if sbpboff is not None else 0
     
     timeivpon = time[isivpon] if isivpon is not None and isivpon.any() else None
-    timesppon = time[issppon] if issppon is not None  and issppon.any() else None
+    timespphon = time[isspphon] if isspphon is not None  and isspphon.any() else None
     timesbpbon = time[issbpbon] if issbpbon is not None and issbpbon.any() else None
     timesbpboff = time[issbpboff] if issbpboff is not None and issbpboff.any() else None
     timesbpoon = time[issbpoon] if issbpoon is not None and issbpoon.any() else None
     timesbpion = time[issbpion] if issbpion is not None and issbpion.any() else None
-    timeon = timesppon if timesppon is not None else timeivpon if timeivpon is not None else timesbpion
+    timeon = timespphon if timespphon is not None else timeivpon if timeivpon is not None else timesbpion
 
     totals = smp.copy()
-    if sppon is not None: 
-        totals += spp    # 1.priority (smartplug)
-        on600 = np.full_like(sppon,600) 
-        on800 = np.full_like(sppon,800)
+    if spphon is not None: 
+        totals += spph    # 1.priority (smartplug)
+        on600 = np.full_like(spphon,600) 
+        on800 = np.full_like(spphon,800)
     elif ivpon is not None:
         totals += ivp    # 2.priority (inverter)
         on600 = np.full_like(ivpon, 600) 
@@ -127,12 +127,12 @@ def _get_w_line(time: t64s, smp: f64s,
     
     ax.clear()
     
-    if sppon is not None:
+    if spphon is not None:
         logger.info(f'{__me__}: using smartplug samples only')
         
-        ax.fill_between(time, 0, spp,
+        ax.fill_between(time, 0, spph,
                         color='grey',label='PLUG', lw=0, alpha=0.3)
-        ax.fill_between(time, spp, spp  + smp,
+        ax.fill_between(time, spph, spph  + smp,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
 
         if ivpon is not None:
@@ -197,10 +197,10 @@ def _get_w_line(time: t64s, smp: f64s,
         title += '' if title[-1] == '\n' else ' | '
         title += f'House {smp[-1]:.0f}'
         title += f'={smp_mean:.0f}^{smp_max:.0f}W'
-    if sppon is not None:
+    if spphon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Plug {spp[-1]:.0f}'
-        title += f'={sppon_mean:.0f}^{sppon_max:.0f}W'
+        title += f'Plug {spph[-1]:.0f}'
+        title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
         
     if sbpb is not None:
         title += f'\nBat+ {-sbpbon[-1] if sbpb[-1] < 0 else 0:.0f}'
@@ -231,7 +231,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
 
 async def get_w_line(time: t64s, smp: f64s,
-                    ivp1: f64s, ivp2: f64s, spp: f64s,
+                    ivp1: f64s, ivp2: f64s, spph: f64s,
                     sbpi: f64s, sbpo: f64s, sbpb: f64s, 
                     slots: timeslots = SLOTS):
     if sys.version_info >= (3, 9):
@@ -241,7 +241,7 @@ async def get_w_line(time: t64s, smp: f64s,
 
 
 def _get_kwh_line(time: t64s, sme: f64s,
-                  ive1: f64s, ive2: f64s, spe: f64s,
+                  ive1: f64s, ive2: f64s, speh: f64s,
                   sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
                   empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%H:%Mh'):
     __me__ ='_get_kwh_line'
@@ -255,8 +255,8 @@ def _get_kwh_line(time: t64s, sme: f64s,
     isiveon = ive>0 if ive is not None else None
     iveon = ive[isiveon] if isiveon is not None and isiveon.any() else None
 
-    isspeon = spe>0 if spe is not None else None
-    speon = spe[isspeon] if isspeon is not None and isspeon.any() else None
+    isspehon = speh>0 if speh is not None else None
+    spehon = speh[isspehon] if isspehon is not None and isspehon.any() else None
 
     issbeoon = sbeo>0 if sbeo is not None else None
     sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
@@ -267,12 +267,12 @@ def _get_kwh_line(time: t64s, sme: f64s,
 
     ax.clear()
 
-    if speon is not None:
+    if spehon is not None:
         logger.info(f'{__me__}: using smartplug samples only')
 
-        ax.fill_between(time, 0, spe,
+        ax.fill_between(time, 0, speh,
                              color='grey', label='PLUG',alpha=0.3)
-        ax.fill_between(time, spe, spe + sme,
+        ax.fill_between(time, speh, speh + sme,
                              color='b',label='HOUSE', alpha=0.3)
 
     elif iveon is not None:
@@ -317,11 +317,11 @@ def _get_kwh_line(time: t64s, sme: f64s,
         else:
             title += f' House {sme.sum():.1f}kWh ~ {(sme.sum()*price):.2f}€'
             
-    if speon is not None:
+    if spehon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f' | Plug {spe[-1]:.1f}kWh ~ {spe[-1]*price:.2f}€'
+            title += f' | Plug {speh[-1]:.1f}kWh ~ {speh[-1]*price:.2f}€'
         else:
-            title += f' | Plug {spe.sum():.1f}kWh ~ {spe.sum()*price:.2f}€'
+            title += f' | Plug {speh.sum():.1f}kWh ~ {speh.sum()*price:.2f}€'
     elif iveon is not None:
         if time_format == '%H:%Mh': # Accumulated
             title += f' | Inv {ive[-1]:.1f}kWh ~ {ive[-1]*price:.2f}€'
@@ -357,7 +357,7 @@ def _get_kwh_line(time: t64s, sme: f64s,
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_kwh_line(time: t64s, sme: f64s,
-                       ive1: f64s, ive2: f64s, spe: f64s,
+                       ive1: f64s, ive2: f64s, speh: f64s,
                        sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
                        empty_kwh: f64s, full_kwh: f64s, price: f64,
                        time_format: str = '%H:%Mh'):
@@ -439,8 +439,9 @@ async def get_kwh_bar_unified(
 
 
 def _get_blocks(time: t64, smp: f64,
-                ivp1: f64, ivp2: f64, spp: f64,
-                sbpi: f64, sbpo: f64, sbpb: f64):
+                ivp1: f64, ivp2: f64, spph: f64,
+                sbpi: f64, sbpo: f64, sbpb: f64,
+                spp1: f64, spp2: f64):
     __me__ ='_blocks'
 
     logger.info(f'{__me__}: started')
@@ -599,7 +600,7 @@ def _get_blocks(time: t64, smp: f64,
         cx = x + r.get_width()/2.0
         cy = y + r.get_height()/2.0
         ax.annotate(text, (cx, cy), color='black', fontsize=9, ha='center', va='center')
-
+        
     panel_1 = (0,  1)
     solix_mppt = (0,0)        
     panel_2 = (0, -1)
@@ -609,27 +610,31 @@ def _get_blocks(time: t64, smp: f64,
     inv_mppt_1 = (4,1)
     inv_mppt_2 = (4,-1)
     inv_out = (4,0)
-    plug = (5,0)
-    house = (6,0)
-    net = (6,1)
-    sinks = (6,-1)
-    
+    plugh = (4,0)
+    house = (5,0)
+    net = (5, 1)
+    sinks = (6, 0)
+    plug1 = (6 ,1)
+    plug2 = (6 ,-1)
+        
     _add_box_to_ax(ax, *panel_1, 'PANEL 1', 'green')
     _add_box_to_ax(ax, *panel_2, 'PANEL 2', 'green')
     _add_box_to_ax(ax, *solix_mppt, 'SOLIX\nMPPT', 'grey')
     _add_box_to_ax(ax, *solix_split, 'SOLIX\nSPLIT', 'grey')
     _add_box_to_ax(ax, *solix_out, 'SOLIX\nOUT', 'grey')
     _add_box_to_ax(ax, *solix_bat, 'SOLIX\nBAT', 'grey')
-    _add_box_to_ax(ax, *house, 'HOUSE',
+    _add_box_to_ax(ax, *house, 'METER\nHOUSE',
                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
     _add_box_to_ax(ax, *net, 'NET', 'blue')
     _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
     _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
-    _add_box_to_ax(ax, *inv_out, 'INV\nOUT', 'cyan')
+    if spph > 0:
+        _add_box_to_ax(ax, *plugh, 'PLUG\nHOUSE', 'brown')
+    else:
+        _add_box_to_ax(ax, *inv_out, 'INV\nOUT', 'cyan')
     _add_box_to_ax(ax, *sinks, 'MANY\nSINKS', 'white')
-
-    if spp > 0:
-        _add_box_to_ax(ax, *plug, 'PLUG', 'brown')
+    _add_box_to_ax(ax, *plug1, 'PLUG 1', 'white')
+    _add_box_to_ax(ax, *plug2, 'PLUG 2', 'white')
 
     if sbpi>0 :
         _add_link_to_ax(ax, *panel_1, 'S', *solix_mppt, 'N',
@@ -651,38 +656,43 @@ def _get_blocks(time: t64, smp: f64,
     if ivp1 > 0:
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
                         ivp1, 'magenta' if sbpb>0 else 'grey')
-        ##_add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
-        ##                ivp1, 'cyan')
-        _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
-                       ivp1, 'magenta' if sbpb>0 else 'grey')
+        if spph>0:
+            _add_link_to_ax(ax, *inv_mppt_1, 'S', *plugh, 'N',
+                            ivp1, 'magenta' if sbpb>0 else 'grey')
+        else:
+            _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
+                            ivp1, 'magenta' if sbpb>0 else 'grey')
     if ivp2 > 0:
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
                         ivp2, 'magenta' if sbpb>0 else 'grey')
-        ##_add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
-        ##               ivp2, 'cyan')
-        _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
+        if spph>0:
+            _add_link_to_ax(ax, *inv_mppt_2, 'N', *plugh, 'S',
+                            ivp1, 'magenta' if sbpb>0 else 'grey')
+        else:
+            _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
                         ivp2, 'magenta' if sbpb>0 else 'grey')
 
-    if spp > 0:
-        if ivp > 0:
-            _add_link_to_ax(ax, *inv_out, 'E', *plug, 'W',
-                            ivp, 'brown')
-            _add_link_to_ax(ax, *plug, 'E', *house, 'W',
-                            ivp, 'brown')
-    else:
-        if ivp > 0:
-            ##_add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
-            ##                ivp, 'cyan')
-            _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
-                            ivp, 'magenta' if sbpb>0 else 'grey')
+    if spph > 0:
+        _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
+                        spph, 'magenta' if sbpb>0 else 'grey')
+    elif ivp > 0:
+        _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
+                        ivp, 'magenta' if sbpb>0 else 'grey')
+
     if smp > 0:
-        _add_link_to_ax(ax, *house, 'N', *net, 'S',
-                        smp, 'blue')
-        _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
-                        smp+ivp, 'black')
+        print(smp, spph, ivp)
+        _add_link_to_ax(ax, *net, 'S', *house, 'N', smp, 'blue')
+        _add_link_to_ax(ax, *house, 'E', *sinks, 'W',
+                        smp + (spph if spph>0 else ivp), 'blue')
     else:
-        _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
-                        ivp, 'black')
+        _add_link_to_ax(ax, *house, 'E', *sinks, 'W',
+                        spph if spph>0 else ivp,
+                        'magenta' if sbpb>0 else 'grey')
+
+    if spp1>0:
+        _add_link_to_ax(ax, *sinks, 'N', *plug1, 'S', spp1, 'black')
+    if spp2>0:
+        _add_link_to_ax(ax, *sinks, 'S', *plug2, 'N', spp2, 'black')
         
     title = f'# System #'
     title += f'\nLast Sample of the Day'
@@ -697,8 +707,9 @@ def _get_blocks(time: t64, smp: f64,
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_blocks(time: t64, smp: f64,
-                    ivp1: f64, ivp2: f64, spp: f64,
-                    sbpi: f64s, sbpo: f64s, sbpb: f64):
+                     ivp1: f64, ivp2: f64, spph: f64,
+                     sbpi: f64s, sbpo: f64s, sbpb: f64,
+                     spp1: f64, spp2: f64):
     if sys.version_info >= (3, 9):
         return await asyncio.to_thread(_get_w_line,**vars()) # type: ignore[unused-ignore]
     else:

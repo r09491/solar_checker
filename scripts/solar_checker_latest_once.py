@@ -54,13 +54,18 @@ async def tuya_smartplug_latest_get(sp: Smartplug) -> str:
     logger.info(f'tuya_smartplug_latest_get started')
     text = '0'
 
-    status = await sp.get_status()
-    if status is not None:
-        logger.debug("The Tuya smartplug has data.")
-        text = f'{status.power:.0f}'
+    if sp is None:
+        logger.warning('A Tuya smartplug is "UNUSED".')
+        await asyncio.sleep(1)
 
     else:
-        logger.warning('The Tuya Smartplug is  "OFF". Plugged?')
+        status = await sp.get_status()
+        if status is not None:
+            logger.info('A Tuya smartplug is "ON".')
+            text = f'{status.power:.0f}'
+
+        else:
+            logger.warning('A Tuya smartplug is "OFF".')
     
     logger.info(f'tuya_smartplug_latest_get done')        
     return text
@@ -119,7 +124,9 @@ async def apsystems_inverter_latest_get(iv: Inverter) -> str:
     return text
 
 
-async def main(sm: Smartmeter, iv: Inverter, sp: Smartplug, sb: Solarbank) -> int:
+async def main(sm: Smartmeter, iv: Inverter,
+               sph: Smartplug, sb: Solarbank,
+               sp1: Smartplug, sp2: Smartplug,) -> int:
 
     # Tasmota sometimes returns with an invalid time. Ensure there is
     # a valid time!
@@ -128,8 +135,10 @@ async def main(sm: Smartmeter, iv: Inverter, sp: Smartplug, sb: Solarbank) -> in
     results = await asyncio.gather(
         tasmota_smartmeter_latest_get(sm),
         apsystems_inverter_latest_get(iv),
-        tuya_smartplug_latest_get(sp),
+        tuya_smartplug_latest_get(sph),
         anker_solarbank_latest_get(sb),
+        tuya_smartplug_latest_get(sp1),
+        tuya_smartplug_latest_get(sp2),
     )
 
     sys.stdout.write(nowiso + ',' + ','.join(results) + '\n')
@@ -144,8 +153,10 @@ class Script_Arguments:
     sm_port: int
     iv_ip: str
     iv_port: int
-    sp_name: str
     sb_sn:str
+    sp_house: str
+    sp_switch_1: str
+    sp_switch_2: str
     
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
@@ -169,17 +180,24 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--iv_port', type = int, default = 8050,
                         help = "IP port of the APsystems inverter")
 
-    parser.add_argument('--sp_name', type = str, required = True,
-                        help = "Name of the plug in the config file")
-
     parser.add_argument('--sb_sn', type = str, required = True,
                         help = "Serial number of the solarbank")
+    
+    parser.add_argument('--sp_house', type = str, default = None,
+                        help = "Name of the plug for input to the house")
+
+    parser.add_argument('--sp_switch_1', type = str, default = None,
+                        help = "Name of the plug used as switch 1")
+
+    parser.add_argument('--sp_switch_2', type = str, default = None,
+                        help = "Name of the plug used as switch 2")
     
     args = parser.parse_args()
     
     return Script_Arguments(args.sm_ip, args.sm_port,
                             args.iv_ip, args.iv_port,
-                            args.sp_name, args.sb_sn)
+                            args.sb_sn, args.sp_house,
+                            args.sp_switch_1, args.sp_switch_2)
 
 
 if __name__ == '__main__':
@@ -194,11 +212,25 @@ if __name__ == '__main__':
         logger.error('IP address of APSystem EZ1M inverter is missing.')
         sys.exit(2)
 
+    if args.sp_house is not None and \
+       args.sp_switch_1 is not None and \
+       args.sp_house == args.sp_switch_1 :
+        logger.error('Illegal usage of smartplug 1.')
+        sys.exit(3)
+
+    if args.sp_house is not None and \
+       args.sp_switch_2 is not None and \
+       args.sp_house == args.sp_switch_2 :
+        logger.error('Illegal usage of smartplug 2.')
+        sys.exit(4)
+        
     sm = Smartmeter(args.sm_ip)
     iv = Inverter(args.iv_ip, args.iv_port)
-    sp = Smartplug(args.sp_name)
     sb = Solarbank(args.sb_sn)
-    err = asyncio.run(main(sm, iv, sp, sb))
+    sph = Smartplug(args.sp_house) if args.sp_house is not None else None
+    sp1 = Smartplug(args.sp_switch_1) if args.sp_switch_1 is not None else None
+    sp2 = Smartplug(args.sp_switch_2) if args.sp_switch_2 is not None else None
+    err = asyncio.run(main(sm, iv, sph, sb, sp1, sp2))
 
     logger.info(f'Recording latest done (err={err})')
     sys.exit(err)

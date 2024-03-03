@@ -9,7 +9,8 @@
 
 solar_checker_latest_once.py --iv_ip "192.168.101.48" \
 			     --sm_ip "192.168.101.30" \
-			     --sp_name "plug1" --sb_sn "AZV6Y60D33200788" >> \
+			     --sb_sn "AZV6Y60D33200788" \
+			     --sp_switch_1 "plug1" >> \
 			$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_$(date +\%y\%m\%d).log 2>> \
 			$SOLAR_CHECKER_STORE_DIR/solar_checker_error_$(date +\%y\%m\%d).log
 
