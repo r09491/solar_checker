@@ -499,81 +499,93 @@ def _get_blocks(time: t64, smp: f64,
         text = f'{power:.0f}W'
         lw = 2*np.log10(float(text[:-1]))
         alpha = 0.3
-        print(lw, text)
-        
+
         if gate0 == 'E':
             if gate1 == 'E':
+                #TODO
                 ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
                 ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
             elif gate1 == 'S':
+                #TODO
                 ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
                 ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya, va = xm, y0, 'bottom'
             elif gate1 == 'W':
-                ax.plot([x0,xm], [y0, y0], color=color, lw=lw, alpha=alpha)
-                ax.plot([xm,xm], [y0, y1], color=color, lw=lw, alpha=alpha)
-                ax.plot([xm,x1], [y1, y1], color=color, lw=lw, alpha=alpha)
+                ax.plot([x0,xm, xm, x1], [y0, y0, y1, y1], color=color, lw=lw, alpha=alpha)
+                #ax.plot([xm,xm], [y0, y1], color=color, lw=lw, alpha=alpha)
+                #ax.plot([xm,x1], [y1, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya, va = xm, y1, 'bottom' if y1>=0 else 'top'
             elif gate1 == 'N':
+                #TODO
                 ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
                 ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya, va = xm, y0, 'bottom'
         elif gate0 == 'S':
             if gate1 == 'E':
+                #TODO
                 ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
                 ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya, ha = x0, ym, 'left'
             elif gate1 == 'S':
                 ym = -BH
-                ax.plot([x0,x0], [y0, ym], color=color, lw=lw, alpha=alpha)
-                ax.plot([x0,x1], [ym, ym], color=color, lw=lw, alpha=alpha)
-                ax.plot([x1,x1], [ym, y1], color=color, lw=lw, alpha=alpha)
+                ax.plot([x0,x0,x1,x1], [y0,ym,ym,y1], color=color, lw=lw, alpha=alpha)
+                #ax.plot([x0,x0], [y0, ym], color=color, lw=lw, alpha=alpha)
+                #ax.plot([x0,x1], [ym, ym], color=color, lw=lw, alpha=alpha)
+                #ax.plot([x1,x1], [ym, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya, va = xm, ym, 'bottom'
             elif gate1 == 'W':
+                #TODO
                 ax.plot([x0,x0], [y0, y1], color=color, lw=lw, alpha=alpha)
                 ax.plot([x0,x1], [y1, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya, va = xm, y1, 'bottom'
             elif gate1 == 'N':
+                #TODO
                 ax.plot([x0,x0], [y0, y1], color=color, lw=lw, alpha=alpha)
                 #ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
         elif gate0 == 'W':
             if gate1 == 'E':
+                #TODO
                 ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
                 ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
             elif gate1 == 'S':
+                #TODO
                 ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
                 ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
             elif gate1 == 'W':
-                xm = (x0+x1)/2
+                #TODO
                 ax.plot([x0,xm], [y0, y0], color=color, lw=lw, alpha=alpha)
                 ax.plot([xm,xm], [y0, y1], color=color, lw=lw, alpha=alpha)
                 ax.plot([xm,x1], [y1, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
             elif gate1 == 'N':
-                ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
-                ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
+                #TODO
+                ax.plot([x0,x1,x1], [y0,y0,y1], color=color, lw=lw, alpha=alpha)
+                #ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
+                #ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
         elif gate0 == 'N':
             if gate1 == 'E':
-                ax.plot([x0,x0], [y0, y1], color=color, lw=lw, alpha=alpha)
-                ax.plot([x1,x0], [y1, y1], color=color, lw=lw, alpha=alpha)
+                #TODO
+                ax.plot([x0,x0,x1], [y0,y1,y1], color=color, lw=lw, alpha=alpha)
+                ##ax.plot([x1,x0], [y1, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
             elif gate1 == 'S':
-                ax.plot([x0,x0], [y0, ym], color=color, lw=lw, alpha=alpha)
-                ax.plot([x0,x1], [ym, ym], color=color, lw=lw, alpha=alpha)
-                ax.plot([x1,x1], [ym, y1], color=color, lw=lw, alpha=alpha)
+                ###TODO
+                ax.plot([x0,x0,x1,x1], [y0,y0+BH/2,y0+BH/2,y1], color=color, lw=lw, alpha=alpha)
+                ##ax.plot([x0,x1], [ym, ym], color=color, lw=lw, alpha=alpha)
+                ##ax.plot([x1,x1], [ym, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
             elif gate1 == 'W':
+                #TODO
                 ax.plot([x0,x0], [y0, y1], color=color, lw=lw, alpha=alpha)
                 ax.plot([x0,x1], [y1, y1], color=color, lw=lw, alpha=alpha)
                 xa, ya, va = xm, y1, 'bottom'
             elif gate1 == 'N':
-                ax.plot([x0,x1], [y0, y0], color=color, lw=lw, alpha=alpha)
-                ax.plot([x1,x1], [y0, y1], color=color, lw=lw, alpha=alpha)
+                ax.plot([x0,x0,x1,x1], [y0,y1+BH/2,y1+BH/2,y1], color=color, lw=lw, alpha=alpha)
                 xa, ya = x0, ym
 
         ax.annotate(text, (xa, ya), color='black',
@@ -608,7 +620,8 @@ def _get_blocks(time: t64, smp: f64,
     _add_box_to_ax(ax, *solix_split, 'SOLIX\nSPLIT', 'grey')
     _add_box_to_ax(ax, *solix_out, 'SOLIX\nOUT', 'grey')
     _add_box_to_ax(ax, *solix_bat, 'SOLIX\nBAT', 'grey')
-    _add_box_to_ax(ax, *house, 'HOUSE', 'white' if smp>0 else 'red')
+    _add_box_to_ax(ax, *house, 'HOUSE',
+                   'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
     _add_box_to_ax(ax, *net, 'NET', 'blue')
     _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
     _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
@@ -637,14 +650,18 @@ def _get_blocks(time: t64, smp: f64,
                         sbpi+sbpb, 'grey')
     if ivp1 > 0:
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
-                        ivp1, 'grey')
+                        ivp1, 'magenta' if sbpb>0 else 'grey')
+        ##_add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
+        ##                ivp1, 'cyan')
         _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
-                        ivp1, 'cyan')
+                       ivp1, 'magenta' if sbpb>0 else 'grey')
     if ivp2 > 0:
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
-                        ivp2, 'grey')
+                        ivp2, 'magenta' if sbpb>0 else 'grey')
+        ##_add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
+        ##               ivp2, 'cyan')
         _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
-                        ivp2, 'cyan')
+                        ivp2, 'magenta' if sbpb>0 else 'grey')
 
     if spp > 0:
         if ivp > 0:
@@ -654,8 +671,10 @@ def _get_blocks(time: t64, smp: f64,
                             ivp, 'brown')
     else:
         if ivp > 0:
+            ##_add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
+            ##                ivp, 'cyan')
             _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
-                            ivp, 'cyan')
+                            ivp, 'magenta' if sbpb>0 else 'grey')
     if smp > 0:
         _add_link_to_ax(ax, *house, 'N', *net, 'S',
                         smp, 'blue')
