@@ -114,40 +114,42 @@ async def main(sp: Smartplug,
         logger.info(f'Samples from stdin  not valid')
         return 10
 
-
     smp = c['SMP']
     if smp.size != power_samples:
-        logger.error(f'Wrong number of records "{smp.size}"')
+        logger.error(f'Wrong number of records "{spbo.size}"')
         return 11
-
+    smp_mean, smp_std = smp.mean(), smp.std()
+    logger.info(f'Last records power mean "{smp_mean:.0f}W", std "{smp_std:.0f}W"')
+    
     sbpo = c['SBPO']
     if sbpo.size != power_samples:
         logger.error(f'Wrong number of records "{spbo.size}"')
         return 12
-    pt = smp + sbpo
+    solarp = sbpo
 
     ivp = c['IVP1'] + c['IVP2']
     if ivp.size != power_samples:
         logger.error(f'Wrong number of records "{ivp.size}"')
         return 13
-    pt = smp + ivp if (ivp>0).any() else pt
+    solarp = ivp if (ivp>0).any() else solarp
 
     spph = c['SPPH']
     if spph.size != power_samples:
         logger.error(f'Wrong number of records "{spph.size}"')
         return 14
-    pt = smp + spph if (spph>0).any() else pt 
+    solarp = spph if (spph>0).any() else solarp 
             
-    pt_mean, pt_std = pt.mean(), pt.std()
-    logger.info(f'Last records mean "{pt_mean:.0f}W", std "{pt_std:.0f}W"')
+    solarp_mean, solarp_std = solarp.mean(), solarp.std()
+    logger.info(f'Last records solar mean "{solarp_mean:.0f}W", std "{solarp_std:.0f}W"')
 
     ss_actual = await tuya_smartplug_switch_get(sp)
     logger.info(f'The smartplug switch currently is "{ss_actual}"')
 
     # Switch to be Open if below average and standard deviation
-    is_to_open =  pt_mean < power_mean_open and pt_std < power_mean_deviation
+    is_to_open =  solarp_mean < power_mean_open and solarp_std < power_mean_deviation
     # Switch to be Closed if above average and standard deviation
-    is_to_closed =  pt_mean > power_mean_closed and pt_std < power_mean_deviation
+    is_to_closed =  solarp_mean > power_mean_closed and solarp_std < power_mean_deviation and \
+        smp_mean < 25 and smpp_std < power_mean_deviation
 
     # What has to be done now?
     ss_desired = Switch_Status('Open' if is_to_open else

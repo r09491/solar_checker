@@ -504,17 +504,19 @@ def _get_blocks(time: t64, smp: f64,
     solix_mppt = (0,0)        
     panel_2 = (0, -1)
     solix_split = (1,0)        
-    solix_bat = (2, 1)
-    solix_out = (3, 0)
-    inv_mppt_1 = (4,1)
-    inv_mppt_2 = (4,-1)
-    inv_out = (4,0)
-    plugh = (4,0)
-    house = (5,0)
-    net = (5, 1)
-    sinks = (6, 0)
-    plug1 = (6 ,1)
-    plug2 = (6 ,-1)
+    solix_bat = (1.5, 0.75)
+    solix_out = (2, 0)
+    inv_mppt_1 = (3,0.75)
+    inv_mppt_2 = (3,-0.75)
+    inv_out = (3,0)
+    plugh = (3,0)
+    house = (4,0)
+    net = (4, 1)
+    sinks = (4, -1)
+    plug1 = (5 ,0.75)
+    plug2 = (5.75 ,0.25)
+    plug3 = (6.0 ,-0.5)
+    plug4 = (5.75 ,-1.25)
         
     _add_box_to_ax(ax, *panel_1, 'PANEL 1', 'green')
     _add_box_to_ax(ax, *panel_2, 'PANEL 2', 'green')
@@ -524,16 +526,24 @@ def _get_blocks(time: t64, smp: f64,
     _add_box_to_ax(ax, *solix_bat, 'SOLIX\nBAT', 'grey')
     _add_box_to_ax(ax, *house, 'METER\nHOUSE',
                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
-    _add_box_to_ax(ax, *net, 'NET', 'blue')
+    _add_box_to_ax(ax, *net, 'POWER\nNET', 'blue')
     _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
     _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
     if spph > 0:
         _add_box_to_ax(ax, *plugh, 'PLUG\nHOUSE', 'brown')
     else:
         _add_box_to_ax(ax, *inv_out, 'INV\nOUT', 'cyan')
-    _add_box_to_ax(ax, *sinks, 'MANY\nSINKS', 'white')
-    _add_box_to_ax(ax, *plug1, 'PLUG 1\nSINK', 'brown' if spp1 > 0 else 'white')
-    _add_box_to_ax(ax, *plug2, 'PLUG 2\nSINK', 'brown' if spp2 > 0 else 'white')
+    _add_box_to_ax(ax, *sinks, 'MANY\nSINKS',
+                   'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
+    _add_box_to_ax(ax, *plug1, 'PLUG 1\nSINK',
+                   'blue' if smp>0 and spp1>0 else 'magenta' if sbpb>0 and spp1>0 else 'white')
+    _add_box_to_ax(ax, *plug2, 'PLUG 2\nSINK',
+                   'blue' if smp>0 and spp2>0 else 'magenta' if sbpb>0 and spp2>0 else 'white')
+    _add_box_to_ax(ax, *plug3, 'PLUG 3\nSINK',
+                   'blue' if smp>0 and spp2>0 else 'magenta' if sbpb>0 and spp2>0 else 'white')
+    _add_box_to_ax(ax, *plug4, 'PLUG 4\nSINK',
+                   'blue' if smp>0 and spp2>0 else 'magenta' if sbpb>0 and spp2>0 else 'white')
+    
 
     if sbpi>0 :
         _add_link_to_ax(ax, *panel_1, 'S', *solix_mppt, 'N',
@@ -580,21 +590,25 @@ def _get_blocks(time: t64, smp: f64,
                         ivp, 'magenta' if sbpb>0 else 'grey')
 
     if smp > 0:
-        print(smp, spph, ivp)
         _add_link_to_ax(ax, *net, 'S', *house, 'N', smp, 'blue')
-        _add_link_to_ax(ax, *house, 'E', *sinks, 'W',
+        _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
                         smp + (spph if spph>0 else ivp), 'brown')
     else:
-        _add_link_to_ax(ax, *house, 'E', *sinks, 'W',
+        _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
                         spph if spph>0 else ivp, 'brown')
 
     if spp1>0:
-        _add_link_to_ax(ax, *sinks, 'N', *plug1, 'S', spp1, 'brown')
+        _add_link_to_ax(ax, *sinks, 'E', *plug1, 'W', spp1, 'brown')
     if spp2>0:
-        _add_link_to_ax(ax, *sinks, 'S', *plug2, 'N', spp2, 'brown')
+        _add_link_to_ax(ax, *sinks, 'E', *plug2, 'W', spp2, 'brown')
+    spp3=spp4=0 #TODO
+    if spp3>0:
+        _add_link_to_ax(ax, *sinks, 'E', *plug3, 'W', spp3, 'brown')
+    if spp4>0:
+        _add_link_to_ax(ax, *sinks, 'E', *plug4, 'W', spp4, 'brown')
 
-    _add_link_to_ax(ax, *sinks, 'E', *sinks, 'E',
-                    smp + (spph if spph>0 else ivp) - spp1 - spp2, 'brown')
+    _add_link_to_ax(ax, *sinks, 'S', *sinks, 'S',
+                    smp + (spph if spph>0 else ivp)-spp1-spp2-spp3-spp4, 'brown')
         
     title = f'# System #'
     title += f'\nLast Sample of the Day'
