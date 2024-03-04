@@ -539,10 +539,11 @@ def _get_blocks(time: t64, smp: f64,
                    'blue' if smp>0 and spp1>0 else 'magenta' if sbpb>0 and spp1>0 else 'white')
     _add_box_to_ax(ax, *plug2, 'PLUG 2\nSINK',
                    'blue' if smp>0 and spp2>0 else 'magenta' if sbpb>0 and spp2>0 else 'white')
+    spp3=spp4=0 #TODO
     _add_box_to_ax(ax, *plug3, 'PLUG 3\nSINK',
-                   'blue' if smp>0 and spp2>0 else 'magenta' if sbpb>0 and spp2>0 else 'white')
+                   'blue' if smp>0 and spp3>0 else 'magenta' if sbpb>0 and spp3>0 else 'white')
     _add_box_to_ax(ax, *plug4, 'PLUG 4\nSINK',
-                   'blue' if smp>0 and spp2>0 else 'magenta' if sbpb>0 and spp2>0 else 'white')
+                   'blue' if smp>0 and spp3>0 else 'magenta' if sbpb>0 and spp4>0 else 'white')
     
 
     if sbpi>0 :
@@ -601,7 +602,6 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *sinks, 'E', *plug1, 'W', spp1, 'brown')
     if spp2>0:
         _add_link_to_ax(ax, *sinks, 'E', *plug2, 'W', spp2, 'brown')
-    spp3=spp4=0 #TODO
     if spp3>0:
         _add_link_to_ax(ax, *sinks, 'E', *plug3, 'W', spp3, 'brown')
     if spp4>0:
