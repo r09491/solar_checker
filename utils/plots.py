@@ -444,9 +444,7 @@ def _get_blocks(time: t64, smp: f64,
                 sbpi: f64, sbpo: f64, sbpb: f64,
                 spp1: f64, spp2: f64):
     __me__ ='_blocks'
-
     logger.info(f'{__me__}: started')
-
 
     """ If the local mode does not work the inverter still works.To
     overcome solarbank output is assigned.  """
@@ -528,7 +526,8 @@ def _get_blocks(time: t64, smp: f64,
     _add_box_to_ax(ax, *solix_bat, 'SOLIX\nBAT', 'grey')
     _add_box_to_ax(ax, *house, 'METER\nHOUSE',
                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
-    _add_box_to_ax(ax, *net, 'POWER\nNET', 'blue')
+    _add_box_to_ax(ax, *net, 'POWER\nNET',
+                   'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
     _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
     _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
     if spph>0.5:
@@ -593,13 +592,12 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
                         ivp, 'magenta' if sbpb>0.5 else 'grey')
 
-    if smp>0.5:
-        _add_link_to_ax(ax, *net, 'S', *house, 'N', smp, 'blue')
-        _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
-                        smp + (spph if spph>0.5 else ivp), 'brown')
-    else:
-        _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
-                        spph if spph>0.5 else ivp, 'brown')
+    _add_link_to_ax(ax, *net, 'S', *house, 'N',  smp if smp>0 else -smp,
+                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
+
+    _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
+                    smp + (spph if spph>0 else ivp),
+                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
 
     if spp1>0.5:
         _add_link_to_ax(ax, *sinks, 'E', *plug1, 'W', spp1, 'brown')
@@ -611,7 +609,7 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *sinks, 'E', *plug4, 'W', spp4, 'brown')
 
     _add_link_to_ax(ax, *sinks, 'S', *sinks, 'S',
-                    smp + (spph if spph>0.5 else ivp)-spp1-spp2-spp3-spp4, 'brown')
+                    smp + (spph if spph>0 else ivp)-spp1-spp2-spp3-spp4, 'brown')
         
     title = f'# System #'
     title += f'\nLast Sample of the Day'
