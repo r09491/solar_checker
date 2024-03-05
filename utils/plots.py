@@ -57,8 +57,13 @@ def _get_w_line(time: t64s, smp: f64s,
     # ?Have data (smartmeter)
     issmpon = smp>0 if smp is not None else None 
     smpon = smp[issmpon] if issmpon  is not None and issmpon.any() else None
-    smp_mean = smpon.mean() if smpon is not None else 0
-    smp_max = smpon.max() if smpon is not None else 0
+    smpon_mean = smpon.mean() if smpon is not None else 0
+    smpon_max = smpon.max() if smpon is not None else 0
+
+    issmpoff = smp<=0 if smp is not None else None 
+    smpoff = smp[issmpoff] if issmpoff  is not None and issmpoff.any() else None
+    smpoff_mean = smpoff.mean() if smpoff is not None else 0
+    smpoff_min = smpoff.min() if smpoff is not None else 0
 
     # ?Have data (inverter)
     ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else None 
@@ -157,11 +162,11 @@ def _get_w_line(time: t64s, smp: f64s,
         logger.warn(f'{__me__}: other power samples are ignored')
 
         ax.fill_between(time, 0, sbpo,
-                        color='grey', label='BANK', alpha=0.3)
+                        color='grey', label='BALKON', alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smp,
                         color='b', label='HOUSE', alpha=0.3)
 
-    elif smpon is not None:
+    elif smpon is not None or smpoff is not None :
         logger.info(f'{__me__}: using smartmeter samples only')
         logger.warn(f'{__me__}: other power samples are not provided')
 
@@ -188,7 +193,7 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
     if sbpoon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Solix {sbpo[-1]:.0f}'
+        title += f'Balkon {sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
     if ivpon is not None:
         title += '' if title[-1] == '\n' else ' | '
@@ -196,8 +201,10 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
     if smpon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'House {smp[-1]:.0f}'
-        title += f'={smp_mean:.0f}^{smp_max:.0f}W'
+        title += f'House+ {smpon[-1]:.0f}'
+        title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
+        title += f' | House- {-smpoff[-1]:.0f}'
+        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
     if spphon is not None:
         title += '' if title[-1] == '\n' else ' | '
         title += f'Plug {spph[-1]:.0f}'
@@ -330,9 +337,9 @@ def _get_kwh_line(time: t64s, sme: f64s,
             title += f' | Inv {ive.sum():.1f}kWh ~ {ive.sum()*price:.2f}€'
     elif sbeoon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f' | Bank {sbeo[-1]:.1f}kWh ~ {sbeo[-1]*price:.2f}€'
+            title += f' | Balkon {sbeo[-1]:.1f}kWh ~ {sbeo[-1]*price:.2f}€'
         else:
-            title += f' | Bank {sbeo.sum():.1f}kWh ~ {sbeo.sum()*price:.2f}€'
+            title += f' | Balkon {sbeo.sum():.1f}kWh ~ {sbeo.sum()*price:.2f}€'
         
     if sbsb is not None:
         title += f' | Bat {sbsb[-1]*1000:.0f}Wh ~ {sbsb[-1]/full_kwh*100:.0f}%'
