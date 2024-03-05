@@ -54,6 +54,11 @@ async def plot_day(request: web.Request) -> dict:
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
     spp1, spp2 = c['SPP1'], c['SPP2']
+
+    smpon = np.zeros_like(smp)
+    smpon[smp>0] = smp[smp>0]
+    smpoff = np.zeros_like(smp)
+    smpoff[smp<=0] = -smp[smp<=0]
     
     blocks, w, kwh = await asyncio.gather(
         get_blocks(time[-1], smp[-1], ivp1[-1], ivp2[-1],
@@ -65,7 +70,11 @@ async def plot_day(request: web.Request) -> dict:
                    spp2[-1] if spp2 is not None else 0),
         get_w_line(time, smp, ivp1, ivp2,
                    spph, sbpi, sbpo, sbpb, slots),
-        get_kwh_line(time, sme, ive1, ive2,
+        get_kwh_line(time,
+            smpon.cumsum()/1000/60 if smpon is not None else None,
+            smpoff.cumsum()/1000/60 if smpoff is not None else None,
+            ivp1.cumsum()/1000/60 if spph is not None else None,
+            ivp2.cumsum()/1000/60 if spph is not None else None,
             spph.cumsum()/1000/60 if spph is not None else None,
             sbpi.cumsum()/1000/60 if sbpi is not None else None,
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
