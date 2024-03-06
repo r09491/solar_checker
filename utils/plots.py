@@ -127,8 +127,6 @@ def _get_w_line(time: t64s, smp: f64s,
         on800 = np.full_like(sbpion, 800) 
     slot_means = _power_means(time, totals, slots)
 
-
-    #plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
@@ -138,7 +136,7 @@ def _get_w_line(time: t64s, smp: f64s,
         
         ax.fill_between(time, 0, spph,
                         color='grey',label='PLUG', lw=0, alpha=0.3)
-        ax.fill_between(time, spph, spph  + smp,
+        ax.fill_between(time, spph, spph + smp,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
 
         if ivpon is not None:
@@ -146,6 +144,8 @@ def _get_w_line(time: t64s, smp: f64s,
                     color='c', lw=2, label='INV 1', alpha=0.6)
             ax.plot(time, ivp1 + ivp2,
                     color='g', lw=2, label='INV 2', alpha=0.6)
+
+        ax.plot(time, spph, color='black', label='<|>', lw=1, alpha=0.7)
 
     elif ivpon is not None:
         logger.info(f'{__me__}: using inverter samples only')
@@ -157,15 +157,19 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
                         color='b', label='HOUSE', alpha=0.3)
 
+        ax.plot(time, ivp1 + ivp2, color='black', label='<|>', lw=1, alpha=0.7)
+
     elif sbpoon is not None:
         logger.info(f'{__me__}: using solarbank samples only')
         logger.warn(f'{__me__}: other power samples are ignored')
 
         ax.fill_between(time, 0, sbpo,
-                        color='grey', label='BALKON', alpha=0.3)
+                        color='grey', label='BALKON', lw=0, alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smp,
-                        color='b', label='HOUSE', alpha=0.3)
+                        color='b', label='HOUSE', lw=0, alpha=0.3)
 
+        ax.plot(time, sbpo, color='black', label='<|>', lw=1, alpha=0.7)
+          
     elif smpon is not None or smpoff is not None :
         logger.info(f'{__me__}: using smartmeter samples only')
         logger.warn(f'{__me__}: other power samples are not provided')
@@ -191,29 +195,31 @@ def _get_w_line(time: t64s, smp: f64s,
     if sbpi is not None:
         title += f'Sun {sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
+
     if sbpoon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Balkon {sbpo[-1]:.0f}'
+        title += f'Bank {sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
-    if ivpon is not None:
+    elif ivpon is not None:
         title += '' if title[-1] == '\n' else ' | '
         title += f'Inv {ivp[-1]:.0f}'
         title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-    if smpon is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        title += f'House + {smp[-1] if smp[-1]>0 else 0:.0f}'
-        title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
-        title += f' - {-smp[-1] if smp[-1]<0 else 0:.0f}'
-        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
-    if spphon is not None:
+    elif spphon is not None:
         title += '' if title[-1] == '\n' else ' | '
         title += f'Plug {spph[-1]:.0f}'
         title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
+  
+    if smpon is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'House < {smp[-1] if smp[-1]>0 else 0:.0f}'
+        title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
+        title += f' > {-smp[-1] if smp[-1]<0 else 0:.0f}'
+        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
         
     if sbpb is not None:
-        title += f'\nBat + {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
+        title += f'\nBat < {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
-        title += f' - {sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
+        title += f' > {sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
         title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
     ax.set_title(title)
@@ -273,21 +279,23 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     if spehon is not None:
         logger.info(f'{__me__}: using smartplug samples only')
 
-        ax.fill_between(time, 0, smeoff,
-                             color='brown', label='HOUSE-',alpha=0.3)
-        ax.fill_between(time, smeoff, speh,
+        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
+        
+        ax.fill_between(time, 0, speh,
                              color='grey', label='PLUG',alpha=0.3)
         ax.fill_between(time, speh, speh + smeon,
                              color='b',label='HOUSE', alpha=0.3)
 
+        ax.plot(time, smeoff, color='b', label='<|>', lw=2, alpha=0.5)
+
     elif iveon is not None:
         logger.info(f'{__me__}: using inverter samples only')
 
-        ax.fill_between(time, 0, smeoff,
-                             color='brown', label='HOUSE-',alpha=0.3)
-        ax.fill_between(time, smeoff, (ive1+ive2)/2,
+        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
+
+        ax.fill_between(time, 0, ive1,
                              color='c', label='INV 1',alpha=0.6)
-        ax.fill_between(time, (ive1+ive2)/2, ive2 + ive1,
+        ax.fill_between(time, ive1, ive2 + ive1,
                              color='g',label='INV 2', alpha=0.5)
         ax.fill_between(time, ive2 + ive1, ive2 + ive1 + smeon,
                              color='b',label='HOUSE', alpha=0.3)
@@ -296,18 +304,20 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         logger.info(f'{__me__}: using solarbank samples only')
         logger.warn(f'{__me__}: other energy samples are ignored')
 
-        ax.fill_between(time, 0, smeoff,
-                             color='brown', label='HOUSE-',alpha=0.3)
-        ax.fill_between(time, smeoff, sbeo,
-                             color='grey', label='BALKON',alpha=0.3)
+        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
+
+        ax.fill_between(time, 0, sbeo,
+                        color='grey', label='BALKON',alpha=0.3)
         ax.fill_between(time, sbeo, sbeo + smeon,
-                             color='b',label='HOUSE+', alpha=0.3)
+                        color='b',label='HOUSE', alpha=0.3)
 
     elif smeon is not None:
         logger.info(f'{__me__}: using smartmeter samples only')
         logger.warn(f'{__me__}: other energy samples are notprovided')
 
-        ax.fill_between(time, smeon,
+        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
+
+        ax.fill_between(time, smeoff, smeon,
                         color='b',label='HOUSE', alpha=0.3)
 
         
@@ -332,24 +342,26 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
             title += f'Inv {ive.sum():.1f}kWh~{ive.sum()*price:.2f}€'
     elif sbeoon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f'Balkon {sbeo[-1]:.1f}kWh~{sbeo[-1]*price:.2f}€'
+            title += f'Bank {sbeo[-1]:.1f}kWh~{sbeo[-1]*price:.2f}€'
         else:
-            title += f'Balkon {sbeo.sum():.1f}kWh~{sbeo.sum()*price:.2f}€'
+            title += f'Bank {sbeo.sum():.1f}kWh~{sbeo.sum()*price:.2f}€'
         
     if smeon is not None:
+        title += '' if title[-1] == '\n' else ' | '
         if time_format == '%H:%Mh': # Accumulated
-            title += f' | House + {smeon[-1]:.1f}kWh~{(smeon[-1]*price):.2f}€'
+            title += f'House < {smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
         else:
-            title += f' | House + {smeon.sum():.1f}kWh~{(smeon.sum()*price):.2f}€'
+            title += f'House < {smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
             
-    if smeoff is not None:
-        if time_format == '%H:%Mh': # Accumulated
-            title += f' - {smeoff[-1]:.1f}kWh~{(smeoff[-1]*price):.2f}€'
-        else:
-            title += f' - {smeoff.sum():.1f}kWh~{(smeoff.sum()*price):.2f}€'
+        if smeoff is not None:
+            if time_format == '%H:%Mh': # Accumulated
+                title += f' > {smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
+            else:
+                title += f' > {smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€'
 
     if sbsb is not None:
-        title += f' | Bat {sbsb[-1]*1000:.0f}Wh~{sbsb[-1]/full_kwh*100:.0f}%'
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'Bat {sbsb[-1]*1000:.0f}Wh~{sbsb[-1]/full_kwh*100:.0f}%'
 
     
     ax.set_title(title)
@@ -393,7 +405,6 @@ def _get_kwh_bar_unified(
     smeon = sme[sme>0] if sme is not None else None
     panelon = panel[panel>0] if panel is not None else None
 
-    #plt.switch_backend('Agg')
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
@@ -499,8 +510,8 @@ def _get_blocks(time: t64, smp: f64,
 
         ha, va = 'center', 'center' if gate0 in "SN" and gate1 in "SN" else 'bottom'
 
-        ltext = f'{power:.0f}W' if power > 0 else ''
-        lwidth = (2*np.log10(power)+1) if power > 0 else 0
+        ltext = f'{power:.0f}W' 
+        lwidth = (2*np.log10(abs(power))+1)
 
         ax.plot(x, y, color=color, lw=lwidth, alpha=0.3)
         ax.annotate(ltext, (x[2], y[2]), color='black',
@@ -540,9 +551,9 @@ def _get_blocks(time: t64, smp: f64,
     _add_box_to_ax(ax, *solix_out, 'SOLIX\nOUT', 'grey')
     _add_box_to_ax(ax, *solix_bat, 'SOLIX\nBAT', 'grey')
     _add_box_to_ax(ax, *house, 'METER\nHOUSE',
-                   'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
+                   'blue' if smp>0 else 'magenta' if sbpb>0 else 'white')
     _add_box_to_ax(ax, *net, 'POWER\nNET',
-                   'blue' if smp>0 else 'brown')
+                   'blue' if smp>0 else 'white')
     _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
     _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
     if spph>0.5:
