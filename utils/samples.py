@@ -201,11 +201,25 @@ async def get_kwh_sum_from_csv(
     logger.info(f'{__me__}: started "{logday}"')
     c = await get_columns_from_csv(logday,logprefix, logdir)
     logger.info(f'{__me__}: done')
-    return {'SME' : c['SMP'].sum()/60.0/1000.0 if c and 'SMP' in c else 0.0,
-            'IVE1' : c['IVP1'].sum()/60.0/1000.0 if c and 'IVP1' in c else 0.0,
-            'IVE2' : c['IVP2'].sum()/60.0/1000.0 if c and 'IVP2' in c else 0.0,
-            'SPEH' : c['SPPH'].sum()/60.0/1000.0 if c and 'SPPH' in c else 0.0,
-            'SBEO' : c['SBPO'].sum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}
+ 
+    smp = c['SMP'] if c and 'SMP' in c else None
+
+    smpon = np.zeros_like(smp) if smp is not None else None
+    if smpon is not None:
+        issmpon = smp>0
+        smpon[issmpon] = smp[issmpon]
+        
+    smpoff = np.zeros_like(smp) if smp is not None else None
+    if smpoff is not None:
+        issmpoff = smp<=0
+        smpoff[issmpoff] = smp[issmpoff]
+
+    return {'SMEON'  : smpon.sum()/60.0/1000.0 if smpon is not None else 0.0,
+            'SMEOFF' : smpoff.sum()/60.0/1000.0 if smpoff is not None else 0.0,
+            'IVE1'   : c['IVP1'].sum()/60.0/1000.0 if c and 'IVP1' in c else 0.0,
+            'IVE2'   : c['IVP2'].sum()/60.0/1000.0 if c and 'IVP2' in c else 0.0,
+            'SPEH'   : c['SPPH'].sum()/60.0/1000.0 if c and 'SPPH' in c else 0.0,
+            'SBEO'   : c['SBPO'].sum()/60.0/1000.0 if c and 'SBPO' in c else 0.0}
 
 
 """
@@ -236,17 +250,18 @@ async def get_kwh_sum_month(logmonth: str,
         return ms.values()
     results = await asyncio.gather(*[doer(t) for t in mtime])
     
-    msme = np.zeros(mtime.size, dtype=f64)
+    msmeon = np.zeros(mtime.size, dtype=f64)
+    msmeoff = np.zeros(mtime.size, dtype=f64)
     mive1 = np.zeros(mtime.size, dtype=f64)
     mive2 = np.zeros(mtime.size, dtype=f64)
     mspeh  = np.zeros(mtime.size, dtype=f64)
     msbeo  = np.zeros(mtime.size, dtype=f64)
     for i, r in enumerate(results):
-        msme[i], mive1[i], mive2[i], mspeh[i], msbeo[i] = r
+        msmeon[i], msmeoff[i], mive1[i], mive2[i], mspeh[i], msbeo[i] = r
 
     logger.info(f'{__me__}: done')       
-    return {'TIME':mtime, 'SME':msme, 'IVE1':mive1,
-            'IVE2':mive2, 'SPEH':mspeh, 'SBEO':msbeo}
+    return {'TIME':mtime, 'SMEON':msmeon, 'SMEOFF':msmeoff,
+            'IVE1':mive1, 'IVE2':mive2, 'SPEH':mspeh, 'SBEO':msbeo}
 
 """
 Unifies the calculated energy results for each day of the specified
@@ -267,7 +282,7 @@ async def get_kwh_sum_month_unified(
 
     mkwhs = await get_kwh_sum_month(
         logmonth, logprefix, logdir, logdayformat)
-    mtime, msme, mive1, mive2, mspeh, msbeo = mkwhs.values()
+    mtime, msmeon, msmeoff, mive1, mive2, mspeh, msbeo = mkwhs.values()
 
     # 1.Prio
     umkwhs = mspeh.copy()
@@ -282,7 +297,7 @@ async def get_kwh_sum_month_unified(
     umkwhs[issbeo] = msbeo[issbeo]
 
     logger.info(f'{__me__}: started')
-    return {'TIME':mtime, 'SME':msme, 'PANEL':umkwhs}
+    return {'TIME':mtime, 'SMEON':msmeon, 'SMEOFF':msmeoff,'PANEL':umkwhs}
     
 
 """
@@ -314,18 +329,19 @@ async def get_kwh_sum_year(
         return yss
     results = await asyncio.gather(*[doer(t) for t in ytime])
 
-    ysme = np.zeros(ytime.size, dtype=f64)
+    ysmeon = np.zeros(ytime.size, dtype=f64)
+    ysmeoff = np.zeros(ytime.size, dtype=f64)
     yive1 = np.zeros(ytime.size, dtype=f64)
     yive2 = np.zeros(ytime.size, dtype=f64)
     yspeh  = np.zeros(ytime.size, dtype=f64)
     ysbeo  = np.zeros(ytime.size, dtype=f64)
 
     for i, r in enumerate(results):
-        ysme[i], yive1[i], yive2[i], yspeh[i], ysbeo[i] = r
+        ysmeon[i], ysmeoff[i], yive1[i], yive2[i], yspeh[i], ysbeo[i] = r
 
     logger.info(f'{__me__}: done')        
-    return {'TIME':ytime, 'SME':ysme, 'IVE1':yive1,
-            'IVE2':yive2, 'SPEH':yspeh, 'SBEO':ysbeo}        
+    return {'TIME':ytime, 'SMEON':ysmeon, 'SMEOFF':ysmeoff,
+            'IVE1':yive1, 'IVE2':yive2, 'SPEH':yspeh, 'SBEO':ysbeo}        
 
 
 """
@@ -354,14 +370,15 @@ async def get_kwh_sum_year_unified(
         return yss
     results = await asyncio.gather(*[doer(t) for t in ytime])
 
-    ysme = np.zeros(ytime.size, dtype=f64)
+    ysmeon = np.zeros(ytime.size, dtype=f64)
+    ysmeoff = np.zeros(ytime.size, dtype=f64)
     ypanel = np.zeros(ytime.size, dtype=f64)
 
     for i, r in enumerate(results):
-        ysme[i], ypanel[i] = r
+        ysmeon[i], ysmeoff[i], ypanel[i] = r
 
     logger.info(f'{__me__}: done')        
-    return {'TIME':ytime, 'SME':ysme, 'PANEL':ypanel}        
+    return {'TIME':ytime, 'SMEON':ysmeon, 'SMEOFF':ysmeoff,'PANEL':ypanel}        
 
 
 async def get_kwh_cumsum_from_csv(

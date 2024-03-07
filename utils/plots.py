@@ -404,13 +404,12 @@ async def get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
 
 
 def _get_kwh_bar_unified(
-        time: t64s, sme: f64s, panel: f64,
+        time: t64s, smeon: f64s, smeoff: f64s, panel: f64,
         price: f64, bar_width: f64, time_format: str):
 
     __me__='_get_kwh_bar_unified'
     logger.info(f'{__me__}: started')
 
-    smeon = sme[sme>0] if sme is not None else None
     panelon = panel[panel>0] if panel is not None else None
 
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -420,31 +419,42 @@ def _get_kwh_bar_unified(
     if panelon is not None:
         logger.info(f'{__me__}: using unified samples')
 
+        ax.bar(time, smeoff, bottom = 0,
+               color='blue', width=bar_width, alpha=0.3)
         ax.bar(time, panel, bottom = 0,
                color='grey', label='PANEL', width=bar_width, alpha=0.3)
-        ax.bar(time, sme, bottom=panel,
+        ax.bar(time, smeon, bottom=panel,
                color='blue',label='HOUSE', width=bar_width, alpha=0.3)
         
-        for x, ypanel, ysme, ytot in zip(time, panel, sme, panel + sme):
+        for x, ysmeoff, ypanel, ysmeon, ytot in zip(time, smeoff, panel, smeon, panel + smeon):
+            if ysmeoff < -1.0:
+                ax.text(x, ysmeoff/2, f'{ysmeoff:.1f}', ha = 'center',
+                        color = 'black', weight='bold', size=8)
             if ypanel > 1.0:
                 ax.text(x, ypanel/2, f'{ypanel:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
-            if ysme > 1.0:
-                ax.text(x, ysme/2 + ypanel, f'{ysme:.1f}', ha = 'center',
+            if ysmeon > 1.0:
+                ax.text(x, ysmeon/2 + ypanel, f'{ysmeon:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
 
-    elif smeon is not None:
+    else:
         logger.info(f'{__me__}: using smartmeter samples only')
 
-        ax.fill_between(time, sme,
-                        color='b',label='HOUSE', alpha=0.3)
+        if smeon is not None:
+            ax.bar(time, smeoff, bottom = 0,
+                   color='blue', width=bar_width, alpha=0.3)
+        if smeoff is not None:
+            ax.bar(time, smeon, bottom=panel,
+                   color='blue',label='HOUSE', width=bar_width, alpha=0.3)
             
                 
-    title = f'Energy Check #'
-    if smeon is not None:
-        title += f' House {sme.sum():.1f}kWh~{(sme.sum()*price):.2f}€'   
+    title = f'# Energy Check #\n'
     if panelon is not None:
-        title += f' | Panel {panel.sum():.1f}kWh~{panel.sum()*price:.2f}€'
+        title += f'Panel {panel.sum():.1f}kWh~{panel.sum()*price:.2f}€'
+    if smeon is not None:
+        title += f' | House < {smeon.sum():.1f}kWh~{(smeon.sum()*price):.2f}€'   
+    if smeoff is not None:
+        title += f' > {abs(smeoff.sum()):.1f}kWh~{(abs(smeoff.sum())*price):.2f}€'   
 
     ax.set_title(title, fontsize='x-large')
 
@@ -464,7 +474,7 @@ def _get_kwh_bar_unified(
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_kwh_bar_unified(
-        time: t64s, sme: f64s, panel: f64s,
+        time: t64s, smeon: f64s, smeoff: f64s, panel: f64s,
         price: f64, bar_width: f64, time_format:str):
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(
