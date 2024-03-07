@@ -501,8 +501,8 @@ def _get_blocks(time: t64, smp: f64,
 
         ha, va = 'center', 'center' if gate0 in "SN" and gate1 in "SN" else 'bottom'
 
-        ltext = f'{power:.0f}W' if power>0 else ''
-        lwidth = (2*np.log10(abs(power))+1) if power>0 else 0
+        ltext = f'{power:.0f}W' if abs(power)>0 else ''
+        lwidth = (2*np.log10(abs(power))+1) if abs(power)>0 else 0
 
         ax.plot(x, y, color=color, lw=lwidth, alpha=0.3)
         ax.annotate(ltext, (x[2], y[2]), color='black',
@@ -574,7 +574,7 @@ def _get_blocks(time: t64, smp: f64,
     if sbpb>1 :
         _add_link_to_ax(ax, *solix_bat, 'E', *solix_out, 'N',
                         sbpb, 'm')
-    print(sbpi, sbpi+sbpb)
+
     if sbpi>1:
         _add_link_to_ax(ax, *solix_split, 'S', *solix_out, 'S',
                         sbpi+sbpb, 'grey')

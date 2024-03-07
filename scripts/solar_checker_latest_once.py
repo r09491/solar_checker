@@ -61,11 +61,11 @@ async def tuya_smartplug_latest_get(sp: Smartplug) -> str:
     else:
         status = await sp.get_status()
         if status is not None:
-            logger.info('A Tuya smartplug is "ON".')
+            logger.info(f'Tuya smartplug "{sp.name}" is "ON".')
             text = f'{status.power:.0f}'
 
         else:
-            logger.warning('A Tuya smartplug is "OFF".')
+            logger.warning(f'Tuya smartplug "{sp.name}" is "OFF".')
     
     logger.info(f'tuya_smartplug_latest_get done')        
     return text

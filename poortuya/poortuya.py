@@ -58,6 +58,7 @@ class Smartplug:
     
     def __init__(self, name: str, timeout: int = 10, persist: bool = False):
         self.config = self._get_config(name)
+        self.name = name
         self.timeout = timeout
         self.persist = persist
 
