@@ -129,7 +129,7 @@ def _get_w_line(time: t64s, smp: f64s,
         
         ax.fill_between(time, 0, spph,
                         color='grey',label='PLUG', lw=0, alpha=0.3)
-        ax.fill_between(time, spph, spph + smp,
+        ax.fill_between(time, spph, spph + smpon,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
 
         if ivpon is not None:
@@ -138,7 +138,7 @@ def _get_w_line(time: t64s, smp: f64s,
             ax.plot(time, ivp1 + ivp2,
                     color='g', lw=2, label='INV 2', alpha=0.6)
 
-        ax.plot(time, spph, color='black', label='<|>', lw=1, alpha=0.7)
+        #ax.plot(time, spph, color='black', label='<|>', lw=1, alpha=0.7)
 
     elif ivpon is not None:
         logger.info(f'{__me__}: using inverter samples only')
@@ -147,10 +147,10 @@ def _get_w_line(time: t64s, smp: f64s,
                         color='c',label='INV 1', alpha=0.6)
         ax.fill_between(time, ivp1, ivp1 + ivp2,
                         color='g', label='INV 2', alpha=0.5)
-        ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smp,
+        ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smpon,
                         color='b', label='HOUSE', alpha=0.3)
 
-        ax.plot(time, ivp1 + ivp2, color='black', label='<|>', lw=1, alpha=0.7)
+        #ax.plot(time, ivp1 + ivp2, color='black', label='<|>', lw=1, alpha=0.7)
 
     elif sbpoon is not None:
         logger.info(f'{__me__}: using solarbank samples only')
@@ -158,10 +158,6 @@ def _get_w_line(time: t64s, smp: f64s,
 
         ax.fill_between(time, 0, sbpo,
                         color='grey', label='BANK', lw=0, alpha=0.3)
-        """
-        ax.fill_between(time, sbpo, sbpo + smp,
-                        color='b', label='HOUSE', lw=0, alpha=0.3)
-        """
         ax.fill_between(time, sbpo, sbpo + smpon,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
         
@@ -292,12 +288,12 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         ax.fill_between(time, speh, speh + smeon,
                              color='b',label='HOUSE', alpha=0.3)
 
-        ax.plot(time, smeoff, color='b', label='<|>', lw=2, alpha=0.5)
+        #ax.plot(time, smeoff, color='b', label='<|>', lw=2, alpha=0.5)
 
     elif iveon is not None:
         logger.info(f'{__me__}: using inverter samples only')
 
-        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
+        #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
 
         ax.fill_between(time, 0, ive1,
                              color='c', label='INV 1',alpha=0.6)
@@ -310,7 +306,7 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         logger.info(f'{__me__}: using solarbank samples only')
         logger.warn(f'{__me__}: other energy samples are ignored')
 
-        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
+        #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
 
         ax.fill_between(time, 0, sbeo,
                         color='grey', label='BANK',alpha=0.3)
@@ -321,19 +317,25 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         logger.info(f'{__me__}: using smartmeter samples only')
         logger.warn(f'{__me__}: other energy samples are notprovided')
 
-        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
+        #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
 
         ax.fill_between(time, smeoff, smeon,
                         color='b',label='HOUSE', alpha=0.3)
 
         
     if sbsb is not None:
-        ax.fill_between(time, 0, -sbsb,
-                        color='m', label='-BAT',alpha=0.3)
-
         ax.axhline(-empty_kwh, color='r', ls='--')        
         ax.axhline(-full_kwh, color='r', ls='--')
 
+        ax.fill_between(time, 0, -sbsb,
+                        color='m', label='-BAT',alpha=0.3)
+
+        ax.fill_between(time, -sbsb, -sbsb - smeoff,
+                        color='b', alpha=0.3)
+
+    else:
+        ax.fill_between(time, 0, -smeoff,
+                        color='b', alpha=0.3)
         
     title = f'# Energy #\n'
     if spehon is not None:
