@@ -60,7 +60,7 @@ def _get_w_line(time: t64s, smp: f64s,
     smpon_mean = smpon.mean() if smpon is not None else 0
     smpon_max = smpon.max() if smpon is not None else 0
 
-    issmpoff = smp<=0 if smp is not None else None 
+    issmpoff = ~issmpon if issmpon is not None else None 
     smpoff = smp[issmpoff] if issmpoff  is not None and issmpoff.any() else None
     smpoff_mean = smpoff.mean() if smpoff is not None else 0
     smpoff_min = smpoff.min() if smpoff is not None else 0
@@ -110,21 +110,10 @@ def _get_w_line(time: t64s, smp: f64s,
     timesbpion = time[issbpion] if issbpion is not None and issbpion.any() else None
     timeon = timespphon if timespphon is not None else timeivpon if timeivpon is not None else timesbpion
 
-    on600 = None
-    on800 = None
-    totals = smp.copy()
-    if spphon is not None: 
-        totals += spph    # 1.priority (smartplug)
-        on600 = np.full_like(spphon,600) 
-        on800 = np.full_like(spphon,800)
-    elif ivpon is not None:
-        totals += ivp    # 2.priority (inverter)
-        on600 = np.full_like(ivpon, 600) 
-        on800 = np.full_like(ivpon, 800)
-    elif sbpoon is not None:
-        totals += sbpo   # 3.priority (solarbank)        
-        on600 = np.full_like(sbpion, 600)
-        on800 = np.full_like(sbpion, 800) 
+    totals = smp + \
+        spph if isspphon is not None else \
+        ivp if isspphon is not None else \
+        ivp if issbpo is not None else None
     slot_means = _power_means(time, totals, slots)
 
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -187,8 +176,10 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.plot(time, slot_means, 
             color='c', lw=2, ls='-', label="MEAN", alpha=0.4)
 
-    if timeon is not None and on600 is not None and on800 is not None:
-        ax.fill_between(timeon , on600, on800,
+    if sbpion is not None:
+        ax.fill_between(timeon ,
+                        np.full_like(sbpion, 600),
+                        np.full_like(sbpion, 800),
                         color='orange', label='LIMITS', alpha=0.4)
 
     title = f'# Power #\n'
@@ -510,8 +501,8 @@ def _get_blocks(time: t64, smp: f64,
 
         ha, va = 'center', 'center' if gate0 in "SN" and gate1 in "SN" else 'bottom'
 
-        ltext = f'{power:.0f}W' 
-        lwidth = (2*np.log10(abs(power))+1)
+        ltext = f'{power:.0f}W' if power>0 else ''
+        lwidth = (2*np.log10(abs(power))+1) if power>0 else 0
 
         ax.plot(x, y, color=color, lw=lwidth, alpha=0.3)
         ax.annotate(ltext, (x[2], y[2]), color='black',
@@ -556,7 +547,7 @@ def _get_blocks(time: t64, smp: f64,
                    'blue' if smp>0 else 'white')
     _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
     _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
-    if spph>0.5:
+    if spph>1:
         _add_box_to_ax(ax, *plugh, 'PLUG\nHOUSE', 'brown')
     else:
         _add_box_to_ax(ax, *inv_out, 'INV\nOUT', 'cyan')
@@ -568,7 +559,7 @@ def _get_blocks(time: t64, smp: f64,
     _add_box_to_ax(ax, *plug4, 'PLUG 4\nSINK', 'white')
     
 
-    if sbpi>0.5 :
+    if sbpi>1 :
         _add_link_to_ax(ax, *panel_1, 'S', *solix_mppt, 'N',
                     sbpi/2, 'green')
         _add_link_to_ax(ax, *panel_2, 'N', *solix_mppt, 'S',
@@ -580,38 +571,39 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *solix_split, 'N', *solix_bat, 'W',
                         -sbpb, 'm')
     
-    if sbpb>0.5 :
+    if sbpb>1 :
         _add_link_to_ax(ax, *solix_bat, 'E', *solix_out, 'N',
                         sbpb, 'm')
-    if sbpi>0.5:
+    print(sbpi, sbpi+sbpb)
+    if sbpi>1:
         _add_link_to_ax(ax, *solix_split, 'S', *solix_out, 'S',
                         sbpi+sbpb, 'grey')
 
-    if ivp1>0.5:
+    if ivp1>1:
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
-                        ivp1, 'magenta' if sbpb>0.5 else 'grey')
-        if spph>0.5:
+                        ivp1, 'magenta' if sbpb>1 else 'grey')
+        if spph>1:
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *plugh, 'N',
-                            ivp1, 'magenta' if sbpb>0.5 else 'grey')
+                            ivp1, 'magenta' if sbpb>1 else 'grey')
         else:
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
-                            ivp1, 'magenta' if sbpb>0.5 else 'grey')
-    if ivp2>0.5:
+                            ivp1, 'magenta' if sbpb>1 else 'grey')
+    if ivp2>1:
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
-                        ivp2, 'magenta' if sbpb>0.5 else 'grey')
-        if spph>0.5:
+                        ivp2, 'magenta' if sbpb>1 else 'grey')
+        if spph>1:
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *plugh, 'S',
-                            ivp1, 'magenta' if sbpb>0.5 else 'grey')
+                            ivp1, 'magenta' if sbpb>1 else 'grey')
         else:
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
-                        ivp2, 'magenta' if sbpb>0.5 else 'grey')
+                        ivp2, 'magenta' if sbpb>1 else 'grey')
 
-    if spph>0.5:
+    if spph>1:
         _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
-                        spph, 'magenta' if sbpb>0.5 else 'grey')
-    elif ivp>0.5:
+                        spph, 'magenta' if sbpb>1 else 'grey')
+    elif ivp>1:
         _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
-                        ivp, 'magenta' if sbpb>0.5 else 'grey')
+                        ivp, 'magenta' if sbpb>1 else 'grey')
 
     _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
                     'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
@@ -620,13 +612,13 @@ def _get_blocks(time: t64, smp: f64,
                     smp + (spph if spph>0 else ivp),
                     'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
 
-    if spp1>0.5:
+    if spp1>1:
         _add_link_to_ax(ax, *sinks, 'E', *plug1, 'W', spp1, 'brown')
-    if spp2>0.5:
+    if spp2>1:
         _add_link_to_ax(ax, *sinks, 'E', *plug2, 'W', spp2, 'brown')
-    if spp3>0.5:
+    if spp3>1:
         _add_link_to_ax(ax, *sinks, 'E', *plug3, 'W', spp3, 'brown')
-    if spp4>0.5:
+    if spp4>1:
         _add_link_to_ax(ax, *sinks, 'E', *plug4, 'W', spp4, 'brown')
 
     _add_link_to_ax(ax, *sinks, 'S', *sinks, 'S',
