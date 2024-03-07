@@ -55,13 +55,17 @@ def _get_w_line(time: t64s, smp: f64s,
     logger.info(f'{__me__}: started')
 
     # ?Have data (smartmeter)
-    issmpon = smp>0 if smp is not None else None 
-    smpon = smp[issmpon] if issmpon  is not None and issmpon.any() else None
+    smpon = np.zeros_like(smp)
+    issmpon = smp>0 if smp is not None else None
+    smpon[issmpon] = smp[issmpon] 
+    #smpon = smp[issmpon] if issmpon  is not None and issmpon.any() else None
     smpon_mean = smpon.mean() if smpon is not None else 0
     smpon_max = smpon.max() if smpon is not None else 0
 
-    issmpoff = ~issmpon if issmpon is not None else None 
-    smpoff = smp[issmpoff] if issmpoff  is not None and issmpoff.any() else None
+    smpoff = np.zeros_like(smp)
+    issmpoff = ~issmpon if issmpon is not None else None
+    smpoff[issmpoff] = smp[issmpoff] 
+    #smpoff = smp[issmpoff] if issmpoff  is not None and issmpoff.any() else None
     smpoff_mean = smpoff.mean() if smpoff is not None else 0
     smpoff_min = smpoff.min() if smpoff is not None else 0
 
@@ -153,11 +157,15 @@ def _get_w_line(time: t64s, smp: f64s,
         logger.warn(f'{__me__}: other power samples are ignored')
 
         ax.fill_between(time, 0, sbpo,
-                        color='grey', label='BALKON', lw=0, alpha=0.3)
+                        color='grey', label='BANK', lw=0, alpha=0.3)
+        """
         ax.fill_between(time, sbpo, sbpo + smp,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
-
-        ax.plot(time, sbpo, color='black', label='<|>', lw=1, alpha=0.7)
+        """
+        ax.fill_between(time, sbpo, sbpo + smpon,
+                        color='b', label='HOUSE', lw=0, alpha=0.3)
+        
+        #ax.plot(time, sbpo, color='black', label='<|>', lw=1, alpha=0.7)
           
     elif smpon is not None or smpoff is not None :
         logger.info(f'{__me__}: using smartmeter samples only')
@@ -172,6 +180,13 @@ def _get_w_line(time: t64s, smp: f64s,
         """ The solarbank output is used directly in spite of inverter """
         ax.fill_between(time, 0, sbpb,
                         color='m', label='-BAT', alpha=0.3)
+        ax.fill_between(time, sbpb, sbpb + smpoff,
+                        color='b', lw=0, alpha=0.3)
+
+    else:
+        ax.fill_between(time, 0, smpoff,
+                        color='b', lw=0, alpha=0.3)
+        
         
     ax.plot(time, slot_means, 
             color='c', lw=2, ls='-', label="MEAN", alpha=0.4)
@@ -298,7 +313,7 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
 
         ax.fill_between(time, 0, sbeo,
-                        color='grey', label='BALKON',alpha=0.3)
+                        color='grey', label='BANK',alpha=0.3)
         ax.fill_between(time, sbeo, sbeo + smeon,
                         color='b',label='HOUSE', alpha=0.3)
 
