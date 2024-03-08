@@ -29,11 +29,13 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 async def tuya_smartplug_latest_get(sp: Smartplug) -> str:
     logger.info(f'tuya_smartplug_latest_get started')
     text = '0,0,0'
-
+    
     status = await sp.get_status()
     if status is not None:
-        logger.info("Tuya smartplug has data I[mA],U[V],P[W]")
         text = f'{status.current:.0f},{status.voltage:.0f},{status.power:.0f}'
+        logger.info("Tuya smartplug got data.")
+    else:
+        logger.error("Tuya smartplug failed to get data.")
 
     logger.info(f'tuya_smartplug_latest_get done')        
     return text

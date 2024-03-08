@@ -63,7 +63,7 @@ async def tuya_smartplug_switch_get(sp: Smartplug) -> Switch_Status:
     logger.info(f'tuya_smartplug_switch_get started')
     is_closed = await sp.is_switch_closed()
     ss_result = Switch_Status('Closed' if is_closed else 'Open')
-    logger.info(f'tuya_smartplug_switch_get done with "{ss_result}"')        
+    logger.info(f'tuya_smartplug_switch_get done: "{ss_result}"')        
     return ss_result
 
 
@@ -98,10 +98,10 @@ async def main(sp: Smartplug,
     logger.info(f'Last "{sp.name}" smartplug means "{spp_mean:.0f}W", std "{spp_std:.0f}W"')
         
 
-    # Switch to be Open if below average and standard deviation
+    # Switch to be Open if above import average
     is_to_open =  smp_mean > power_mean_import_open
-    # Switch to be Closed if above average and standard deviation
-    is_to_closed =  smp_mean < -power_mean_export_closed and smp_std < power_mean_deviation
+    # Switch to be Closed if below export average
+    is_to_closed =  smp_mean < -power_mean_export_closed
 
     ss_actual = await tuya_smartplug_switch_get(sp)
     logger.info(f'The smartplug switch currently is "{ss_actual}"')
