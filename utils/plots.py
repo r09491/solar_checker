@@ -114,7 +114,7 @@ def _get_w_line(time: t64s, smp: f64s,
     timesbpion = time[issbpion] if issbpion is not None and issbpion.any() else None
     timeon = timespphon if timespphon is not None else timeivpon if timeivpon is not None else timesbpion
 
-    totals = smp + \
+    totals = np.maximum(smp, [0]) + \
         spph if isspphon is not None else \
         ivp if isspphon is not None else \
         ivp if issbpo is not None else None
@@ -184,9 +184,9 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, 0, smpoff,
                         color='b', lw=0, alpha=0.3)
         
-        
+    """ A good first guess for Anker family load for Nulleinspeisung """
     ax.plot(time, slot_means, 
-            color='c', lw=2, ls='-', label="MEAN", alpha=0.4)
+            color='c', lw=2, ls='-', label="MEANS+", alpha=0.4)
 
     if sbpion is not None:
         ax.fill_between(timeon ,
