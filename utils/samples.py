@@ -150,25 +150,25 @@ def _get_columns_from_csv(
     spp1 = np.array(df.SPP1.apply(_str2float))
     if np.isnan(spp1).any():
         logger.warn(f'{__me__}:Undefined SPP1 samples')
-        spp1 =  None
+        #spp1 =  None
 
     """ The normalised smartplug power switch 2 """
     spp2 = np.array(df.SPP2.apply(_str2float))
     if np.isnan(spp2).any():
         logger.warn(f'{__me__}:Undefined SPP2 samples')
-        spp2 =  None
+        #spp2 =  None
 
     """ The normalised smartplug power switch 3 """
     spp3 = np.array(df.SPP3.apply(_str2float))
     if np.isnan(spp3).any():
         logger.warn(f'{__me__}:Undefined SPP3 samples')
-        spp3 =  None
+        #spp3 =  None
 
     """ The normalised smartplug power switch 3 """
     spp4 = np.array(df.SPP4.apply(_str2float))
     if np.isnan(spp4).any():
         logger.warn(f'{__me__}:Undefined SPP4 samples')
-        spp4 =  None
+        #spp4 =  None
         
     # Get rid of offsets and fill tails
 
