@@ -74,7 +74,7 @@ def _get_columns_from_csv(
             return None
         
     sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPPH,SBPI,SBPO,SBPB,SBSB,SPP1,SPP2'.split(',')
+    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPPH,SBPI,SBPO,SBPB,SBSB,SPP1,SPP2,SPP3,SPP4'.split(',')
     df = read_csv(logfile, sep=sep, names=names)
 
     """ The timestamps """
@@ -157,6 +157,18 @@ def _get_columns_from_csv(
     if np.isnan(spp2).any():
         logger.warn(f'{__me__}:Undefined SPP2 samples')
         spp2 =  None
+
+    """ The normalised smartplug power switch 3 """
+    spp3 = np.array(df.SPP3.apply(_str2float))
+    if np.isnan(spp3).any():
+        logger.warn(f'{__me__}:Undefined SPP3 samples')
+        spp3 =  None
+
+    """ The normalised smartplug power switch 3 """
+    spp4 = np.array(df.SPP4.apply(_str2float))
+    if np.isnan(spp4).any():
+        logger.warn(f'{__me__}:Undefined SPP4 samples')
+        spp4 =  None
         
     # Get rid of offsets and fill tails
 
@@ -177,7 +189,7 @@ def _get_columns_from_csv(
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
             'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2, 'SPPH' : spph,
             'SBPI' : sbpi, 'SBPO' : sbpo, 'SBPB' : sbpb, 'SBSB' : sbsb,
-            'SPP1' : spp1, 'SPP2' : spp2}
+            'SPP1' : spp1, 'SPP2' : spp2, 'SPP3' : spp3, 'SPP4' : spp4}
 
 async def get_columns_from_csv(
         logday: str = None,

@@ -53,7 +53,7 @@ async def plot_day(request: web.Request) -> dict:
     sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
-    spp1, spp2 = c['SPP1'], c['SPP2']
+    spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
@@ -67,7 +67,9 @@ async def plot_day(request: web.Request) -> dict:
                    sbpo[-1] if sbpo is not None else 0,
                    sbpb[-1] if sbpb is not None else 0,
                    spp1[-1] if spp1 is not None else 0,
-                   spp2[-1] if spp2 is not None else 0),
+                   spp2[-1] if spp2 is not None else 0,
+                   spp3[-1] if spp3 is not None else 0,
+                   spp4[-1] if spp4 is not None else 0),
         get_w_line(time, smp, ivp1, ivp2,
                    spph, sbpi, sbpo, sbpb, slots),
         get_kwh_line(time,
