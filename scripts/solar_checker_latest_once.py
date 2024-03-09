@@ -126,12 +126,16 @@ async def apsystems_inverter_latest_get(iv: Inverter) -> str:
 
 async def main(sm: Smartmeter, iv: Inverter,
                sph: Smartplug, sb: Solarbank,
-               sp1: Smartplug, sp2: Smartplug,) -> int:
+               sp1: Smartplug, sp2: Smartplug,
+               sp3: Smartplug, sp4: Smartplug) -> int:
 
     # Tasmota sometimes returns with an invalid time. Ensure there is
     # a valid time!
     nowiso = datetime.now().isoformat('T',"seconds")
 
+    # The order in the list determines the columns in the recording
+    # file
+    
     results = await asyncio.gather(
         tasmota_smartmeter_latest_get(sm),
         apsystems_inverter_latest_get(iv),
@@ -139,6 +143,8 @@ async def main(sm: Smartmeter, iv: Inverter,
         anker_solarbank_latest_get(sb),
         tuya_smartplug_latest_get(sp1),
         tuya_smartplug_latest_get(sp2),
+        tuya_smartplug_latest_get(sp3),
+        tuya_smartplug_latest_get(sp4),
     )
 
     sys.stdout.write(nowiso + ',' + ','.join(results) + '\n')
@@ -154,9 +160,11 @@ class Script_Arguments:
     iv_ip: str
     iv_port: int
     sb_sn:str
-    sp_house: str
+    sp_balcony: str
     sp_switch_1: str
     sp_switch_2: str
+    sp_switch_3: str
+    sp_switch_4: str
     
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
@@ -183,21 +191,28 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--sb_sn', type = str, required = True,
                         help = "Serial number of the solarbank")
     
-    parser.add_argument('--sp_house', type = str, default = None,
-                        help = "Name of the plug for input to the house")
+    parser.add_argument('--sp_balcony', type = str, default = None,
+                        help = "Name of the plug at the house plug")
 
     parser.add_argument('--sp_switch_1', type = str, default = None,
                         help = "Name of the plug used as switch 1")
 
     parser.add_argument('--sp_switch_2', type = str, default = None,
                         help = "Name of the plug used as switch 2")
+
+    parser.add_argument('--sp_switch_3', type = str, default = None,
+                        help = "Name of the plug used as switch 3")
+
+    parser.add_argument('--sp_switch_4', type = str, default = None,
+                        help = "Name of the plug used as switch 4")
     
     args = parser.parse_args()
     
     return Script_Arguments(args.sm_ip, args.sm_port,
                             args.iv_ip, args.iv_port,
-                            args.sb_sn, args.sp_house,
-                            args.sp_switch_1, args.sp_switch_2)
+                            args.sb_sn, args.sp_balcony,
+                            args.sp_switch_1, args.sp_switch_2,
+                            args.sp_switch_3, args.sp_switch_4)
 
 
 if __name__ == '__main__':
@@ -212,25 +227,39 @@ if __name__ == '__main__':
         logger.error('IP address of APSystem EZ1M inverter is missing.')
         sys.exit(2)
 
-    if args.sp_house is not None and \
+    if args.sp_balcony is not None and \
        args.sp_switch_1 is not None and \
-       args.sp_house == args.sp_switch_1 :
+       args.sp_balcony == args.sp_switch_1 :
         logger.error('Illegal usage of smartplug 1.')
         sys.exit(3)
 
-    if args.sp_house is not None and \
+    if args.sp_balcony is not None and \
        args.sp_switch_2 is not None and \
-       args.sp_house == args.sp_switch_2 :
+       args.sp_balcony == args.sp_switch_2 :
         logger.error('Illegal usage of smartplug 2.')
         sys.exit(4)
+
+    if args.sp_balcony is not None and \
+       args.sp_switch_3 is not None and \
+       args.sp_balcony == args.sp_switch_3 :
+        logger.error('Illegal usage of smartplug 3.')
+        sys.exit(5)
+
+    if args.sp_balcony is not None and \
+       args.sp_switch_4 is not None and \
+       args.sp_balcony == args.sp_switch_4 :
+        logger.error('Illegal usage of smartplug 4.')
+        sys.exit(5)
         
     sm = Smartmeter(args.sm_ip)
     iv = Inverter(args.iv_ip, args.iv_port)
     sb = Solarbank(args.sb_sn)
-    sph = Smartplug(args.sp_house) if args.sp_house is not None else None
+    sph = Smartplug(args.sp_balcony) if args.sp_balcony is not None else None
     sp1 = Smartplug(args.sp_switch_1) if args.sp_switch_1 is not None else None
     sp2 = Smartplug(args.sp_switch_2) if args.sp_switch_2 is not None else None
-    err = asyncio.run(main(sm, iv, sph, sb, sp1, sp2))
+    sp3 = Smartplug(args.sp_switch_3) if args.sp_switch_3 is not None else None
+    sp4 = Smartplug(args.sp_switch_4) if args.sp_switch_4 is not None else None
+    err = asyncio.run(main(sm, iv, sph, sb, sp1, sp2, sp3, sp4))
 
     logger.info(f'Recording latest done (err={err})')
     sys.exit(err)
