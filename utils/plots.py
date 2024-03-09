@@ -176,7 +176,8 @@ def _get_w_line(time: t64s, smp: f64s,
         """ The solarbank output is used directly in spite of inverter """
         ax.fill_between(time, 0, sbpb,
                         color='m', label='-BAT', alpha=0.3)
-        ax.fill_between(time, sbpb, sbpb + smpoff,
+        sbpb_stacked = np.minimum(sbpb, [0])
+        ax.fill_between(time, sbpb_stacked, sbpb_stacked + smpoff,
                         color='b', lw=0, alpha=0.3)
 
     else:
@@ -428,7 +429,7 @@ def _get_kwh_bar_unified(
         
         for x, ysmeoff, ypanel, ysmeon, ytot in zip(time, smeoff, panel, smeon, panel + smeon):
             if ysmeoff < -1.0:
-                ax.text(x, ysmeoff/2, f'{ysmeoff:.1f}', ha = 'center',
+                ax.text(x, ysmeoff/2, f'{-ysmeoff:.1f}', ha = 'center', va='top',
                         color = 'black', weight='bold', size=8)
             if ypanel > 1.0:
                 ax.text(x, ypanel/2, f'{ypanel:.1f}', ha = 'center',
