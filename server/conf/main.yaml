@@ -5,7 +5,7 @@ logdir : /home/r09491/storage/solar_checker
 logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
 
-power_slots : ['00:00', '07:30', '09:30', '11:00', '13:00', '17:30', '22:30', '23:59']
+power_slots : ['00:00', '07:30', '09:30', '23:59']
 
 energy_price : 0.369
 

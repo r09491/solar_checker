@@ -491,15 +491,6 @@ def _get_blocks(time: t64, smp: f64,
     __me__ ='_blocks'
     logger.info(f'{__me__}: started')
 
-    """ If the local mode does not work the inverter still works.To
-    overcome solarbank output is assigned.  """
-    if ivp1 + ivp2 <= 0:
-        ivp1 = ivp2 = sbpo/2
-        ivp = ivp1 + ivp2
-
-    if np.isnan(ivp):
-        ivp = 0
-
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.axis('equal')
@@ -511,7 +502,7 @@ def _get_blocks(time: t64, smp: f64,
     def _add_link_to_ax(ax: Any,
                         xb0: int, yb0: int, gate0: str,
                         xb1: int, yb1: int, gate1: str,
-                        power: float, color: str) -> None:
+                        power: float, color: str, show_power: bool = True) -> None:
 
         x = [None]*5
         x[0] = (2*xb0)*BW + (BW if gate0 in 'E' else -BW if gate0 in 'W' else 0)/2
@@ -527,13 +518,13 @@ def _get_blocks(time: t64, smp: f64,
         y[3] = y[4] + (BH if gate1 in 'N' else -BH if gate1 in 'S' else 0)/2
         y[2] = (y[1] + y[3])/2
 
-        ha, va = 'center', 'center' if gate0 in "SN" and gate1 in "SN" else 'bottom'
-
-        ltext = f'{power:.0f}W' if abs(power)>0 else ''
         lwidth = (2*np.log10(abs(power))+1) if abs(power)>0 else 0
-
         ax.plot(x, y, color=color, lw=lwidth, alpha=0.3)
-        ax.annotate(ltext, (x[2], y[2]), color='black',
+
+        if show_power:
+            ha, va = 'center', 'center' #if gate0 in "SN" and gate1 in "SN" else 'bottom'
+            ltext = f'{power:.0f}W' if abs(power)>0 else ''
+            ax.annotate(ltext, ((x[1]+x[3])/2, (y[2]+y[3])/2), color='black',
                     weight='bold', fontsize=9, ha=ha, va=va, alpha=0.9)
                 
 
@@ -606,38 +597,53 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *solix_split, 'S', *solix_out, 'S',
                         sbpi+sbpb, 'grey')
 
-    if ivp1>1:
+    if sbpo>1:
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
-                        ivp1, 'magenta' if sbpb>1 else 'grey')
+                        ivp1 if ivp1>1 else sbpo/2,
+                        'magenta' if sbpb>1 else 'grey',
+                        show_power = True)
         if spph>1:
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *plugh, 'N',
-                            ivp1, 'magenta' if sbpb>1 else 'grey')
+                            ivp1 if ivp1>1 else sbpo/2,
+                            'magenta' if sbpb>1 else 'grey',
+                            show_power = ivp1>1)            
         else:
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
-                            ivp1, 'magenta' if sbpb>1 else 'grey')
-    if ivp2>1:
+                            ivp1 if ivp1>1 else sbpo/2,
+                            'magenta' if sbpb>1 else 'grey',
+                            show_power = ivp1>1)
+
+            
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
-                        ivp2, 'magenta' if sbpb>1 else 'grey')
+                        ivp2 if ivp2>1 else sbpo/2,
+                        'magenta' if sbpb>1 else 'grey',
+                        show_power = True)
         if spph>1:
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *plugh, 'S',
-                            ivp1, 'magenta' if sbpb>1 else 'grey')
+                            ivp1 if ivp2>1 else sbpo/2,
+                            'magenta' if sbpb>1 else 'grey',
+                            show_power = ivp2>1)
         else:
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
-                        ivp2, 'magenta' if sbpb>1 else 'grey')
+                            ivp2 if ivp2>1 else sbpo/2,
+                            'magenta' if sbpb>1 else 'grey',
+                            show_power = ivp2>1)
+
+    ivp = (ivp1+ivp2) if (ivp1+ivp2) > 0 else sbpo
 
     if spph>1:
         _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
                         spph, 'magenta' if sbpb>1 else 'grey')
     elif ivp>1:
         _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
-                        ivp, 'magenta' if sbpb>1 else 'grey')
+                        ivp if ivp>1 else sbpo,
+                        'magenta' if sbpb>1 else 'grey')
 
     _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
                     'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
 
     _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
-                    smp + (spph if spph>0 else ivp),
-                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
+                    smp + (spph if spph>0 else ivp), 'brown')
 
     if spp1>1:
         _add_link_to_ax(ax, *sinks, 'E', *plug1, 'W', spp1, 'brown')
