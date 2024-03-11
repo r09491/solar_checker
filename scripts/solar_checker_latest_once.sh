@@ -10,6 +10,7 @@
 solar_checker_latest_once.py --iv_ip "192.168.101.48" \
 			     --sm_ip "192.168.101.30" \
 			     --sb_sn "AZV6Y60D33200788" \
+			     --sp_balcony "plug0" \
 			     --sp_switch_3 "plug3" \
 			     --sp_switch_2 "plug2" \
 			     --sp_switch_1 "plug1" >> \

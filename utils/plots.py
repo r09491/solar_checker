@@ -106,13 +106,7 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpboff_mean = sbpboff.mean() if sbpboff is not None else 0
     sbpboff_max = sbpboff.max() if sbpboff is not None else 0
     
-    timeivpon = time[isivpon] if isivpon is not None and isivpon.any() else None
-    timespphon = time[isspphon] if isspphon is not None  and isspphon.any() else None
-    timesbpbon = time[issbpbon] if issbpbon is not None and issbpbon.any() else None
-    timesbpboff = time[issbpboff] if issbpboff is not None and issbpboff.any() else None
-    timesbpoon = time[issbpoon] if issbpoon is not None and issbpoon.any() else None
-    timesbpion = time[issbpion] if issbpion is not None and issbpion.any() else None
-    timeon = timespphon if timespphon is not None else timeivpon if timeivpon is not None else timesbpion
+    timesbpion = time[issbpion] if issbpion is not None   else None
 
     totals = np.maximum(smp, [0]) + \
         spph if isspphon is not None else \
@@ -189,7 +183,7 @@ def _get_w_line(time: t64s, smp: f64s,
             color='c', lw=2, ls='-', label="MEANS+", alpha=0.4)
 
     if sbpion is not None:
-        ax.fill_between(timeon ,
+        ax.fill_between(timesbpion ,
                         np.full_like(sbpion, 600),
                         np.full_like(sbpion, 800),
                         color='orange', label='LIMITS', alpha=0.4)
@@ -199,18 +193,18 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'Sun {sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
 
-    if sbpoon is not None:
+    if spphon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Bank {sbpo[-1]:.0f}'
-        title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
+        title += f'Plug0  {spph[-1]:.0f}'
+        title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
     elif ivpon is not None:
         title += '' if title[-1] == '\n' else ' | '
         title += f'Inv {ivp[-1]:.0f}'
         title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-    elif spphon is not None:
+    elif sbpoon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Plug {spph[-1]:.0f}'
-        title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
+        title += f'Bank {sbpo[-1]:.0f}'
+        title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
   
     if smpon is not None:
         title += '' if title[-1] == '\n' else ' | '
@@ -341,9 +335,9 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     title = f'# Energy #\n'
     if spehon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f'Plug {speh[-1]:.1f}kWh~{speh[-1]*price:.2f}€'
+            title += f'Plug0 {speh[-1]:.1f}kWh~{speh[-1]*price:.2f}€'
         else:
-            title += f'Plug {speh.sum():.1f}kWh~{speh.sum()*price:.2f}€'
+            title += f'Plug0 {speh.sum():.1f}kWh~{speh.sum()*price:.2f}€'
     elif iveon is not None:
         if time_format == '%H:%Mh': # Accumulated
             title += f'Inv {ive[-1]:.1f}kWh~{ive[-1]*price:.2f}€'
@@ -451,7 +445,7 @@ def _get_kwh_bar_unified(
                 
     title = f'# Energy Check #\n'
     if panelon is not None:
-        title += f'Panel {panel.sum():.1f}kWh~{panel.sum()*price:.2f}€'
+        title += f'Balcony {panel.sum():.1f}kWh~{panel.sum()*price:.2f}€'
     if smeon is not None:
         title += f' | House < {smeon.sum():.1f}kWh~{(smeon.sum()*price):.2f}€'   
     if smeoff is not None:
@@ -554,27 +548,27 @@ def _get_blocks(time: t64, smp: f64,
     plug3 = (6.0 ,-0.5)
     plug4 = (5.75 ,-1.25)
         
-    _add_box_to_ax(ax, *panel_1, 'PANEL 1', 'green')
-    _add_box_to_ax(ax, *panel_2, 'PANEL 2', 'green')
-    _add_box_to_ax(ax, *solix_mppt, 'SOLIX\nMPPT', 'grey')
-    _add_box_to_ax(ax, *solix_split, 'SOLIX\nSPLIT', 'grey')
-    _add_box_to_ax(ax, *solix_out, 'SOLIX\nOUT', 'grey')
-    _add_box_to_ax(ax, *solix_bat, 'SOLIX\nBAT', 'grey')
+    _add_box_to_ax(ax, *panel_1, 'PANEL1', 'green')
+    _add_box_to_ax(ax, *panel_2, 'PANEL2', 'green')
+    _add_box_to_ax(ax, *solix_mppt, 'MPPT\nSOLIX', 'grey')
+    _add_box_to_ax(ax, *solix_split, 'SPLIT\nSOLIX', 'grey')
+    _add_box_to_ax(ax, *solix_out, 'OUT\nSOLIX', 'grey')
+    _add_box_to_ax(ax, *solix_bat, 'BAT\nSOLIX', 'grey')
     _add_box_to_ax(ax, *house, 'METER\nHOUSE',
                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'white')
     _add_box_to_ax(ax, *net, 'POWER\nNET',
                    'blue' if smp>0 else 'white')
-    _add_box_to_ax(ax, *inv_mppt_1, 'INV\nMPPT 1', 'cyan')
-    _add_box_to_ax(ax, *inv_mppt_2, 'INV\nMPPT 2', 'cyan')
+    _add_box_to_ax(ax, *inv_mppt_1, 'MPPT1\nINV', 'cyan')
+    _add_box_to_ax(ax, *inv_mppt_2, 'MPPT2\nINV', 'cyan')
     if spph>1:
-        _add_box_to_ax(ax, *plugh, 'PLUG\nHOUSE', 'brown')
+        _add_box_to_ax(ax, *plugh, 'PLUG0\nBALCONY', 'brown')
     else:
-        _add_box_to_ax(ax, *inv_out, 'INV\nOUT', 'cyan')
-    _add_box_to_ax(ax, *sinks, 'MANY\nSINKS', 'white')
-    _add_box_to_ax(ax, *plug1, 'PLUG 1\nSINK', 'white')
-    _add_box_to_ax(ax, *plug2, 'PLUG 2\nSINK', 'white')
-    _add_box_to_ax(ax, *plug3, 'PLUG 3\nSINK', 'white')
-    _add_box_to_ax(ax, *plug4, 'PLUG 4\nSINK', 'white')
+        _add_box_to_ax(ax, *inv_out, 'OUT\nINV', 'cyan')
+    _add_box_to_ax(ax, *sinks, 'MANY\nSINK', 'white')
+    _add_box_to_ax(ax, *plug1, 'PLUG1\nSINK', 'white')
+    _add_box_to_ax(ax, *plug2, 'PLUG2\nSINK', 'white')
+    _add_box_to_ax(ax, *plug3, 'PLUG3\nSINK', 'white')
+    _add_box_to_ax(ax, *plug4, 'PLUG4\nSINK', 'white')
     
 
     if sbpi>1 :
