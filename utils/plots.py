@@ -399,37 +399,37 @@ async def get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
 
 
 def _get_kwh_bar_unified(
-        time: t64s, smeon: f64s, smeoff: f64s, panel: f64,
+        time: t64s, smeon: f64s, smeoff: f64s, balcony: f64,
         price: f64, bar_width: f64, time_format: str):
 
     __me__='_get_kwh_bar_unified'
     logger.info(f'{__me__}: started')
 
-    panelon = panel[panel>0] if panel is not None else None
+    balconyon = balcony[balcony>0] if balcony is not None else None
 
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
 
-    if panelon is not None:
+    if balconyon is not None:
         logger.info(f'{__me__}: using unified samples')
 
         ax.bar(time, smeoff, bottom = 0,
                color='blue', width=bar_width, alpha=0.3)
-        ax.bar(time, panel, bottom = 0,
-               color='grey', label='PANEL', width=bar_width, alpha=0.3)
-        ax.bar(time, smeon, bottom=panel,
+        ax.bar(time, balcony, bottom = 0,
+               color='grey', label='BALCONY', width=bar_width, alpha=0.3)
+        ax.bar(time, smeon, bottom=balcony,
                color='blue',label='HOUSE', width=bar_width, alpha=0.3)
         
-        for x, ysmeoff, ypanel, ysmeon, ytot in zip(time, smeoff, panel, smeon, panel + smeon):
+        for x, ysmeoff, ybalcony, ysmeon, ytot in zip(time, smeoff, balcony, smeon, balcony + smeon):
             if ysmeoff < -1.0:
                 ax.text(x, ysmeoff/2, f'{-ysmeoff:.1f}', ha = 'center', va='top',
                         color = 'black', weight='bold', size=8)
-            if ypanel > 1.0:
-                ax.text(x, ypanel/2, f'{ypanel:.1f}', ha = 'center',
+            if ybalcony > 1.0:
+                ax.text(x, ybalcony/2, f'{ybalcony:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
             if ysmeon > 1.0:
-                ax.text(x, ysmeon/2 + ypanel, f'{ysmeon:.1f}', ha = 'center',
+                ax.text(x, ysmeon/2 + ybalcony, f'{ysmeon:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
 
     else:
@@ -439,17 +439,30 @@ def _get_kwh_bar_unified(
             ax.bar(time, smeoff, bottom = 0,
                    color='blue', width=bar_width, alpha=0.3)
         if smeoff is not None:
-            ax.bar(time, smeon, bottom=panel,
+            ax.bar(time, smeon, bottom=balcony,
                    color='blue',label='HOUSE', width=bar_width, alpha=0.3)
             
                 
-    title = f'# Energy Check #\n'
-    if panelon is not None:
-        title += f'Balcony {panel.sum():.1f}kWh~{panel.sum()*price:.2f}€'
-    if smeon is not None:
-        title += f' | House < {smeon.sum():.1f}kWh~{(smeon.sum()*price):.2f}€'   
-    if smeoff is not None:
-        title += f' > {abs(smeoff.sum()):.1f}kWh~{(abs(smeoff.sum())*price):.2f}€'   
+    title = '' # f'# Energy Check #\n'
+    if balconyon.any():
+        title += f'Balcony {balconyon.sum():.1f}'
+        title += f'={balconyon.mean():.1f}'
+        title += f'^{balconyon.max():.1f}kWh'
+        title += f'~{balconyon.sum()*price:.2f}€'
+
+    smeonon = smeon[smeon>0]
+    if smeonon.any():
+        title += f'\nHouse < {smeonon.sum():.1f}'
+        title += f'={smeonon.mean():.1f}'
+        title += f'^{smeonon.max():.1f}kWh'   
+        title += f'~{(smeonon.sum()*price):.2f}€'
+
+        smeoffon = abs(smeoff)[abs(smeoff)>0]
+        if smeoffon.any():
+            title += f' > {smeoffon.sum():.1f}'
+            title += f'={smeoffon.mean():.1f}'
+            title += f'^{smeoffon.max():.1f}kWh'   
+            title += f'~{(smeoffon.sum()*price):.2f}€'
 
     ax.set_title(title, fontsize='x-large')
 
@@ -469,7 +482,7 @@ def _get_kwh_bar_unified(
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
 async def get_kwh_bar_unified(
-        time: t64s, smeon: f64s, smeoff: f64s, panel: f64s,
+        time: t64s, smeon: f64s, smeoff: f64s, balcony: f64s,
         price: f64, bar_width: f64, time_format:str):
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(
@@ -595,7 +608,7 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
                         ivp1 if ivp1>1 else sbpo/2,
                         'magenta' if sbpb>1 else 'grey',
-                        show_power = True)
+                        show_power = ivp1>1)
         if spph>1:
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *plugh, 'N',
                             ivp1 if ivp1>1 else sbpo/2,
@@ -611,7 +624,7 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
                         ivp2 if ivp2>1 else sbpo/2,
                         'magenta' if sbpb>1 else 'grey',
-                        show_power = True)
+                        show_power = ivp2>1)
         if spph>1:
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *plugh, 'S',
                             ivp1 if ivp2>1 else sbpo/2,
