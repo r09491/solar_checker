@@ -10,7 +10,7 @@ tail -n 11 $SOLAR_CHECKER_LATEST|solar_checker_switch_on_export_once.py \
      --power_samples 11 2>> $SOLAR_CHECKER_ERROR
 
 # This script shall start/stop the charging of low power devices. It
-# starts the charging if power is exported after a certain period (13
+# starts the charging if power is exported after a certain period (11
 # minutes).  It stops the charging if no power is exported to the
-# provider after a certain period (13 minutes). At the end it shall
+# provider after a certain period (11 minutes). At the end it shall
 # ensure that the export is minimized.
