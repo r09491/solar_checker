@@ -636,21 +636,19 @@ def _get_blocks(time: t64, smp: f64,
                             'magenta' if sbpb>1 else 'grey',
                             show_power = ivp2>1)
 
-    ivp = (ivp1+ivp2) if (ivp1+ivp2) > 0 else sbpo
+    ivp = (ivp1+ivp2)
 
-    if spph>1:
-        _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
-                        spph, 'magenta' if sbpb>1 else 'grey')
-    elif ivp>1:
-        _add_link_to_ax(ax, *inv_out, 'E', *house, 'W',
-                        ivp if ivp>1 else sbpo,
-                        'magenta' if sbpb>1 else 'grey')
+    balconyp = spph if spph>1 else ivp if ivp > 1 else sbpo
+    
+    _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
+                    balconyp, 'magenta' if sbpb>1 else 'grey',
+                    show_power = spph>1 or ivp>1)
 
     _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
                     'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
 
     _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
-                    smp + (spph if spph>0 else ivp), 'brown')
+                    smp + balconyp, 'brown')
 
     if spp1>1:
         _add_link_to_ax(ax, *sinks, 'E', *plug1, 'W', spp1, 'brown')
@@ -662,7 +660,7 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *sinks, 'E', *plug4, 'W', spp4, 'brown')
 
     _add_link_to_ax(ax, *sinks, 'S', *sinks, 'S',
-                    smp + (spph if spph>0 else ivp)-spp1-spp2-spp3-spp4, 'brown')
+                    smp + (balconyp)-spp1-spp2-spp3-spp4, 'brown')
         
     title = f'# System #'
     title += f'\nLast Sample of the Day'
