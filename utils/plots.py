@@ -556,10 +556,10 @@ def _get_blocks(time: t64, smp: f64,
     house = (4,0)
     net = (4, 1)
     sinks = (4, -1)
-    plug1 = (5 ,0.75)
-    plug2 = (5.75 ,0.25)
-    plug3 = (6.0 ,-0.5)
-    plug4 = (5.75 ,-1.25)
+    plug1 = (5.25 ,1)
+    plug2 = (5.5 ,0.33)
+    plug3 = (5.5 ,-0.33)
+    plug4 = (5.25 ,-1)
         
     _add_box_to_ax(ax, *panel_1, 'PANEL1', 'green')
     _add_box_to_ax(ax, *panel_2, 'PANEL2', 'green')
@@ -640,27 +640,28 @@ def _get_blocks(time: t64, smp: f64,
 
     balconyp = spph if spph>1 else ivp if ivp > 1 else sbpo
     
-    _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
-                    balconyp, 'magenta' if sbpb>1 else 'grey',
-                    show_power = spph>1 or ivp>1)
+    #_add_link_to_ax(ax, *plugh, 'E', *house, 'W',
+    #                balconyp, 'magenta' if sbpb>1 else 'grey',
+    #                show_power = spph>1 or ivp>1)
+    if balconyp > 0:
+        _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
+                        balconyp, 'magenta' if sbpb>1 else 'grey')
 
     _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
                     'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
 
-    _add_link_to_ax(ax, *house, 'S', *sinks, 'N',
-                    smp + balconyp, 'brown')
+    sinksp = smp + (balconyp)-spp1-spp2-spp3-spp4
+    if sinksp > 1:
+        _add_link_to_ax(ax, *house, 'S', *sinks, 'N', sinksp, 'brown')
 
     if spp1>1:
-        _add_link_to_ax(ax, *sinks, 'E', *plug1, 'W', spp1, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug1, 'W', spp1, 'brown')
     if spp2>1:
-        _add_link_to_ax(ax, *sinks, 'E', *plug2, 'W', spp2, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug2, 'W', spp2, 'brown')
     if spp3>1:
-        _add_link_to_ax(ax, *sinks, 'E', *plug3, 'W', spp3, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug3, 'W', spp3, 'brown')
     if spp4>1:
-        _add_link_to_ax(ax, *sinks, 'E', *plug4, 'W', spp4, 'brown')
-
-    _add_link_to_ax(ax, *sinks, 'S', *sinks, 'S',
-                    smp + (balconyp)-spp1-spp2-spp3-spp4, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug4, 'W', spp4, 'brown')
         
     title = f'# System #'
     title += f'\nLast Sample of the Day'
