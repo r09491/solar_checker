@@ -594,7 +594,7 @@ def _get_blocks(time: t64, smp: f64,
 
     if sbpb<0 :
         _add_link_to_ax(ax, *solix_split, 'N', *solix_bat, 'W',
-                        -sbpb, 'm')
+                        sbpb, 'm')
     
     if sbpb>1 :
         _add_link_to_ax(ax, *solix_bat, 'E', *solix_out, 'N',
