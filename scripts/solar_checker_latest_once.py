@@ -38,14 +38,19 @@ async def anker_solarbank_latest_get(sb: Solarbank) -> str:
     logger.info(f'anker_solarbank_latest_get started')
     text = '0.000,0.000,0.000,0.00'
 
-    pdata = await sb.get_power_data()
+    try:
+        pdata = await sb.get_power_data()
+    except:
+        pdata = None
     if pdata is not None:
-        logger.debug("Anker solarbank has data.")
+        logger.debug("Anker solarbank provides data.")
         text = f'{pdata.input_power:.0f}'
         text += f',{pdata.output_power:.0f}'
         text += f',{pdata.battery_power:.0f}'
         text += f',{pdata.battery_soc:.2f}'
-
+    else:
+        logger.error("Anker solarbank provides no data (?Server down).")
+        
     logger.info(f'anker_solarbank_latest_get done')        
     return text
 
