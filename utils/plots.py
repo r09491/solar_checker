@@ -648,20 +648,20 @@ def _get_blocks(time: t64, smp: f64,
                         balconyp, 'magenta' if sbpb>1 else 'grey')
 
     _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
-                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'grey')
+                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'brown')
 
     sinksp = smp + (balconyp)-spp1-spp2-spp3-spp4
     if sinksp > 1:
-        _add_link_to_ax(ax, *house, 'S', *sinks, 'N', sinksp, 'brown')
+        _add_link_to_ax(ax, *house, 'S', *sinks, 'N', -sinksp, 'brown')
 
     if spp1>1:
-        _add_link_to_ax(ax, *house, 'E', *plug1, 'W', spp1, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug1, 'W', -spp1, 'brown')
     if spp2>1:
-        _add_link_to_ax(ax, *house, 'E', *plug2, 'W', spp2, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug2, 'W', -spp2, 'brown')
     if spp3>1:
-        _add_link_to_ax(ax, *house, 'E', *plug3, 'W', spp3, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug3, 'W', -spp3, 'brown')
     if spp4>1:
-        _add_link_to_ax(ax, *house, 'E', *plug4, 'W', spp4, 'brown')
+        _add_link_to_ax(ax, *house, 'E', *plug4, 'W', -spp4, 'brown')
         
     title = f'# System #'
     title += f'\nLast Sample of the Day'
