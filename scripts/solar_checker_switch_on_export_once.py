@@ -70,7 +70,6 @@ async def tuya_smartplug_switch_get(sp: Smartplug) -> Switch_Status:
 async def main(sp: Smartplug,
                power_mean_import_open: f64,
                power_mean_export_closed: f64,
-               power_mean_deviation: f64,
                power_samples: int, f: Any) -> int:
 
     c = await get_columns_from_csv()
@@ -82,20 +81,20 @@ async def main(sp: Smartplug,
     if smp.size != power_samples:
         logger.error(f'Wrong number of smartmeter records "{smp.size}"')
         return 11
-    smp_mean, smp_std = smp.mean(), smp.std()
-    logger.info(f'Last smartmeter means "{smp_mean:.0f}W", std "{smp_std:.0f}W"')
+    smp_mean = smp.mean()
+    logger.info(f'Last smartmeter means "{smp_mean:.0f}W"')
 
     name = sp.name
     spp = c['SPP1'] if name == 'plug1' else \
         c['SPP2'] if name == 'plug2' else \
         c['SPP3'] if name == 'plug3' else \
-        c['SPP4'] if name == 'plug4' else None
+        c['SPP4'] if name == 'plug0' else None
     if spp is None or spp.size != power_samples:
         logger.error(f'Wrong number of plug records "{spp.size}" for "{name}"')
         return 12
     
-    spp_mean, spp_std = spp.mean(), spp.std()
-    logger.info(f'Last "{sp.name}" smartplug means "{spp_mean:.0f}W", std "{spp_std:.0f}W"')
+    spp_mean = spp.mean()
+    logger.info(f'Last "{name}" smartplug means "{spp_mean:.0f}W"')
         
 
     # Switch to be Open if above import average
@@ -112,16 +111,16 @@ async def main(sp: Smartplug,
     logger.info(f'The smartplug switch goal is "{ss_desired}"')
 
     if ss_desired == Switch_Status('Null'):
-        logger.warning(f'Net mean "{smp_mean:.0f}" or std "{smp_std:.0f}" do not match.')
+        logger.warning(f'Net mean "{smp_mean:.0f}" does not match.')
         logger.info(f'The smartplug switch "{name}" remains "{ss_actual}"')
 
         if ss_actual == Switch_Status('Closed'):
-            logger.info('Keeping smartplug "{name}" awake')
+            logger.info(f'Keeping smartplug "{name}" awake')
             onoff = await sp.turn_off()
-            logger.info(f'{name}" is "OPEN" for test: "{not onoff}"')
+            logger.info(f'"{name}" is "OPEN" for test: "{not onoff}"')
             await asyncio.sleep(5)
             onoff = await sp.turn_on()
-            logger.info(f'{name}" is "CLOSED" for test: "{onoff}"')
+            logger.info(f'"{name}" is "CLOSED" for test: "{onoff}"')
 
     elif ss_actual != ss_desired:
         logger.info(f'The smartplug "{name}" is desired to "{ss_desired}"')
@@ -144,7 +143,6 @@ class Script_Arguments:
     plug_name: str
     power_mean_import_open: f64
     power_mean_export_closed: f64
-    power_mean_deviation: f64
     power_samples: int
     
 def parse_arguments() -> Script_Arguments:
@@ -166,9 +164,6 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--power_mean_export_closed', type = f64, default = 20.0,
                         help = "Net power to close the plug")
 
-    parser.add_argument('--power_mean_deviation', type = f64, default = 10.0,
-                        help = "Maximum deviation of the samples")
-
     parser.add_argument('--power_samples', type = int, default = 10,
                         help = "Number of recorded samples to use")
     
@@ -177,7 +172,6 @@ def parse_arguments() -> Script_Arguments:
     return Script_Arguments(args.plug_name,
                             args.power_mean_import_open,
                             args.power_mean_export_closed,
-                            args.power_mean_deviation,
                             args.power_samples)
 
 
@@ -196,16 +190,9 @@ if __name__ == '__main__':
         logger.error(f'Switching of "{args.plug_name}" aborted (err=2)')
         sys.exit(2)
 
-    max_deviation = (args.power_mean_import_open + args.power_mean_export_closed) * 0.50
-    if args.power_mean_deviation > max_deviation:
-        logger.error(f'Provided deviation "{args.power_mean_deviation}" larger than max "{max_deviation:.0f}"')
-        logger.error(f'Switching of "{args.plug_name}" aborted (err=4)')
-        sys.exit(4)
-        
     err = asyncio.run(main(Smartplug(args.plug_name),
                            args.power_mean_import_open,
                            args.power_mean_export_closed,
-                           args.power_mean_deviation,
                            args.power_samples,
                            sys.stdin))
 
