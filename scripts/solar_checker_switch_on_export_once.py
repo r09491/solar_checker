@@ -51,19 +51,19 @@ def str2f64(value: str) -> f64:
 async def tuya_smartplug_switch_set(sp: Smartplug,
                                     ss_desired: Switch_Status) -> Switch_Status:
 
-    logger.info(f'tuya_smartplug_switch_set started for "{ss_desired}"')
+    logger.info(f'tuya_smartplug_switch_set "{sp.name}" started for "{ss_desired}"')
     is_closed = await (sp.turn_on() if ss_desired.value == "Closed" else sp.turn_off())
     ss_result = Switch_Status('Closed' if is_closed else 'Open')
-    logger.info(f'tuya_smartplug_switch_set done with "{ss_result}')        
+    logger.info(f'tuya_smartplug_switch_set "{sp.name}" done with "{ss_result}')        
     return ss_result
 
 
 async def tuya_smartplug_switch_get(sp: Smartplug) -> Switch_Status:
 
-    logger.info(f'tuya_smartplug_switch_get started')
+    logger.info(f'tuya_smartplug_switch_get "{sp.name}" started')
     is_closed = await sp.is_switch_closed()
     ss_result = Switch_Status('Closed' if is_closed else 'Open')
-    logger.info(f'tuya_smartplug_switch_get done: "{ss_result}"')        
+    logger.info(f'tuya_smartplug_switch_get "{sp.name}" done: "{ss_result}"')        
     return ss_result
 
 
@@ -82,7 +82,7 @@ async def main(sp: Smartplug,
         logger.error(f'Wrong number of smartmeter records "{smp.size}"')
         return 11
     smp_mean = smp.mean()
-    logger.info(f'Last smartmeter means "{smp_mean:.0f}W"')
+    logger.info(f'Last smartmeter mean "{smp_mean:.0f}W"')
 
     name = sp.name
     spp = c['SPP1'] if name == 'plug1' else \
@@ -94,7 +94,7 @@ async def main(sp: Smartplug,
         return 12
     
     spp_mean = spp.mean()
-    logger.info(f'Last "{name}" smartplug means "{spp_mean:.0f}W"')
+    logger.info(f'Last "{name}" smartplug mean "{spp_mean:.0f}W"')
         
 
     # Switch to be Open if above import average
@@ -111,7 +111,7 @@ async def main(sp: Smartplug,
     logger.info(f'The smartplug switch goal is "{ss_desired}"')
 
     if ss_desired == Switch_Status('Null'):
-        logger.warning(f'Net mean "{smp_mean:.0f}" does not match.')
+        ##logger.warning(f'Net mean "{smp_mean:.0f}" does not match.')
         logger.info(f'The smartplug switch "{name}" remains "{ss_actual}"')
 
         if ss_actual == Switch_Status('Closed'):
