@@ -114,6 +114,7 @@ async def main(sp: Smartplug,
         ##logger.warning(f'Net mean "{smp_mean:.0f}" does not match.')
         logger.info(f'The smartplug switch "{name}" remains "{ss_actual}"')
 
+        """
         if ss_actual == Switch_Status('Closed'):
             logger.info(f'Keeping smartplug "{name}" awake')
             onoff = await sp.turn_off()
@@ -121,7 +122,8 @@ async def main(sp: Smartplug,
             await asyncio.sleep(5)
             onoff = await sp.turn_on()
             logger.info(f'"{name}" is "CLOSED" for test: "{onoff}"')
-
+        """
+        
     elif ss_actual != ss_desired:
         logger.info(f'The smartplug "{name}" is desired to "{ss_desired}"')
         try:
