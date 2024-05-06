@@ -167,7 +167,7 @@ def _get_w_line(time: t64s, smp: f64s,
         
     """ Plot the battery power of the solarbank during charging"""
     if sbpb is not None:
-        """ The solarbank output is used directly in spite of inverter """
+        """ The solarbank output is used directly inspite of inverter """
         ax.fill_between(time, 0, sbpb,
                         color='m', label='-BAT', alpha=0.3)
         sbpb_stacked = np.minimum(sbpb, [0])
@@ -206,19 +206,19 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'Bank {sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
   
-    if smpon is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        title += f'House < {smp[-1] if smp[-1]>0 else 0:.0f}'
-        title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
-        title += f' > {-smp[-1] if smp[-1]<0 else 0:.0f}'
-        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
-        
     if sbpb is not None:
-        title += f'\nBat < {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
+        title += f' * Bat < {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
         title += f' > {sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
         title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
+    if smpon is not None:
+        ##title += '' if title[-1] == '\n' else ' | '
+        title += f'\nHouse < {smp[-1] if smp[-1]>0 else 0:.0f}'
+        title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
+        title += f' > {-smp[-1] if smp[-1]<0 else 0:.0f}'
+        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
+        
     ax.set_title(title)
     
     ax.legend(loc='lower left')
@@ -335,19 +335,19 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     title = f'# Energy #\n'
     if spehon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f'Plug0 {speh[-1]:.1f}kWh~{speh[-1]*price:.2f}€'
+            title += f'Plug0 {speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
         else:
-            title += f'Plug0 {speh.sum():.1f}kWh~{speh.sum()*price:.2f}€'
+            title += f'Plug0 {speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
     elif iveon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f'Inv {ive[-1]:.1f}kWh~{ive[-1]*price:.2f}€'
+            title += f'Inv {ive[-1]:.2f}kWh~{ive[-1]*price:.2f}€'
         else:
-            title += f'Inv {ive.sum():.1f}kWh~{ive.sum()*price:.2f}€'
+            title += f'Inv {ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
     elif sbeoon is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f'Bank {sbeo[-1]:.1f}kWh~{sbeo[-1]*price:.2f}€'
+            title += f'Bank {sbeo[-1]:.2f}kWh~{sbeo[-1]*price:.2f}€'
         else:
-            title += f'Bank {sbeo.sum():.1f}kWh~{sbeo.sum()*price:.2f}€'
+            title += f'Bank {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
         
     if smeon is not None:
         title += '' if title[-1] == '\n' else ' | '
