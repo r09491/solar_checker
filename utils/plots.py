@@ -221,7 +221,7 @@ def _get_w_line(time: t64s, smp: f64s,
         
     ax.set_title(title)
     
-    ax.legend(loc='lower left')
+    ax.legend(loc='upper left')
     ax.set_ylabel('Power [W]')
     ax.set_yscale('symlog')
     ax.xaxis_date()
@@ -407,29 +407,33 @@ def _get_kwh_bar_unified(
 
     balconyon = balcony[balcony>0] if balcony is not None else None
 
-    fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
+    fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE+1))
 
     ax.clear()
 
     if balconyon is not None:
         logger.info(f'{__me__}: using unified samples')
 
-        ax.bar(time, smeoff, bottom = 0,
-               color='blue', width=bar_width, alpha=0.3)
-        ax.bar(time, balcony, bottom = 0,
+        ax.bar(time, balcony, bottom = smeoff,
                color='grey', label='BALCONY', width=bar_width, alpha=0.3)
-        ax.bar(time, smeon, bottom=balcony,
-               color='blue',label='HOUSE', width=bar_width, alpha=0.3)
-        
-        for x, ysmeoff, ybalcony, ysmeon, ytot in zip(time, smeoff, balcony, smeon, balcony + smeon):
+        ax.bar(time, smeon, bottom=balcony+smeoff,
+               color='blue',label='HOUSE <', width=bar_width, alpha=0.3)
+
+        for x, ysmeoff, ybalcony, ysmeon in zip(time, smeoff, balcony, smeon):
+            if ybalcony > 0.5 and ysmeoff < 0.0:
+                ax.text(x, ysmeoff, f'{ybalcony:.1f}', ha = 'center',
+                        color = 'grey', weight='bold', size=8)
+            """
             if ysmeoff < -1.0:
-                ax.text(x, ysmeoff/2, f'{-ysmeoff:.1f}', ha = 'center', va='top',
-                        color = 'black', weight='bold', size=8)
-            if ybalcony > 1.0:
-                ax.text(x, ybalcony/2, f'{ybalcony:.1f}', ha = 'center',
+                ax.text(x, ysmeoff/2, f'{-ysmeoff:.1f}', ha = 'center',
+                        color = 'brown', weight='bold', size=8)
+            """
+
+            if ysmeoff + ybalcony > 0.5:
+                ax.text(x, (ysmeoff + ybalcony)/2, f'{ysmeoff+ybalcony:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
             if ysmeon > 1.0:
-                ax.text(x, ysmeon/2 + ybalcony, f'{ysmeon:.1f}', ha = 'center',
+                ax.text(x, ysmeoff + ybalcony + ysmeon/2 , f'{ysmeon:.1f}', ha = 'center',
                         color = 'black', weight='bold', size=8)
 
     else:
@@ -464,6 +468,14 @@ def _get_kwh_bar_unified(
             title += f'^{smeoffon.max():.1f}kWh'   
             title += f'~{(smeoffon.sum()*price):.2f}€'
 
+            title += f'\nProfit {(balconyon.sum()-smeoffon.sum()):.1f}kWh'
+            title += f'~{((balconyon.sum()-smeoffon.sum())*price):.2f}€'
+            title += f' ({(balconyon.sum()-smeoffon.sum())/balconyon.sum()*100:.0f}%)'
+                
+            title += f' | Gift {smeoffon.sum():.1f}kWh'
+            title += f'~{smeoffon.sum()*price:.2f}€'
+            title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
+
     ax.set_title(title, fontsize='x-large')
 
     ax.legend(loc="upper right")
@@ -472,6 +484,9 @@ def _get_kwh_bar_unified(
     ax_formatter = mdates.DateFormatter(time_format)
     ax.xaxis.set_major_formatter(ax_formatter)
     ax.grid(which='major', ls='-', lw=1, axis='y')
+    ax.grid(which='major', ls=':', lw=1, axis='x')
+    ax.grid(which='minor', ls=':', lw=1, axis='both')
+    ax.minorticks_on()
 
     # Save it to a temporary buffer.
     buf = BytesIO()
@@ -648,7 +663,7 @@ def _get_blocks(time: t64, smp: f64,
                         balconyp, 'magenta' if sbpb>1 else 'grey')
 
     _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
-                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'brown')
+                    'blue' if smp>0 else 'brown')
 
     sinksp = smp + (balconyp)-spp1-spp2-spp3-spp4
     if sinksp > 1:
