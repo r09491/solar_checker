@@ -633,7 +633,7 @@ def _get_blocks(time: t64, smp: f64,
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
                             ivp1 if ivp1>1 else sbpo/2,
                             'magenta' if sbpb>1 else 'grey',
-                            show_power = ivp1>1)
+                            show_power = False)
 
             
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
@@ -649,15 +649,12 @@ def _get_blocks(time: t64, smp: f64,
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
                             ivp2 if ivp2>1 else sbpo/2,
                             'magenta' if sbpb>1 else 'grey',
-                            show_power = ivp2>1)
+                            show_power = False)
 
     ivp = (ivp1+ivp2)
 
     balconyp = spph if spph>1 else ivp if ivp > 1 else sbpo
     
-    #_add_link_to_ax(ax, *plugh, 'E', *house, 'W',
-    #                balconyp, 'magenta' if sbpb>1 else 'grey',
-    #                show_power = spph>1 or ivp>1)
     if balconyp > 0:
         _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
                         balconyp, 'magenta' if sbpb>1 else 'grey')
