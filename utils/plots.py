@@ -136,11 +136,13 @@ def _get_w_line(time: t64s, smp: f64s,
 
     elif ivpon is not None:
         logger.info(f'{__me__}: using inverter samples only')
-
-        ax.fill_between(time, 0, ivp1,
-                        color='c',label='INV 1', alpha=0.6)
-        ax.fill_between(time, ivp1, ivp1 + ivp2,
-                        color='g', label='INV 2', alpha=0.5)
+        
+        ###ax.fill_between(time, 0, ivp1,
+        ###                color='c',label='INV 1', alpha=0.1)
+        ###ax.fill_between(time, ivp1, ivp1 + ivp2,
+        ###                color='c', label='INV 2', alpha=0.1)
+        ax.fill_between(time, 0, ivp1 + ivp2,
+                        color='grey', label='INV', alpha=0.2)
         ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smpon,
                         color='b', label='HOUSE', alpha=0.3)
 
@@ -179,8 +181,8 @@ def _get_w_line(time: t64s, smp: f64s,
                         color='b', lw=0, alpha=0.3)
         
     """ A good first guess for Anker family load for Nulleinspeisung """
-    ax.plot(time, slot_means, 
-            color='c', lw=2, ls='-', label="MEANS+", alpha=0.4)
+    ### ax.plot(time, slot_means, 
+    ###        color='c', lw=2, ls='-', label="MEANS+", alpha=0.4)
 
     if sbpion is not None:
         ax.fill_between(timesbpion ,
@@ -193,15 +195,7 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'Sun {sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
 
-    if spphon is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        title += f'Plug0  {spph[-1]:.0f}'
-        title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
-    elif ivpon is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        title += f'Inv {ivp[-1]:.0f}'
-        title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
-    elif sbpoon is not None:
+    if sbpoon is not None:
         title += '' if title[-1] == '\n' else ' | '
         title += f'Bank {sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
@@ -212,9 +206,20 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f' > {sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
         title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
+    title += '' if title[-1] == '\n' else '\n'
+        
+    if ivpon is not None:
+        title += f'Inv {ivp[-1]:.0f}'
+        title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
+
+    if spphon is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'Plug0  {spph[-1]:.0f}'
+        title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
+
     if smpon is not None:
-        ##title += '' if title[-1] == '\n' else ' | '
-        title += f'\nHouse < {smp[-1] if smp[-1]>0 else 0:.0f}'
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'House < {smp[-1] if smp[-1]>0 else 0:.0f}'
         title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
         title += f' > {-smp[-1] if smp[-1]<0 else 0:.0f}'
         title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
@@ -265,6 +270,9 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     isspehon = speh>0 if speh is not None else None
     spehon = speh[isspehon] if isspehon is not None and isspehon.any() else None
 
+    issbeion = sbei>0 if sbei is not None else None
+    sbeion = sbei[issbeion] if issbeion is not None and issbeion.any() else None
+
     issbeoon = sbeo>0 if sbeo is not None else None
     sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
 
@@ -290,10 +298,12 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
 
         #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
 
-        ax.fill_between(time, 0, ive1,
-                             color='c', label='INV 1',alpha=0.6)
-        ax.fill_between(time, ive1, ive2 + ive1,
-                             color='g',label='INV 2', alpha=0.5)
+        ###ax.fill_between(time, 0, ive1,
+        ###                     color='c', label='INV 1',alpha=0.6)
+        ###ax.fill_between(time, ive1, ive2 + ive1,
+        ###                     color='g',label='INV 2', alpha=0.5)
+        ax.fill_between(time, 0, ive2 + ive1,
+                             color='grey',label='INV', alpha=0.3)                             
         ax.fill_between(time, ive2 + ive1, ive2 + ive1 + smeon,
                              color='b',label='HOUSE', alpha=0.3)
 
@@ -333,21 +343,45 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
                         color='b', alpha=0.3)
         
     title = f'# Energy #\n'
-    if spehon is not None:
+    if sbeion is not None:
         if time_format == '%H:%Mh': # Accumulated
-            title += f'Plug0 {speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
+            title += f'Sun {sbei[-1]:.2f}kWh'
         else:
-            title += f'Plug0 {speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
-    elif iveon is not None:
+            title += f'Sun {sbei.sum():.2f}kWh'
+
+    if sbeo is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        if time_format == '%H:%Mh': # Accumulated
+            title += f'Bank {sbeo[-1]:.2f}kWh'
+        else:
+            title += f'Bank {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
+
+    """
+    if sbeb is not None:
+        if time_format == '%H:%Mh': # Accumulated
+            title += f' * Bat {-sbeb[sbeb<0][-1]:.2f}kWh'
+        else:
+            title += f' * Bat {-sbeb[sbeb<0].sum():.2f}kWh'
+    """
+    
+    if sbsb is not None:
+        title += '' if title[-1] == '\n' else ' | '
+        title += f'Bat {sbsb[-1]*1000:.0f}Wh~{sbsb[-1]/full_kwh*100:.0f}%'
+
+    title += '' if title[-1] == '\n' else '\n'
+        
+    if iveon is not None:
         if time_format == '%H:%Mh': # Accumulated
             title += f'Inv {ive[-1]:.2f}kWh~{ive[-1]*price:.2f}€'
         else:
             title += f'Inv {ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
-    elif sbeoon is not None:
+
+    if spehon is not None:
+        title += '' if title[-1] == '\n' else '\n'
         if time_format == '%H:%Mh': # Accumulated
-            title += f'Bank {sbeo[-1]:.2f}kWh~{sbeo[-1]*price:.2f}€'
+            title += f'Plug0 {speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
         else:
-            title += f'Bank {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
+            title += f'Plug0 {speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
         
     if smeon is not None:
         title += '' if title[-1] == '\n' else ' | '
@@ -359,13 +393,10 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         if smeoff is not None:
             if time_format == '%H:%Mh': # Accumulated
                 title += f' > {smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
+                title += f' | Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
             else:
                 title += f' > {smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€'
-
-    if sbsb is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        title += f'Bat {sbsb[-1]*1000:.0f}Wh~{sbsb[-1]/full_kwh*100:.0f}%'
-
+                title += f' | Profit {ive.sum()-smeoff.sum():.2f}kWh~{(ive.sum()-smeoff.sum())*price:.2f}€'
     
     ax.set_title(title)
 
