@@ -142,7 +142,7 @@ def _get_w_line(time: t64s, smp: f64s,
         ###ax.fill_between(time, ivp1, ivp1 + ivp2,
         ###                color='c', label='INV 2', alpha=0.1)
         ax.fill_between(time, 0, ivp1 + ivp2,
-                        color='grey', label='INV', alpha=0.2)
+                        color='c', label='INV', alpha=0.2)
         ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smpon,
                         color='b', label='HOUSE', alpha=0.3)
 
@@ -303,7 +303,7 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         ###ax.fill_between(time, ive1, ive2 + ive1,
         ###                     color='g',label='INV 2', alpha=0.5)
         ax.fill_between(time, 0, ive2 + ive1,
-                             color='grey',label='INV', alpha=0.3)                             
+                             color='c',label='INV', alpha=0.3)                             
         ax.fill_between(time, ive2 + ive1, ive2 + ive1 + smeon,
                              color='b',label='HOUSE', alpha=0.3)
 
@@ -658,12 +658,12 @@ def _get_blocks(time: t64, smp: f64,
         if spph>1:
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *plugh, 'N',
                             ivp1 if ivp1>1 else sbpo/2,
-                            'magenta' if sbpb>1 else 'grey',
+                            'c' if ivp1>1 else 'grey',
                             show_power = ivp1>1)            
         else:
             _add_link_to_ax(ax, *inv_mppt_1, 'S', *inv_out, 'N',
                             ivp1 if ivp1>1 else sbpo/2,
-                            'magenta' if sbpb>1 else 'grey',
+                            'c' if ivp1>1 else 'grey',
                             show_power = False)
 
             
@@ -673,13 +673,13 @@ def _get_blocks(time: t64, smp: f64,
                         show_power = ivp2>1)
         if spph>1:
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *plugh, 'S',
-                            ivp1 if ivp2>1 else sbpo/2,
-                            'magenta' if sbpb>1 else 'grey',
+                            ivp2 if ivp2>1 else sbpo/2,
+                            'c' if ivp2>1 else 'grey',
                             show_power = ivp2>1)
         else:
             _add_link_to_ax(ax, *inv_mppt_2, 'N', *inv_out, 'S',
                             ivp2 if ivp2>1 else sbpo/2,
-                            'magenta' if sbpb>1 else 'grey',
+                            'c' if ivp2>1 else 'grey',
                             show_power = False)
 
     ivp = (ivp1+ivp2)
@@ -688,7 +688,7 @@ def _get_blocks(time: t64, smp: f64,
     
     if balconyp > 0:
         _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
-                        balconyp, 'magenta' if sbpb>1 else 'grey')
+                        balconyp, 'c' if ivp>1 else 'grey')
 
     _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
                     'blue' if smp>0 else 'brown')
