@@ -705,9 +705,14 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *house, 'E', *plug3, 'W', -spp3, 'brown')
     if spp4>1:
         _add_link_to_ax(ax, *house, 'E', *plug4, 'W', -spp4, 'brown')
-        
+
+
+    # last sample time (python version independent)
+    dt = datetime.strptime(str(time), '%Y-%m-%dT%H:%M:%S.%f000')
+    hm = dt.strftime('%H:%M') 
+
     title = f'# System #'
-    title += f'\nLast Sample of the Day'
+    title += f'\nLast Sample of the Day @ {hm}'
     ax.set_title(title)
     
     # Save it to a temporary buffer.
