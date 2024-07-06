@@ -21,7 +21,7 @@ alias apsystems_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_c
 
 #based on the energy at the start of the year (PH = Power, EY = Energy current Year, EL = Energy Lifetime)
 alias tasmota_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
-    awk -F',' 'BEGIN{start=4192;price=0.369}{printf(\"PH %04.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh|%.2f€\n\",\$2, \$3-start, (\$3-start)*price, \$3, \$3*price)}'"
+    awk -F',' 'BEGIN{start=4192;price=0.369}{printf(\"PH %+5.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh|%.2f€\n\",\$2, \$3-start, (\$3-start)*price, \$3, \$3*price)}'"
 
 alias tasmota_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
       			    awk -F',' '{ printf(\"%d,%f\n\", NR, \$2)}' | \
@@ -43,7 +43,7 @@ alias tuya_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(da
 
 # (PI = Power Inverter, PP = Power Plug, PH = Power Home)
 alias solar_checker_watts_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
-  awk -F',' '{printf(\"%s PR %03.0fW PO %03.0fW PB %03.0fW  PI %03.0f+%03.0f=%03.0fW  PP %03.0fW  PH %04.0fW\n\", \$1, \$11, \$12, \$13, \$4,\$7,\$4+\$7, \$10, \$2)}'"
+  awk -F',' '{printf(\"%s  PR %03.0fW  PB %04.0fW PO %03.0fW  PI %03.0f+%03.0f=%03.0fW  PP %03.0fW  PH %+05.0fW\n\", \$1, \$11, \$13, \$12, \$4,\$7,\$4+\$7, \$10, \$2)}'"
 
 alias solar_checker_plot="solar_checker_plot.sh"
 alias solar_checker_plot_anyday="solar_checker_plot_anyday.sh"

@@ -55,18 +55,18 @@ def show_slots(slots: timeslots,
     ivp = ivp1 + ivp2
 
     """ The normalised smartplug power """
-    spp = c['SPP']
+    spph = c['SPPH']
         
     for slot, start, stop in zip(slots, starts, stops):
         wheres, = np.where((time >= start) & (time < stop))
         if wheres.size == 0: continue
         
-        smps, ivps, spps = smp[wheres], ivp[wheres], spp[wheres]
+        smps, ivps, spphs = smp[wheres], ivp[wheres], spph[wheres]
 
         text = f"'{slot}'"
         text += f" > smp={smps.mean():.0f}^{smps.max():.0f}W"
         text += f" | ivp={ivps.mean():.0f}^{ivps.max():.0f}W"
-        text += f" | spp={spps.mean():.0f}^{spps.max():.0f}W"
+        text += f" | spph={spphs.mean():.0f}^{spphs.max():.0f}W"
         logger.info(text)
 
     return 0
