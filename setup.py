@@ -4,7 +4,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='solar_checker',
-      version='0.3.0',
+      version='0.4.0',
       description='Solar checker with APsystems,Tasmota an Tuya API',
       url='https://github.com/r09491/solar_checker',
       author='r09491',
@@ -16,6 +16,9 @@ setup(name='solar_checker',
           './scripts/tuya_plug_latest_get.py',
           './scripts/tuya_plug_switch_set.py',
           './scripts/solar_checker_latest_once.py',
+          './scripts/solar_checker_latest_once.sh',
+          './scripts/solar_checker_grid_load_set_once.py',
+          './scripts/solar_checker_grid_load_set_once.sh',
           './scripts/solar_checker_latest_once.sh',
           './scripts/solar_checker_switch_once.py',
           './scripts/solar_checker_switch_once_plug2.sh',
