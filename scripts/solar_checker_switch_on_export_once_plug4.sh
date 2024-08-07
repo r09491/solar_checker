@@ -9,4 +9,3 @@ tail -n $SAMPLES $SOLAR_CHECKER_LATEST|solar_checker_switch_on_export_once.py \
      --power_mean_export_closed 100 \
      --power_samples $SAMPLES 2>> $SOLAR_CHECKER_ERROR
 
-# This script shall start/stop the charging of my laptop.

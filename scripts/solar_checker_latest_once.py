@@ -164,7 +164,6 @@ class Script_Arguments:
     sm_port: int
     iv_ip: str
     iv_port: int
-    sb_sn:str
     sp_balcony: str
     sp_switch_1: str
     sp_switch_2: str
@@ -193,9 +192,6 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--iv_port', type = int, default = 8050,
                         help = "IP port of the APsystems inverter")
 
-    parser.add_argument('--sb_sn', type = str, required = True,
-                        help = "Serial number of the solarbank")
-    
     parser.add_argument('--sp_balcony', type = str, default = None,
                         help = "Name of the plug at the house plug")
 
@@ -215,7 +211,7 @@ def parse_arguments() -> Script_Arguments:
     
     return Script_Arguments(args.sm_ip, args.sm_port,
                             args.iv_ip, args.iv_port,
-                            args.sb_sn, args.sp_balcony,
+                            args.sp_balcony,
                             args.sp_switch_1, args.sp_switch_2,
                             args.sp_switch_3, args.sp_switch_4)
 
@@ -255,10 +251,10 @@ if __name__ == '__main__':
        args.sp_balcony == args.sp_switch_4 :
         logger.error('Illegal usage of smartplug 4.')
         sys.exit(5)
-        
+
+    sb = Solarbank()        
     sm = Smartmeter(args.sm_ip)
     iv = Inverter(args.iv_ip, args.iv_port)
-    sb = Solarbank(args.sb_sn)
     sph = Smartplug(args.sp_balcony) if args.sp_balcony is not None else None
     sp1 = Smartplug(args.sp_switch_1) if args.sp_switch_1 is not None else None
     sp2 = Smartplug(args.sp_switch_2) if args.sp_switch_2 is not None else None

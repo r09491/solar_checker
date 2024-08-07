@@ -24,11 +24,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(__file__))
 
 
-async def anker_grid_load_set(sb: Solarbank, grid_load: int) -> bool:
-    logger.info(f"anker_grid_load_set started")
+async def anker_home_load_set(sb: Solarbank, home_load: int) -> bool:
+    logger.info(f'anker_home_load_set started "{home_load}"')
 
     try:
-        is_done = await sb.set_grid_load(grid_load)
+        is_done = await sb.set_home_load(home_load)
     except:
         is_done = False
     if is_done:
@@ -36,7 +36,7 @@ async def anker_grid_load_set(sb: Solarbank, grid_load: int) -> bool:
     else:
         logger.error("anker solarbank grid load not set.")
         
-    logger.info(f"anker_grid_load_set finished {'ok' if is_done else 'with problem'}")        
+    logger.info(f"anker_home_load_set finished {'ok' if is_done else 'with problem'}")        
     return is_done
 
 
@@ -87,12 +87,12 @@ async def main(sb: Solarbank, samples: int) -> int:
         goal += sbpo
 
     # Weighted average
-    grid_goal = (2*goal.min()+goal.mean())/3
+    grid_goal = int((2*goal.min()+goal.mean())/3)
     # Adapt to system limits
     grid_goal = min(max(grid_goal,100), 800)
     
     logger.info(f'Calculated grid goal for solarbank "{grid_goal:.0f}W"')
-    is_done = await anker_grid_load_set(sb, grid_goal)
+    is_done = await anker_home_load_set(sb, grid_goal)
     logger.info(f"Setting of grid load {'ok' if is_done else 'failed'}")
 
     return 0 if is_done else 15
@@ -100,7 +100,6 @@ async def main(sb: Solarbank, samples: int) -> int:
 
 @dataclass
 class Script_Arguments:
-    serial_number: str
     power_samples: int
 
 def parse_arguments() -> Script_Arguments:
@@ -113,22 +112,19 @@ def parse_arguments() -> Script_Arguments:
 
     parser.add_argument('--version', action = 'version', version = __version__)
 
-    parser.add_argument('--serial_number', type = str, required = True,
-                        help = "Serial number of the solarbank")
-
     parser.add_argument('--power_samples', type = int, default = 5,
                         help = "Number of recorded samples to use")
     
     
     args = parser.parse_args()
 
-    return Script_Arguments(args.serial_number, args.power_samples)
+    return Script_Arguments(args.power_samples)
 
 
 if __name__ == '__main__':
     args = parse_arguments()
 
-    sb = Solarbank(args.serial_number)
+    sb = Solarbank()
 
     try:
         err = asyncio.run(main(sb, args.power_samples))
@@ -138,4 +134,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt: 
         err = 99
 
+    logger.info(f'solar_checker_home_load_set_once done (err={err}).')
     sys.exit(err)
