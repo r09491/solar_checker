@@ -35,7 +35,7 @@ class Power_Data:
     input_power: float   # Watt
     output_power: float  # Watt
     battery_power: float # Watt negativ for charging, positiv for discharging
-    battery_soc: float    # %
+    battery_soc: float   # %
 
         
 class Solarbank():
@@ -50,9 +50,9 @@ class Solarbank():
                     cjson = json.load(cf)
                     break
             except:
-                logger.warn(f'Reading credentials from {cn} failed.')
+                logger.warn(f'reading credentials from {cn} failed.')
                 continue
-        logger.info(f'Reading credentials ok')
+        logger.info(f'reading credentials ok')
         return list(cjson.values()) if cjson else None 
 
     
@@ -82,12 +82,8 @@ class Solarbank():
             
             input_power = float(device_data['input_power'])
             output_power = float(device_data['output_power'])
-            charging_power = float(device_data['charging_power'])
-            battery_power = output_power - input_power
+            battery_power = -float(device_data['charging_power'])
             battery_soc = float(device_data['battery_soc'])/100.0
-
-            logger.info(f'Charging power >>>>> "{charging_power}"')
-            logger.info(f'Battery power >>>>> "{battery_power}"')
             
             return Power_Data(input_power, output_power,
                               battery_power, battery_soc)
