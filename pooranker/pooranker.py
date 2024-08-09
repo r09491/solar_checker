@@ -11,13 +11,11 @@ import sys
 import os
 import json
 
-from datetime import datetime
-
 import asyncio
 from aiohttp import ClientSession
 
 from anker_solix_api.api import AnkerSolixApi
-from anker_solix_api.types import SolarbankTimeslot
+from anker_solix_api.types import SolixParmType, SolarbankStatus
 
 from typing import Optional, Any
 from dataclasses import dataclass
@@ -92,7 +90,27 @@ class Solarbank():
     async def set_home_load(self,
                             home_load: int,
                             start_time: str = "00:00",
-                            stop_time : str = "23:59") -> bool:
+                            end_time : str = "23:59") -> bool:
+
+        """ Fill the schedule with input """
+        schedule_sb1 = {
+            "ranges": [
+                {
+                    "id":0,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "turn_on": True,
+                    "appliance_loads": [
+                        {
+                            "id":0,
+                            "name":"PoorAnker",
+                            "power": home_load,
+                            "number":1
+                        }
+                    ],
+                }
+            ],
+        }
         
         async with ClientSession() as cs:
             if self._credentials is None:
@@ -100,15 +118,16 @@ class Solarbank():
                 return False
 
             sapi = AnkerSolixApi(*self._credentials, cs, None)
+
             await sapi.update_sites()
             device_sn = list(sapi.devices)[0]
             logger.info(f'updated data for serial number "{device_sn}"')
 
             device_data = sapi.devices[device_sn]
             
-            is_admin = device_data['is_admin']
-            if not is_admin:
-                logger.error(f'setting allowed by admin only')
+            device_pn = device_data['device_pn']
+            if device_pn != 'A17C0':
+                logger.error(f'setting allowed for solarbank 1 only')
                 return False
 
             status = device_data['status_desc']        
@@ -116,70 +135,28 @@ class Solarbank():
                 logger.info(f'wrong status of solarbank "{status}"')
                 return False
 
-            site_id = device_data['site_id']    
-            logger.info(f'id of site is "{site_id}"')
-
-            await sapi.set_home_load(
-                siteId=site_id,
-                deviceSn=device_sn,
-                preset=None,
-                dev_preset=None,
-                all_day=None,
-                export=None,
-                charge_prio=None,
-                set_slot=SolarbankTimeslot(
-                    start_time=datetime.strptime(start_time, "%H:%M"),
-                    end_time=datetime.strptime(stop_time, "%H:%M"),
-                    appliance_load=home_load,
-                    device_load=None,
-                    allow_export=True,
-                    charge_priority_limit=None,
-                ),
-                insert_slot=None,
-            )
-
-            logger.info(f'home load is set to "{home_load}".')
-            return True
-
-
-    async def clear_home_load(self) -> bool:
-        
-        async with ClientSession() as cs:
-            if self._credentials is None:
-                logger.error(f'credentials are not available.')
-                return False
-
-            sapi = AnkerSolixApi(*self._credentials, cs, None)
-            await sapi.update_sites()
-            device_sn = list(sapi.devices)[0]
-
-            logger.info(f'updated data for serial number "{device_sn}"')
-
-            device_data = sapi.devices[device_sn]
-
             is_admin = device_data['is_admin']
             if not is_admin:
                 logger.error(f'setting allowed by admin only')
                 return False
-            
-            status = device_data['status_desc']        
-            if status != 'online':
-                logger.info(f'wrong status of solarbank : "{status}"')
-                return False
 
             site_id = device_data['site_id']    
-            logger.info(f'Id of site is "{site_id}"')
-            
-            await sapi.set_home_load(
-                siteId=site_id,
-                deviceSn=device_sn,
-                preset=None,
-                dev_preset=None,
-                all_day=None,
-                export=None,
-                charge_prio=None,
-                insert_slot=None,
-            )
+            logger.info(f'id of site is "{site_id}"')
 
-            logger.info(f'home load is reset.')
-            return True
+            charging_status = device_data['charging_status']
+            if (charging_status != SolarbankStatus.discharge or
+                charging_status != SolarbankStatus.charge):
+                logger.error(f'Illegal charging_status is "{charging_status}"')
+                return False
+
+            is_done= await sapi.set_device_parm(
+                siteId = site_id,                                   
+                deviceSn = device_sn,
+                paramData = schedule_sb1, 
+                paramType = SolixParmType.SOLARBANK_SCHEDULE.value)
+
+            if is_done:
+                logger.info(f'home load is set to "{home_load}".')
+            else:
+                logger.error(f'home load setting failed".')
+            return is_done

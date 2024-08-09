@@ -32,7 +32,7 @@ async def anker_home_load_set(sb: Solarbank, home_load: int) -> bool:
     except:
         is_done = False
     if is_done:
-        logger.debug("anker solarbank home load set.")
+        logger.info("anker solarbank home load set.")
     else:
         logger.error("anker solarbank home load not set.")
         
