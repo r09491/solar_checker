@@ -127,14 +127,15 @@ class Solarbank():
                 all_day=None,
                 export=None,
                 charge_prio=None,
-                insert_slot=SolarbankTimeslot(
+                set_slot=SolarbankTimeslot(
                     start_time=datetime.strptime(start_time, "%H:%M"),
                     end_time=datetime.strptime(stop_time, "%H:%M"),
                     appliance_load=home_load,
                     device_load=None,
-                    allow_export=None,
+                    allow_export=True,
                     charge_priority_limit=None,
                 ),
+                insert_slot=None,
             )
 
             logger.info(f'home load is set to "{home_load}".')
