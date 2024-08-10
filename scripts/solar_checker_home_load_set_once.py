@@ -75,16 +75,22 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
 
+    if (ivp < sbpo).all():
+        logger.error(f'inconsistent record values ivp "{ivp}", sbpo "{sbpo}"')
+        return 0
+        
     estimate = smp
-    if (spph>0.0).any():
+    if (spph>0.0).all():
         logger.info(f'using smartplug records')
         estimate += spph
-    elif (ivp>0.0).any():
+    elif (ivp>0.0).all():
         logger.info(f'using inverter records')
         estimate += ivp
-    elif (sbpo>0.0).any():
+    elif (sbpo>0.0).all():
         logger.info(f'using solarbank records')
         estimate += sbpo
+
+        
 
     # Weighted rounded average
     estimate = int((2*estimate.min()+estimate.mean())/30)*10

@@ -143,12 +143,15 @@ class Solarbank():
             site_id = device_data['site_id']    
             logger.info(f'id of site is "{site_id}"')
 
-            charging_status = device_data['charging_status']
-            if (charging_status != SolarbankStatus.discharge or
-                charging_status != SolarbankStatus.charge):
+            charging_status = SolarbankStatus(device_data['charging_status'])
+            logger.info(f'charging status is "{charging_status}"')
+            if not ((charging_status == SolarbankStatus.discharge) or
+                    (charging_status == SolarbankStatus.charge) or
+                    (charging_status == SolarbankStatus.bypass) or
+                    (charging_status == SolarbankStatus.bypass_charge)):
                 logger.error(f'Illegal charging_status is "{charging_status}"')
                 return False
-
+            
             is_done= await sapi.set_device_parm(
                 siteId = site_id,                                   
                 deviceSn = device_sn,
@@ -156,7 +159,7 @@ class Solarbank():
                 paramType = SolixParmType.SOLARBANK_SCHEDULE.value)
 
             if is_done:
-                logger.info(f'home load is set to "{home_load}".')
+                logger.info(f'home load is set to "{home_load}"')
             else:
-                logger.error(f'home load setting failed".')
+                logger.error(f'home load setting failed"')
             return is_done
