@@ -58,9 +58,6 @@ async def get_home_load_estimate(samples: int) -> int:
     if sbpo.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return 0
-    if not (sbpo > 0).all():
-        logger.error(f'missing solarbank records sbpo "{sbpo}"')
-        return 0
     
     """ The normalised inverter power samples channel 1 """
     ivp1 = c['IVP1']
