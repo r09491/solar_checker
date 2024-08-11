@@ -52,9 +52,6 @@ async def get_home_load_estimate(samples: int) -> int:
     if smp.size != samples:
         logger.error(f'wrong number of smartmeter records "{smp.size}"')
         return 0
-    if not (smp > 0).any():
-        logger.error(f'missing smartmeter records')
-        return 0
     
     """ The normalised solarbank power output """
     sbpo = c['SBPO']
@@ -62,7 +59,7 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return 0
     if not (sbpo > 0).all():
-        logger.error(f'missing solarbank records')
+        logger.error(f'missing solarbank records sbpo "{sbpo}"')
         return 0
     
     """ The normalised inverter power samples channel 1 """
@@ -74,17 +71,16 @@ async def get_home_load_estimate(samples: int) -> int:
     if ivp.size != samples:
         logger.error(f'wrong number of smartmeter records "{ivp.size}"')
         return 0
-    if (ivp > 0).all() and (ivp > sbpo).any():
+    if (ivp > 0).all() and (ivp > 1.05*sbpo).any():
         logger.error(f'inconsistent record values ivp "{ivp}", sbpo "{sbpo}"')
         return 0
-    estimate = smp + ivp
     
     """ The normalised smartplug power """
     spph = c['SPPH']
     if spph.size != samples:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
-    if (spph > 0).all() and (spph > sbpo).any():
+    if (spph > 0).all() and (spph > 1.05*sbpo).any():
         logger.error(f'inconsistent record values spph "{spph}", sbpo "{sbpo}"')
         return 0
 
@@ -104,7 +100,7 @@ async def get_home_load_estimate(samples: int) -> int:
     estimate = smp + sbpo
     
     # Weighted rounded average
-    estimate = int((estimate.min()+2*estimate.mean())/30 + 1)*10
+    estimate = int((estimate.min()+2*estimate.mean())/30)*10
     return min(max(estimate,100), 800)
 
 

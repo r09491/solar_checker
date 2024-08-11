@@ -124,7 +124,7 @@ class Solarbank():
             logger.info(f'updated data for serial number "{device_sn}"')
 
             device_data = sapi.devices[device_sn]
-            
+
             device_pn = device_data['device_pn']
             if device_pn != 'A17C0':
                 logger.error(f'setting allowed for solarbank 1 only')
@@ -151,6 +151,11 @@ class Solarbank():
                     (charging_status == SolarbankStatus.bypass_charge)):
                 logger.error(f'Illegal charging_status is "{charging_status}"')
                 return False
+
+            set_output_power = int(device_data['set_output_power'])
+            if home_load == set_output_power:
+                logger.info(f'Kept set home load "{set_output_power}"')
+                return True
             
             is_done= await sapi.set_device_parm(
                 siteId = site_id,                                   
