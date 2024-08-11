@@ -230,7 +230,7 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.set_ylabel('Power [W]')
     ax.set_yscale('symlog')
     ax.xaxis_date()
-    hm_formatter = mdates.DateFormatter('%Hh')
+    hm_formatter = mdates.DateFormatter('%H:%M')
     ax.xaxis.set_major_formatter(hm_formatter)
     ax.grid(which='major', ls='-', lw=1, axis='both')
     ax.grid(which='minor', ls=':', lw=1, axis='both')
@@ -259,7 +259,7 @@ async def get_w_line(time: t64s, smp: f64s,
 def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
                   ive1: f64s, ive2: f64s, speh: f64s,
                   sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
-                  empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%Hh'):
+                  empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%H:%M'):
     __me__ ='_get_kwh_line'
     logger.info(f'{__me__}: started')
 
@@ -344,21 +344,21 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         
     title = f'# Energy #\n'
     if sbeion is not None:
-        if time_format == '%Hh': # Accumulated
+        if time_format == '%H:%M': # Accumulated
             title += f'Sun {sbei[-1]:.2f}kWh'
         else:
             title += f'Sun {sbei.sum():.2f}kWh'
 
     if sbeo is not None:
         title += '' if title[-1] == '\n' else ' | '
-        if time_format == '%Hh': # Accumulated
+        if time_format == '%H:%M': # Accumulated
             title += f'Bank {sbeo[-1]:.2f}kWh'
         else:
             title += f'Bank {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
 
     """
     if sbeb is not None:
-        if time_format == '%Hh': # Accumulated
+        if time_format == '%H:%M': # Accumulated
             title += f' * Bat {-sbeb[sbeb<0][-1]:.2f}kWh'
         else:
             title += f' * Bat {-sbeb[sbeb<0].sum():.2f}kWh'
@@ -371,27 +371,27 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     title += '' if title[-1] == '\n' else '\n'
         
     if iveon is not None:
-        if time_format == '%Hh': # Accumulated
+        if time_format == '%H:%M': # Accumulated
             title += f'Inv {ive[-1]:.2f}kWh~{ive[-1]*price:.2f}€'
         else:
             title += f'Inv {ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
 
     if spehon is not None:
         title += '' if title[-1] == '\n' else '\n'
-        if time_format == '%Hh': # Accumulated
+        if time_format == '%H:%M': # Accumulated
             title += f'Plug0 {speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
         else:
             title += f'Plug0 {speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
         
     if smeon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        if time_format == '%Hh': # Accumulated
+        if time_format == '%H:%M': # Accumulated
             title += f'House < {smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
         else:
             title += f'House < {smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
             
         if smeoff is not None:
-            if time_format == '%Hh': # Accumulated
+            if time_format == '%H:%M': # Accumulated
                 title += f' > {smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
                 title += f' | Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
             else:
@@ -422,7 +422,7 @@ async def get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
                        ive1: f64s, ive2: f64s, speh: f64s,
                        sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
                        empty_kwh: f64s, full_kwh: f64s, price: f64,
-                       time_format: str = '%Hh'):
+                       time_format: str = '%H:%M'):
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(_get_kwh_line, **vars()) # type: ignore[unused-ignore]
     else:
