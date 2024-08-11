@@ -52,13 +52,19 @@ async def get_home_load_estimate(samples: int) -> int:
     if smp.size != samples:
         logger.error(f'wrong number of smartmeter records "{smp.size}"')
         return 0
+    if not (smp > 0).any():
+        logger.error(f'missing smartmeter records')
+        return 0
     
-    """ The normalised solarbqnk power output """
+    """ The normalised solarbank power output """
     sbpo = c['SBPO']
     if sbpo.size != samples:
-        logger.error(f'wrong number of smartmeter records "{sbpo.size}"')
+        logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return 0
-        
+    if not (sbpo > 0).all():
+        logger.error(f'missing solarbank records')
+        return 0
+    
     """ The normalised inverter power samples channel 1 """
     ivp1 = c['IVP1']
     """ The normalised inverter power samples channel 2 """
@@ -68,30 +74,37 @@ async def get_home_load_estimate(samples: int) -> int:
     if ivp.size != samples:
         logger.error(f'wrong number of smartmeter records "{ivp.size}"')
         return 0
+    if (ivp > 0).all() and (ivp > sbpo).any():
+        logger.error(f'inconsistent record values ivp "{ivp}", sbpo "{sbpo}"')
+        return 0
+    estimate = smp + ivp
     
     """ The normalised smartplug power """
     spph = c['SPPH']
     if spph.size != samples:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
-
-    if (ivp > sbpo).any():
-        logger.error(f'inconsistent record values ivp "{ivp}", sbpo "{sbpo}"')
+    if (spph > 0).all() and (spph > sbpo).any():
+        logger.error(f'inconsistent record values spph "{spph}", sbpo "{sbpo}"')
         return 0
-        
+
+    """
     estimate = smp
-    if (spph>0.0).all():
+    if (spph>0.0).any():
         logger.info(f'using smartplug records')
         estimate += spph
-    elif (ivp>0.0).all():
+    elif (ivp>0.0).any():
         logger.info(f'using inverter records')
         estimate += ivp
-    elif (sbpo>0.0).all():
+    elif (sbpo>0.0).any():
         logger.info(f'using solarbank records')
         estimate += sbpo
-        
+    """
+
+    estimate = smp + sbpo
+    
     # Weighted rounded average
-    estimate = int((estimate.min()+2*estimate.mean())/30)*10
+    estimate = int((estimate.min()+2*estimate.mean())/30 + 1)*10
     return min(max(estimate,100), 800)
 
 
