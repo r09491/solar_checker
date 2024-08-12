@@ -108,23 +108,29 @@ async def apsystems_inverter_latest_get(iv: Inverter) -> str:
     text = '0,0.000,0.000,0,0.000,0.000'
 
     try:
-        if await iv.is_power_on():
-            logger.debug('The APSytems EZ1M is "ON".')
+        for trial in range(2):
+            if await iv.is_power_on():
+                logger.debug('The APSytems EZ1M is "ON".')
 
-            output = await iv.get_output_data()
-            if output is not None:
-                logger.debug('The APSytems EZ1M inverter has data.')
-                text = f'{output.p1:.0f},{output.e1:.3f},{output.te1:.3f}'
-                text += f',{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}'
+                output = await iv.get_output_data()
+                if output is not None:
+                    logger.debug('The APSytems EZ1M inverter has data.')
+                    text = f'{output.p1:.0f},{output.e1:.3f},{output.te1:.3f}'
+                    text += f',{output.p2:.0f},{output.e2:.3f},{output.te2:.3f}'
+                    
+                break
 
-        else:
-            logger.warning('The APSytems EZ1M is "OFF". Sun? Local?')
+            else:
+                logger.warning('The APSytems EZ1M is "OFF". Sun? Local?')
+                await asyncio.sleep(2)
             
     except ClientConnectorError:
         logger.warning('Cannot connect to inverter APSystems EZ1M. Sun?')
     except TypeError:
         logger.error('Unexpected exception TypeError')
-
+    except:
+        logger.error('Unknown error')
+        
     logger.info(f'apsystems_inverter_latest_get done')
     return text
 
