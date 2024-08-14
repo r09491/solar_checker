@@ -68,7 +68,7 @@ async def get_home_load_estimate(samples: int) -> int:
     if ivp.size != samples:
         logger.error(f'wrong number of smartmeter records "{ivp.size}"')
         return 0
-    if (ivp > 0).all() and (ivp > 1.05*sbpo).any():
+    if (ivp > 0).all() and (ivp > 1.1*sbpo).any():
         logger.error(f'inconsistent record values ivp "{ivp}", sbpo "{sbpo}"')
         return 0
     
