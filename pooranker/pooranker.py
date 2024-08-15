@@ -154,7 +154,7 @@ class Solarbank():
 
             set_output_power = int(device_data['set_output_power'])
             if home_load == set_output_power:
-                logger.info(f'Kept set home load "{set_output_power}"')
+                logger.info(f'home load is kept to "{set_output_power}"')
                 return True
             
             is_done= await sapi.set_device_parm(
