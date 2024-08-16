@@ -17,7 +17,11 @@ load power with the intention to minimize the output delivered from
 the solarbank to the power grid.
 
 The following is the output of a log day on the HTTP server. It shows
-the components with the power flow for my system.
+the components with the minutely  power flow in my system.
+
+There is an extreme high power import from the grid since my wife switched the dryer on!
+
+Very low sun power since the sun is alomost set.
 
 ![alt text](images/solar_checker_logday.png)
 
@@ -26,17 +30,18 @@ power imported from the grid in blue and the solar power produced in
 grey. Positive grey values are actually consumed in the home, negative
 grey values are donated to the power grid.
 
-In the month shown I was on vacation on the days with small blue bars.
+![alt text](images/solar_checker_logmonth.png)
 
-There are some days without blue. My smartmeter was not working these days.
+In July I was on vacation on the days with small blue bars.
 
-My solar system produced 101.8 kWh in July. 67% were directly used which
+There are some days without blue when my smartmeter was not working.
+
+My solar system produced 101.8 kWh. 67% were directly used which
 resulted in an saving of 24.98€.
 
-Nevertheless I still have to pay 13.85€ to my power supplier and he gets
-power worth 12.57€ as a present.
+Nevertheless I still have to pay 13.85€ to my supplier and he gets
+energy worth 12.57€ as a present.
 
-![alt text](images/solar_checker_logmonth.png)
 
 ---
 
