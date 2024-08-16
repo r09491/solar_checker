@@ -16,10 +16,27 @@ Again after some time the Anker API was extended for setting the home
 load power with the intention to minimize the output delivered from
 the solarbank to the power grid.
 
-The following example is the output of a log day on the HTTP
-server. It shows the components with the power flow for my system.
+The following is the output of a log day on the HTTP server. It shows
+the components with the power flow for my system.
 
 ![alt text](images/solar_checker_logday.png)
+
+For each month and year an overview can be calculated showing the
+power imported from the grid in blue and the solar power produced in
+grey. Positive grey values are actually consumed in the home, negative
+grey values are donated to the power grid.
+
+In the month shown I was on vacation on the days with small blue bars.
+
+There are some days without blue. My smartmeter was not working these days.
+
+My solar system produced 101.8 kWh in July. 67% were directly used which
+resulted in an saving of 24.98€.
+
+Nevertheless I still have to pay 13.85€ to my power supplier and he gets
+power worth 12.57€ as a present.
+
+![alt text](images/solar_checker_logmonth.png)
 
 ---
 
@@ -58,7 +75,7 @@ Ensure you have a proper '.poortuya' is in your home directory!
 
 ## Setup Pooranker for your Solarbank
 
-Install the anker-solix-api [repositiory](https://github.com/thomluther/anker-solix-api)
+Install the anker-solix-api [repositiory](https://github.com/thomluther/anker-solix-api-2)
 
 if you want to install on a Raspberry with Python 3.7 clone the
 [fork](https://github.com/r09491/anker-solix-api.git) and run ''pip3
@@ -154,15 +171,4 @@ Channel 1: 25W 0.035kWh 0.701kWh
 Channel 2: 24W 0.032kWh 0.661kWh
 ~/solar_checker/scripts $
 ```
----
-
-## Disclaimer
-
-During the installation of the Anker Solix 1600 solarbank the firmware
-of the APsystems EZ1M was overidden in such a way that its 'Local Mode'
-is not available anymore. Testing of the inverter is not possible
-anymore and development is skipped until Anker, APsystems, and/or my
-dealer's support find a solution rather delegating responsibilty to
-the others.
-
 ---
