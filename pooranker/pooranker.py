@@ -153,7 +153,7 @@ class Solarbank():
                 return False
 
             set_output_power = int(device_data['set_output_power'])
-            if home_load == set_output_power:
+            if home_load-10 < set_output_power < home_load+10:
                 logger.info(f'home load is kept to "{set_output_power}"')
                 return True
             

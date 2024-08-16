@@ -201,9 +201,9 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
   
     if sbpb is not None:
-        title += f' * Bat < {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
+        title += f' * Bat <{-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
-        title += f' > {sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
+        title += f' >{sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
         title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
     title += '' if title[-1] == '\n' else '\n'
@@ -219,9 +219,9 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if smpon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'House < {smp[-1] if smp[-1]>0 else 0:.0f}'
+        title += f'House <{smp[-1] if smp[-1]>0 else 0:.0f}'
         title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
-        title += f' > {-smp[-1] if smp[-1]<0 else 0:.0f}'
+        title += f' >{-smp[-1] if smp[-1]<0 else 0:.0f}'
         title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
         
     ax.set_title(title)
@@ -386,16 +386,16 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     if smeon is not None:
         title += '' if title[-1] == '\n' else ' | '
         if time_format == '%H:%M': # Accumulated
-            title += f'House < {smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
+            title += f'House <{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
         else:
-            title += f'House < {smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
+            title += f'House <{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
             
         if smeoff is not None:
             if time_format == '%H:%M': # Accumulated
-                title += f' > {smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
+                title += f' >{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
                 title += f' | Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
             else:
-                title += f' > {smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€'
+                title += f' >{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€'
                 title += f' | Profit {ive.sum()-smeoff.sum():.2f}kWh~{(ive.sum()-smeoff.sum())*price:.2f}€'
     
     ax.set_title(title)
@@ -487,18 +487,8 @@ def _get_kwh_bar_unified(
 
     smeonon = smeon[smeon>0]
     if smeonon.any():
-        title += f'\nHouse < {smeonon.sum():.1f}'
-        title += f'={smeonon.mean():.1f}'
-        title += f'^{smeonon.max():.1f}kWh'   
-        title += f'~{(smeonon.sum()*price):.2f}€'
-
         smeoffon = abs(smeoff)[abs(smeoff)>0]
         if smeoffon.any():
-            title += f' > {smeoffon.sum():.1f}'
-            title += f'={smeoffon.mean():.1f}'
-            title += f'^{smeoffon.max():.1f}kWh'   
-            title += f'~{(smeoffon.sum()*price):.2f}€'
-
             title += f'\nProfit {(balconyon.sum()-smeoffon.sum()):.1f}kWh'
             title += f'~{((balconyon.sum()-smeoffon.sum())*price):.2f}€'
             title += f' ({(balconyon.sum()-smeoffon.sum())/balconyon.sum()*100:.0f}%)'
@@ -506,6 +496,16 @@ def _get_kwh_bar_unified(
             title += f' | Gift {smeoffon.sum():.1f}kWh'
             title += f'~{smeoffon.sum()*price:.2f}€'
             title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
+
+            title += f'\nHouse <{smeonon.sum():.1f}'
+            title += f'={smeonon.mean():.1f}'
+            title += f'^{smeonon.max():.1f}kWh'   
+            title += f'~{(smeonon.sum()*price):.2f}€'
+
+            title += f' >{smeoffon.sum():.1f}'
+            title += f'={smeoffon.mean():.1f}'
+            title += f'^{smeoffon.max():.1f}kWh'   
+            title += f'~{(smeoffon.sum()*price):.2f}€'
 
     ax.set_title(title, fontsize='x-large')
 
@@ -600,7 +600,7 @@ def _get_blocks(time: t64, smp: f64,
     inv_out = (3,0)
     plugh = (3,0)
     house = (4,0)
-    net = (4, 1)
+    grid = (4, 1)
     sinks = (4, -1)
     plug1 = (5.25 ,1)
     plug2 = (5.5 ,0.33)
@@ -615,7 +615,7 @@ def _get_blocks(time: t64, smp: f64,
     _add_box_to_ax(ax, *solix_bat, 'BAT\nSOLIX', 'grey')
     _add_box_to_ax(ax, *house, 'METER\nHOUSE',
                    'blue' if smp>0 else 'magenta' if sbpb>0 else 'white')
-    _add_box_to_ax(ax, *net, 'POWER\nNET',
+    _add_box_to_ax(ax, *grid, 'POWER\nGRID',
                    'blue' if smp>0 else 'white')
     _add_box_to_ax(ax, *inv_mppt_1, 'MPPT1\nINV', 'cyan')
     _add_box_to_ax(ax, *inv_mppt_2, 'MPPT2\nINV', 'cyan')
@@ -680,7 +680,7 @@ def _get_blocks(time: t64, smp: f64,
         _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
                         balconyp, 'c' if ivp>1 else 'grey')
 
-    _add_link_to_ax(ax, *net, 'S', *house, 'N', smp,
+    _add_link_to_ax(ax, *grid, 'S', *house, 'N', smp,
                     'blue' if smp>0 else 'brown')
 
     sinksp = smp + balconyp-spp1-spp2-spp3-spp4

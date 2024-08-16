@@ -75,7 +75,7 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
 
-
+    """
     estimate = sbpo
     weight = 1
     if (ivp>0.0).any():
@@ -87,8 +87,11 @@ async def get_home_load_estimate(samples: int) -> int:
     estimate /= weight
     estimate += smp
     
-    # Weighted rounded average
     estimate = int((estimate.min()+2*estimate.mean())/30)*10
+    """
+    
+    estimate = int((smp + sbpo).mean())
+
     return min(max(estimate,100), 800)
 
 

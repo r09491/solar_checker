@@ -7,12 +7,12 @@
 ## * * * * * solar_checker_latest_once.sh
 ##
 ## ## Needs a few minutes to settle
-## 0-59/5 * * * * sleep 30 && solar_checker_home_load_set_once.sh
+## 0-59/4 * * * * sleep 40 && solar_checker_home_load_set_once.sh
 ## ##
-## 1-59/5 * * * * sleep 30 && solar_checker_switch_on_export_once_plug4.sh
-## 2-59/5 * * * * sleep 30 && solar_checker_switch_on_export_once_plug3.sh
-## 3-59/5 * * * * sleep 30 && solar_checker_switch_on_export_once_plug2.sh
-## 4-59/5 * * * * sleep 30 && solar_checker_switch_on_export_once_plug1.sh
+## 1-59/4 * * * * sleep 20 && solar_checker_switch_on_export_once_plug4.sh
+## 2-59/4 * * * * sleep 20 && solar_checker_switch_on_export_once_plug3.sh
+## 3-59/4 * * * * sleep 20 && solar_checker_switch_on_export_once_plug2.sh
+## 4-59/4 * * * * sleep 20 && solar_checker_switch_on_export_once_plug1.sh
 ##
 
 SAMPLES=2
