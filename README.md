@@ -3,13 +3,23 @@
 ## Overview
 
 The Solar Checker Python library provides APIs for the APsystems EZ1
-Microinverters, Tasmota smartmeter, a poor Tuya library for
-smartplugs, a poor Anler library for the Solix solarbank. Based on
-these three APIs there are scripts to recordtheir latest power data
-which in turn can be used for plots to visualise them. Especially there is 
-a HTTP server for displaying the recorded data. It facilitates the process
-to monitor a solar power station and to assess if it will pay off at a point
-of time.
+microinverter, Tasmota smartmeter, a poor Tuya library for
+smartplugs, a poor Anker library for the Solix solarbank. Based on
+these four APIs there are scripts to record their latest power data
+which in turn can be used for plots to visualise them.
+
+After some time a HTTP server was created for displaying the recorded
+data. It facilitates the process to monitor my solar power station and
+to assess if it will pay off at a point of time.
+
+Again after some time the Anker API was extended for setting the home
+load power with the intention to minimize the output delivered from
+the solarbank to the power grid.
+
+The following example is the output of a log day on the HTTP
+server. It shows the components with the power flow for my system.
+
+![alt text](images/solar_checker_logday.png)
 
 ---
 
@@ -56,14 +66,13 @@ install .'
 
 ## Installation
 
-I installed the 'apsystems', the 'tosmota' and the 'poortuya' APIs on
-a standard raspberry buster system with python version 3.7.3. In order
-to use the scripts the python3-numpy, python3-pandas,
-python3-matplotlib packages have to be installed with 'apt' in
-advance. I used 'sudo' for a system wide install avoiding to deal with
-local paths and local pip libraries in cron. You might have a
-different philosophy and use virtual environments.
-
+I installed the 'apsystems', the 'tosmota' 'pooranker' and the
+'poortuya' APIs on a standard raspberry buster system with python
+version 3.7.3. In order to use the scripts the python3-numpy,
+python3-pandas, python3-matplotlib packages have to be installed with
+'apt' in advance. I used 'sudo' for a system wide install avoiding to
+deal with local paths and local pip libraries in cron. You might have
+a different philosophy and use virtual environments.
 It should be installable on any Linux with python >= 3.7.1.
 
 I installed the repository also under 'termux' on my Android
@@ -145,32 +154,6 @@ Channel 1: 25W 0.035kWh 0.701kWh
 Channel 2: 24W 0.032kWh 0.661kWh
 ~/solar_checker/scripts $
 ```
-
-Finally Have a look at the daily  recordings!
-
-```bash
-~/solar_checker $ solar_checker_plot.sh
-~/solar_checker $
-```
-
-The green areas represent the power and energy produced by the
-panels. The blue areas represent the power and energy imported from
-the commerical net. Oh dear! I wonder if my panels will ever pay off!
-
-![alt text](images/solar_checker_poor.png)
-
-A few days later on a cold winter day in January with blue sky, no
-clouds, visbility 9999, and temperatures down to -10 degrees! Things
-look better! I am happy with my new bifaciale panels starting
-harversting shortly before sun rise already! The inverter has to block
-their power output at 600W during noon! Propably 800W were possible
-without legal restrictions!  At about 15:00 there is a gap for about a
-quarter of an hour caused by my neigbour's chimney about 50 m away. I
-was not aware of any shade on my house. But this will disappear in the
-next days when the sun rises higher. I donate too much energy. I need
-a storage.
-
-![alt text](images/solar_checker_better.png)
 ---
 
 ## Disclaimer
