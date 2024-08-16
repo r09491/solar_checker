@@ -4,11 +4,11 @@
 
 The Solar Checker Python library provides APIs for the APsystems EZ1
 microinverter, Tasmota smartmeter, a poor Tuya library for
-smartplugs, a poor Anker library for the Solix solarbank. Based on
+smartplugs, and a poor Anker library for the Solix solarbank. Based on
 these four APIs there are scripts to record their latest power data
 which in turn can be used for plots to visualise them.
 
-After some time a HTTP server was created for displaying the recorded
+After some time a HTTP server was created to visualize the recorded
 data. It facilitates the process to monitor my solar power station and
 to assess if it will pay off at a point of time.
 
@@ -17,31 +17,24 @@ load power with the intention to minimize the output delivered from
 the solarbank to the power grid.
 
 The following is the output of a log day on the HTTP server. It shows
-the components with the minutely  power flow in my system.
-
-There is an extreme high power import from the grid since my wife switched the dryer on!
-
-Very low sun power since the sun is alomost set.
+the components with the minutely power flow. There is an extreme high
+power import from the grid since my wife switched the dryer on. Very
+low sun power since the sun is almost set! Battery not charged!
 
 ![alt text](images/solar_checker_logday.png)
 
 For each month and year an overview can be calculated showing the
 power imported from the grid in blue and the solar power produced in
-grey. Positive grey values are actually consumed in the home, negative
+grey. Positive grey values are consumed in the home, negative
 grey values are donated to the power grid.
 
 ![alt text](images/solar_checker_logmonth.png)
 
-In July I was on vacation on the days with small blue bars.
-
-There are some days without blue when my smartmeter was not working.
-
-My solar system produced 101.8 kWh. 67% were directly used which
-resulted in an saving of 24.98€.
-
-Nevertheless I still have to pay 13.85€ to my supplier and he gets
-energy worth 12.57€ as a present.
-
+In July I was on vacation in the period with small blue bars. On the days
+without blue my smartmeter was not working.  My solar
+system produced 101.8 kWh. 67% were directly used which resulted in an
+saving of 24.98€. Nevertheless I still have to pay 13.85€ to my
+supplier and he gets energy worth 12.57€ as a present.
 
 ---
 
@@ -83,7 +76,7 @@ Ensure you have a proper '.poortuya' is in your home directory!
 Install the anker-solix-api [repositiory](https://github.com/thomluther/anker-solix-api-2)
 
 if you want to install on a Raspberry with Python 3.7 clone the
-[fork](https://github.com/r09491/anker-solix-api.git) and run ''pip3
+[fork](https://github.com/r09491/anker-solix-api-2.git) and run ''pip3
 install .'
 
 ## Installation
