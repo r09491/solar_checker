@@ -86,9 +86,13 @@ class Solarbank():
             return Power_Data(input_power, output_power,
                               battery_power, battery_soc)
 
-
+    """ Set the output power of the Anker Solarbank. It takes upto
+    three minutes to settle after the command start. There are
+    conditions the bank is not able to meet the request, eg when the
+    battery is full and/or low solar radiation even if commanded.
+    """
     async def set_home_load(self,
-                            home_load: int,
+                            home_load: int, # Watt
                             start_time: str = "00:00",
                             end_time : str = "23:59") -> bool:
 
