@@ -87,9 +87,11 @@ class Solarbank():
                               battery_power, battery_soc)
 
     """ Set the output power of the Anker Solarbank. It takes upto
-    three minutes to settle after the command start. There are
-    conditions the bank is not able to meet the request, eg when the
-    battery is full and/or low solar radiation even if commanded.
+    three minutes to settle after the command start. During the first
+    minute the output power drops down. Then approaches the commanded
+    value. There are conditions the bank is not able to meet the
+    request, eg when the battery is full and/or low solar radiation
+    even if commanded. Be aware of the latencies in the Anker cloud!
     """
     async def set_home_load(self,
                             home_load: int, # Watt
@@ -153,7 +155,7 @@ class Solarbank():
                     (charging_status == SolarbankStatus.charge) or
                     (charging_status == SolarbankStatus.bypass) or
                     (charging_status == SolarbankStatus.bypass_charge)):
-                logger.error(f'Illegal charging_status is "{charging_status}"')
+                logger.warning(f'wrong charging status "{charging_status}"')
                 return False
 
             set_output_power = int(device_data['set_output_power'])
