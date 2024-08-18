@@ -34,7 +34,7 @@ async def anker_home_load_set(sb: Solarbank, home_load: int) -> bool:
     if is_done:
         logger.info("anker solarbank home load set.")
     else:
-        logger.error("anker solarbank home load not set.")
+        logger.warning("anker solarbank home load not set.")
         
     logger.info(f"anker_home_load_set finished {'ok' if is_done else 'with problem'}")        
     return is_done
