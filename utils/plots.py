@@ -718,6 +718,6 @@ async def get_blocks(time: t64, smp: f64,
                      sbpi: f64s, sbpo: f64s, sbpb: f64,
                      spp1: f64, spp2: f64, spp3: f64, spp4: f64):
     if sys.version_info >= (3, 9):
-        return await asyncio.to_thread(_get_w_line,**vars()) # type: ignore[unused-ignore]
+        return await asyncio.to_thread(_get_blocks,**vars()) # type: ignore[unused-ignore]
     else:
         return _get_blocks(**vars())
