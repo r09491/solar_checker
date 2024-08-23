@@ -75,23 +75,28 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
 
-    """
-    estimate = sbpo
-    weight = 1
-    if (ivp>0.0).any():
+    estimate = smp
+    if (sbpo>0.0).any():
+        estimate += sbpo
+    elif (ivp>0.0).any():
         estimate += ivp
-        weight += 1
-    if (spph>0.0).any():
+    elif (spph>0.0).any():
         estimate += spph
-        weight += 1
-    estimate /= weight
-    estimate += smp
-    
+
+    """
     estimate = int((estimate.min()+2*estimate.mean())/30)*10
     """
     
-    estimate = int((smp + sbpo).mean())
-
+    """ Parabolic extrapolation
+    y = smp + sbpo
+    a = (y[-1]+y[-3])/2 - y[-2]
+    b = (y[-1]-y[-3])/2
+    c = y[-2]
+    estimate = int(4*a + 2*b + c)
+    """
+    
+    estimate = int(estimate.mean())
+    logger.info(f"home estimate is '{estimate:.0f}W'")
     return min(max(estimate,100), 800)
 
 
