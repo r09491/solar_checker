@@ -109,10 +109,7 @@ async def main(sp: Smartplug,
                                'Closed' if is_to_closed else 'Null')
     logger.info(f'The smartplug switch goal is "{ss_desired}"')
 
-    if ss_desired == Switch_Status('Null'):
-        logger.info(f'The smartplug switch "{sp.name}" remains "{ss_actual}"')
-
-    elif ss_actual != ss_desired:
+    if ss_actual != ss_desired:
         logger.info(f'The smartplug "{sp.name}" is desired to "{ss_desired}"')
         try:
             ss_result = await tuya_smartplug_switch_set(sp, ss_desired) 
@@ -121,9 +118,27 @@ async def main(sp: Smartplug,
             return 1
         # ss_result and ss_desired to be the same 
         logger.info(f'The smartplug switch "{sp.name}" became "{ss_result}"')
-            
+
     else:
-        logger.info(f'The smartplug switch "{sp.name}" remains "{ss_actual}"')
+        logger.info(f'The smartplug switch "{sp.name}" has to be kept awake"')
+
+        """
+        try:
+            ss_result = await tuya_smartplug_switch_set(sp, Switch_Status('Open')) 
+        except ClientConnectorError:
+            logger.error('Cannot connect to smartplug "{sp.name}".')
+            return 2
+        logger.info(f'The smartplug switch "{sp.name}" switched "{ss_result}"')
+
+        await asyncio.sleep(2)
+        """
+        
+        try:
+            ss_result = await tuya_smartplug_switch_set(sp, ss_actual) 
+        except ClientConnectorError:
+            logger.error('Cannot connect to smartplug "{sp.name}".')
+            return 3
+        logger.info(f'The smartplug switch "{sp.name}" reswitched "{ss_result}"')        
 
     return 0
 
