@@ -1,5 +1,5 @@
 __doc__=""" This is a poor anker libray to get the latest power data
-from a Anker Solix solarbank.
+from a Anker Solix solarbank and to set the home load.
 
 It uses the anker-solix-api.  See the anker-solix-api repository on
 github.com.
@@ -86,10 +86,10 @@ class Solarbank():
             return Power_Data(input_power, output_power,
                               battery_power, battery_soc)
 
-    """ Set the output power of the Anker Solarbank. It takes upto
-    three minutes to settle after the command start. During the first
-    minute the output power drops down. Then approaches the commanded
-    value. There are conditions the bank is not able to meet the
+    """ Set the output power of the Anker Solarbank. During
+    discharging the output power drops down initially. Then approaches
+    the commanded value. It takes upto three minutes to settle after
+    start.  There are conditions the bank is not able to meet the
     request, eg when the battery is full and/or low solar radiation
     even if commanded. Be aware of the latencies in the Anker cloud!
     """
@@ -159,8 +159,9 @@ class Solarbank():
                 return False
 
             set_output_power = int(device_data['set_output_power'])
-            if home_load-10 < set_output_power < home_load+10:
-                logger.info(f'home load is kept to "{set_output_power}"')
+            tolerance = 10 if charging_status ==SolarbankStatus.discharge else 5
+            if home_load-tolerance < set_output_power < home_load+tolerance:
+                logger.info(f'home load is kept "{set_output_power}"')
                 return True
             
             is_done= await sapi.set_device_parm(
@@ -170,7 +171,7 @@ class Solarbank():
                 paramType = SolixParmType.SOLARBANK_SCHEDULE.value)
 
             if is_done:
-                logger.info(f'home load is set to "{home_load}"')
+                logger.info(f'home load is set "{home_load}"')
             else:
                 logger.error(f'home load setting failed"')
             return is_done
