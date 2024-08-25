@@ -631,56 +631,59 @@ def _get_blocks(time: t64, smp: f64,
     
 
     if sbpi>1 :
-        _add_link_to_ax(ax, *panel_1, 'S', *solix_mppt, 'N',
-                    sbpi/2, 'green')
-        _add_link_to_ax(ax, *panel_2, 'N', *solix_mppt, 'S',
-                    sbpi/2, 'green')
-        _add_link_to_ax(ax, *solix_mppt, 'E', *solix_split, 'W',
-                        sbpi, 'grey')
+        _add_link_to_ax(
+            ax, *panel_1, 'S', *solix_mppt, 'N',
+            sbpi/2, 'green', show_power = False) # Measured only
+        _add_link_to_ax(
+            ax, *panel_2, 'N', *solix_mppt, 'S',
+            sbpi/2, 'green', show_power = False) # Measured only
+        _add_link_to_ax(
+            ax, *solix_mppt, 'E', *solix_split, 'W',
+            sbpi, 'grey')
 
     if sbpb<0 :
-        _add_link_to_ax(ax, *solix_split, 'N', *solix_bat, 'W',
+        _add_link_to_ax(
+            ax, *solix_split, 'N', *solix_bat, 'W', sbpb, 'm')
+    
+    if sbpb>0 :
+        _add_link_to_ax(ax, *solix_bat, 'E', *solix_out, 'N',
                         sbpb, 'm',
                         show_power = sbpi+sbpb>ivp1+ivp2)
-    
-    if sbpb>1 :
-        _add_link_to_ax(ax, *solix_bat, 'E', *solix_out, 'N',
-                        sbpb, 'm')
 
-    if sbpi>1:
+    if sbpi>0:
         _add_link_to_ax(ax, *solix_split, 'S', *solix_out, 'S',
                         sbpi+sbpb, 'grey',
                         show_power = sbpi+sbpb>ivp1+ivp2)
 
     
     _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
-                    ivp1 if ivp1>1 else sbpo/2,
-                    'c' if ivp1>1 else 'grey',
-                    show_power = ivp1>1)
+                    ivp1 if ivp1>0 else sbpo/2,
+                    'c' if ivp1>0 else 'grey',
+                    show_power = ivp1>0)
 
     _add_link_to_ax(ax, *inv_mppt_1, 'S', *plugh, 'N',
-                    ivp1 if ivp1>1 else sbpo/2,
-                    'c' if ivp1>1 else 'grey',
+                    ivp1 if ivp1>0 else sbpo/2,
+                    'c' if ivp1>0 else 'grey',
                     show_power = False)            
             
     _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
-                    ivp2 if ivp2>1 else sbpo/2,
-                    'c' if ivp2 > 1 else 'grey',
-                    show_power = ivp2>1)
+                    ivp2 if ivp2>0 else sbpo/2,
+                    'c' if ivp2>0 else 'grey',
+                    show_power = ivp2>0)
 
     _add_link_to_ax(ax, *inv_mppt_2, 'N', *plugh, 'S',
-                    ivp2 if ivp2>1 else sbpo/2,
-                    'c' if ivp2>1 else 'grey',
+                    ivp2 if ivp2>0 else sbpo/2,
+                    'c' if ivp2>0 else 'grey',
                     show_power = False)
 
     
     ivp = (ivp1+ivp2)
 
-    balconyp = spph if spph>1 else ivp if ivp > 1 else sbpo
+    balconyp = spph if spph>1 else ivp if ivp > 0 else sbpo
     
     if balconyp > 0:
         _add_link_to_ax(ax, *plugh, 'E', *house, 'W',
-                        balconyp, 'c' if ivp>1 else 'grey')
+                        balconyp, 'c' if ivp>0 else 'grey')
 
     _add_link_to_ax(ax, *grid, 'S', *house, 'N', smp,
                     'blue' if smp>0 else 'brown')
