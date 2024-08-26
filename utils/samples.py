@@ -277,11 +277,10 @@ async def get_kwh_sum_month(logmonth: str,
 
 """
 Unifies the calculated energy results for each day of the specified
-month. For each day one device column is selected best representing
-the energy production at that day. If connected the smartplug has
-priority 1 if it directly connects an inverter to the house.  Priority
-2 has the inverter if data are available. Priority 3 has the
-solarbank.
+month. One device column is selected best representing the energy
+production at that day. If connected the smartplug has priority 1 if
+it directly connects an inverter to the house.  Priority 2 has the
+inverter if data are available. Priority 3 has the solarbank.
 """
 async def get_kwh_sum_month_unified(
         logmonth: str,
@@ -296,17 +295,17 @@ async def get_kwh_sum_month_unified(
         logmonth, logprefix, logdir, logdayformat)
     mtime, msmeon, msmeoff, mive1, mive2, mspeh, msbeo = mkwhs.values()
 
-    # 1.Prio
-    umkwhs = mspeh.copy()
+    # 3.Prio
+    umkwhs = msbeo.copy()
 
     # 2.Prio 
     mive = mive1 + mive2
-    isive = mive>0 & ~(umkwhs>0)
+    isive = mive>0 
     umkwhs[isive] = mive[isive]
 
-    # 3.Prio
-    issbeo = msbeo>0 & ~(umkwhs>0)
-    umkwhs[issbeo] = msbeo[issbeo]
+    # 1.Prio
+    isspeh = mspeh>0
+    umkwhs[isspeh] = mspeh[isspeh]
 
     logger.info(f'{__me__}: started')
     return {'TIME':mtime, 'SMEON':msmeon, 'SMEOFF':msmeoff,'PANEL':umkwhs}
