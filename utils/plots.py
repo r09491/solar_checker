@@ -256,10 +256,11 @@ async def get_w_line(time: t64s, smp: f64s,
         return _get_w_line(**vars())
 
 
-def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
-                  ive1: f64s, ive2: f64s, speh: f64s,
-                  sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
-                  empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%H:%M'):
+def _get_kwh_line(
+        time: t64s, smeon: f64s, smeoff: f64s,
+        ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
+        sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
+        empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%H:%M'):
     __me__ ='_get_kwh_line'
     logger.info(f'{__me__}: started')
 
@@ -276,13 +277,6 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     issbeoon = sbeo>0 if sbeo is not None else None
     sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
 
-    issbebdischarge = sbeb>0 if sbeb is not None else None
-    sbebdischarge = sbeb[issbebdischarge] if issbebdischarge is not None and issbebdischarge.any() else None
-    
-    issbebcharge = sbeb<0 if sbeb is not None else None
-    sbebcharge = -sbeb[issbebcharge] if issbebcharge is not None and issbebcharge.any() else None
-
-    
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
@@ -297,17 +291,9 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         ax.fill_between(time, speh, speh + smeon,
                              color='b',label='HOUSE', alpha=0.3)
 
-        #ax.plot(time, smeoff, color='b', label='<|>', lw=2, alpha=0.5)
-
     elif iveon is not None:
         logger.info(f'{__me__}: using inverter samples only')
 
-        #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
-
-        ###ax.fill_between(time, 0, ive1,
-        ###                     color='c', label='INV 1',alpha=0.6)
-        ###ax.fill_between(time, ive1, ive2 + ive1,
-        ###                     color='g',label='INV 2', alpha=0.5)
         ax.fill_between(time, 0, ive2 + ive1,
                              color='c',label='INV', alpha=0.3)                             
         ax.fill_between(time, ive2 + ive1, ive2 + ive1 + smeon,
@@ -316,8 +302,6 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     elif sbeoon is not None:
         logger.info(f'{__me__}: using solarbank samples only')
         logger.warn(f'{__me__}: other energy samples are ignored')
-
-        #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
 
         ax.fill_between(time, 0, sbeo,
                         color='grey', label='BANK',alpha=0.3)
@@ -338,12 +322,17 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
         ax.axhline(-empty_kwh, color='r', ls='--')        
         ax.axhline(-full_kwh, color='r', ls='--')
 
+        sbeb = +sbebcharge - sbebdischarge + sbsb[0]
+
         ax.fill_between(time, 0, -sbsb,
                         color='m', label='-BAT',alpha=0.3)
 
-        ax.fill_between(time, -sbsb, -sbsb - smeoff,
-                        color='b', alpha=0.3)
+        ax.fill_between(time, -sbsb, -sbeb,
+                        color='black', label='LOSS', alpha=0.3)
 
+        ax.fill_between(time, -sbeb, -sbeb - smeoff,
+                        color='b', alpha=0.3)
+        
     else:
         ax.fill_between(time, 0, -smeoff,
                         color='b', alpha=0.3)
@@ -361,19 +350,22 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
             title += f'Bank {sbeo[-1]:.2f}kWh'
         else:
             title += f'Bank {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
-    
-    if sbeb is not None:
-        title += '' if title[-1] == '\n' else ' * '
-        if time_format == '%H:%M': # Accumulated
-            title += f'Bat <{0 if sbebcharge is None else sbebcharge[-1]:.2f}kWh'
-            title += f' >{0 if sbebdischarge is None else sbebdischarge[-1]:.2f}kWh'
-        else:
-            title += f'Bat <{0 if sbebcharge is None else sbebcharge.sum():.2f}kWh'
-            title += f' >{0 if sbebdischarge is None else sbebdischarge.sum():.2f}kWh'
 
+    title += '' if title[-1] == '\n' else ' * BAT'
+    if sbebcharge is not None:
+        if time_format == '%H:%M': # Accumulated
+            title += f' <{sbebcharge[sbebcharge>0][-1]:.2f}kWh'
+        else:
+            title += f' <{sbebcharge[sbebcharge>0].sum():.2f}kWh'
+
+    if sbebdischarge is not None:
+        if time_format == '%H:%M': # Accumulated
+            title += f' >{sbebdischarge[sbebdischarge>0][-1]:.2f}kWh'
+        else:
+            title += f' >{sbebdischarge[sbebdischarge>0].sum():.2f}kWh'
+            
     if sbsb is not None:
         title += f' #{sbsb[-1]:.2f}kWh~{sbsb[-1]/full_kwh*100:.0f}%'
-
             
 
     title += '' if title[-1] == '\n' else '\n'
@@ -426,11 +418,12 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
 
     return base64.b64encode(buf.getbuffer()).decode('ascii')
 
-async def get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
-                       ive1: f64s, ive2: f64s, speh: f64s,
-                       sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
-                       empty_kwh: f64s, full_kwh: f64s, price: f64,
-                       time_format: str = '%H:%M'):
+async def get_kwh_line(
+        time: t64s, smeon: f64s, smeoff: f64s,
+        ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
+        sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
+        empty_kwh: f64s, full_kwh: f64s, price: f64,
+        time_format: str = '%H:%M'):
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(_get_kwh_line, **vars()) # type: ignore[unused-ignore]
     else:

@@ -59,6 +59,12 @@ async def plot_day(request: web.Request) -> dict:
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
     smpoff[smp<=0] = -smp[smp<=0]
+
+    sbpbcharge = np.zeros_like(sbpb)
+    sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
+    sbpbdischarge = np.zeros_like(sbpb)
+    sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
+    
     
     blocks, w, kwh = await asyncio.gather(
         get_blocks(time[-1], smp[-1], ivp1[-1], ivp2[-1],
@@ -80,7 +86,8 @@ async def plot_day(request: web.Request) -> dict:
             spph.cumsum()/1000/60 if spph is not None else None,
             sbpi.cumsum()/1000/60 if sbpi is not None else None,
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
-            sbpb.cumsum()/1000/60 if sbpb is not None else None,
+            sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
+            sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
             sbsb*full_kwh if sbsb is not None else None,
             empty_kwh, full_kwh, price))
     return {'logday': logday, 'blocks': blocks, 'w': w, 'kwh': kwh}
