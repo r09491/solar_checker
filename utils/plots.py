@@ -276,6 +276,12 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
     issbeoon = sbeo>0 if sbeo is not None else None
     sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
 
+    issbebdischarge = sbeb>0 if sbeb is not None else None
+    sbebdischarge = sbeb[issbebdischarge] if issbebdischarge is not None and issbebdischarge.any() else None
+    
+    issbebcharge = sbeb<0 if sbeb is not None else None
+    sbebcharge = -sbeb[issbebcharge] if issbebcharge is not None and issbebcharge.any() else None
+
     
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
@@ -355,18 +361,20 @@ def _get_kwh_line(time: t64s, smeon: f64s, smeoff: f64s,
             title += f'Bank {sbeo[-1]:.2f}kWh'
         else:
             title += f'Bank {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
-
-    """
-    if sbeb is not None:
-        if time_format == '%H:%M': # Accumulated
-            title += f' * Bat {-sbeb[sbeb<0][-1]:.2f}kWh'
-        else:
-            title += f' * Bat {-sbeb[sbeb<0].sum():.2f}kWh'
-    """
     
+    if sbeb is not None:
+        title += '' if title[-1] == '\n' else ' * '
+        if time_format == '%H:%M': # Accumulated
+            title += f'Bat <{0 if sbebcharge is None else sbebcharge[-1]:.2f}kWh'
+            title += f' >{0 if sbebdischarge is None else sbebdischarge[-1]:.2f}kWh'
+        else:
+            title += f'Bat <{0 if sbebcharge is None else sbebcharge.sum():.2f}kWh'
+            title += f' >{0 if sbebdischarge is None else sbebdischarge.sum():.2f}kWh'
+
     if sbsb is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        title += f'Bat {sbsb[-1]*1000:.0f}Wh~{sbsb[-1]/full_kwh*100:.0f}%'
+        title += f' #{sbsb[-1]:.2f}kWh~{sbsb[-1]/full_kwh*100:.0f}%'
+
+            
 
     title += '' if title[-1] == '\n' else '\n'
         
