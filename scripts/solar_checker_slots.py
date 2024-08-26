@@ -94,23 +94,23 @@ def parse_args() -> Script_Arguments:
                         version = __version__)
     
     parser.add_argument(
-        '--morning', type=hm2time, default = "07:00",
+        '--morning', type=hm2time, default = "07:30",
         help = "The start hour of the morning slot")
 
     parser.add_argument(
-        '--noon', type=hm2time, default = "10:00",
+        '--noon', type=hm2time, default = "09:30",
         help = "The start hour of the noon slot")
 
     parser.add_argument(
-        '--afternoon', type=hm2time, default = "12:00",
+        '--afternoon', type=hm2time, default = "14:00",
         help = "The start hour of the afternoon slot")
 
     parser.add_argument(
-        '--evening', type=hm2time, default = "18:00",
+        '--evening', type=hm2time, default = "19:30",
         help = "The start hour of the evening slot")
 
     parser.add_argument(
-        '--night', type=hm2time, default = "23:00",
+        '--night', type=hm2time, default = "22:30",
         help = "The start hour of the midnight slot")
 
     args = parser.parse_args()
