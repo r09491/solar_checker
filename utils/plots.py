@@ -358,16 +358,16 @@ def _get_kwh_line(
         else:
             title += f' <{sbebcharge[sbebcharge>0].sum():.2f}kWh'
 
+    if sbsb is not None:
+        title += f' #{sbsb[-1]:.2f}kWh~{sbsb[-1]/full_kwh*100:.0f}%'
+            
     if sbebdischarge is not None and (sbebdischarge>0).any():
         if time_format == '%H:%M': # Accumulated
             title += f' >{sbebdischarge[sbebdischarge>0][-1]:.2f}kWh'
         else:
             title += f' >{sbebdischarge[sbebdischarge>0].sum():.2f}kWh'
-            
-    if sbsb is not None:
-        title += f' #{sbsb[-1]:.2f}kWh~{sbsb[-1]/full_kwh*100:.0f}%'
-            
 
+            
     title += '' if title[-1] == '\n' else '\n'
         
     if iveon is not None:
