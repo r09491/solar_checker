@@ -4,7 +4,7 @@ __doc__="""
 Sets the new power limit to the APsystems EZ1 inverter
 """
 
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 __author__ = "r09491@gmail.com"
 
 import os
@@ -111,10 +111,6 @@ if __name__ == '__main__':
                                        args.max_power > 800):
         logger.error(f'Input "{args.max_power}" is out of legal range.')
         sys.exit(2)
-
-    if args.max_power is not None and args.max_power > 600:
-        logger.info(f'The power limit for inverters in Germany is 600W.')
-        logger.info(f'Be advised to consult your lawyer!')
         
     ez1m = Inverter(args.ip, args.port)
 

@@ -18,8 +18,7 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Optional, Any, Dict
     ReturnRequest = Optional[Dict[str, Any]]
-
-
+    
 class Status(IntEnum):
     normal = 0
     alarm = 1
@@ -167,10 +166,10 @@ class Inverter:
     
     async def set_device_power_status(self, power_status: Status) -> Optional[Status]:
         status_map = {"0": "0", "ON": "0", "1": "1", "SLEEP": "1", "OFF": "1"}
-        status_value = status_map.get(str(power_status))
+        status_value = status_map.get(str(power_status.value))
         if status_value is None:
             raise ValueError(
-                f"Invalid power status: '{str(power_status)}'"
+                f"Invalid power status: '{str(power_status.value)}'"
             )
         try:
             request = await self._request(f"setOnOff?status={status_value}")
