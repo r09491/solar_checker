@@ -20,26 +20,26 @@ alias apsystems_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_c
 
 
 #based on the energy at the start of the year (PH = Power, EY = Energy current Year, EL = Energy Lifetime)
-alias tasmota_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
-    awk -F',' 'BEGIN{start=4192;price=0.369}{printf(\"PH %+5.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh|%.2f€\n\",\$2, \$3-start, (\$3-start)*price, \$3, \$3*price)}'"
+alias home_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
+    awk -F',' 'BEGIN{start=4405-4192;price=0.369}{printf(\"PH %+5.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh|%.2f€\n\",\$2, \$3+start, (\$3+start)*price, \$3, \$3*price)}'"
 
-alias tasmota_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
+alias home_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
       			    awk -F',' '{ printf(\"%d,%f\n\", NR, \$2)}' | \
 			    termgraph --suffix 'W' \
-			    	      --title 'Tasmota Smartmeter Watts'"
+			    	      --title 'Home Smartmeter Watts'"
 
-alias tasmota_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
+alias home_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
       			    awk -F',' '{ printf(\"%d,%.3f\n\", NR, \$3/1000)}' | \
 			    termgraph --suffix 'kWh' \
-			    	      --title 'Tasmota Smartmeter Lifetime Watt-Hours'"
+			    	      --title 'Home Smartmeter Lifetime Watt-Hours (ab 05.03.2024)'"
 
 
-alias tuya_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
+alias home_plug_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
     awk -F',' 'BEGIN{}{printf(\"PP %03.0fW\n\",\$10)}'"
 
-alias tuya_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
+alias home_plug_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
       			    awk -F',' '{printf(\"%d,%.3f\n\", NR, \$10)}' | \
-			    termgraph --suffix 'W' --title 'Tuya Smartplug Watts'"
+			    termgraph --suffix 'W' --title 'Home Plug Smartplug Watts'"
 
 # (PI = Power Inverter, PP = Power Plug, PH = Power Home)
 alias solar_checker_watts_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
