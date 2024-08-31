@@ -96,7 +96,7 @@ async def get_home_load_estimate(samples: int) -> int:
     """
     
     estimate = int(estimate.mean())
-    logger.info(f"home estimate is '{estimate:.0f}W'")
+    logger.info(f"home load estimate is '{estimate:.0f}W'")
     return min(max(estimate,100), 800)
 
 
@@ -106,9 +106,9 @@ async def main(sb: Solarbank, samples: int) -> int:
     if estimate == 0:
         return 10
     
-    logger.info(f'calculated home goal for solarbank "{estimate:.0f}W"')
+    logger.info(f'home load goal is "{estimate:.0f}W"')
     is_done = await anker_home_load_set(sb, estimate)
-    logger.info(f"setting of home load {'ok' if is_done else 'failed'}")
+    logger.info(f"home load goal is {'ok' if is_done else 'failed'}")
 
     return 0 if is_done else 15
 
