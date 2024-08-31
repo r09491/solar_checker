@@ -159,7 +159,7 @@ class Solarbank():
                 return False
 
             set_output_power = int(device_data['set_output_power'])
-            tolerance = 10 if charging_status ==SolarbankStatus.discharge else 5
+            tolerance = 10 if charging_status ==SolarbankStatus.discharge else 10
             if home_load-tolerance < set_output_power < home_load+tolerance:
                 logger.info(f'home load is kept "{set_output_power}"')
                 return True
