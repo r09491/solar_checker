@@ -68,7 +68,7 @@ class Solarbank():
             await sapi.update_sites()
             device_sn = list(sapi.devices)[0]
             
-            logger.info(f'updated data for serial number "{device_sn}"')
+            logger.debug(f'updated data for serial number "{device_sn}"')
 
             """ Currently data from only one solarbank is handled """
 
@@ -127,7 +127,7 @@ class Solarbank():
 
             await sapi.update_sites()
             device_sn = list(sapi.devices)[0]
-            logger.info(f'updated data for serial number "{device_sn}"')
+            logger.debug(f'updated data for serial number "{device_sn}"')
 
             device_data = sapi.devices[device_sn]
 
@@ -147,14 +147,13 @@ class Solarbank():
                 return False
 
             site_id = device_data['site_id']    
-            logger.info(f'id of site is "{site_id}"')
+            logger.debug(f'id of site is "{site_id}"')
 
             charging_status = SolarbankStatus(device_data['charging_status'])
-            logger.info(f'charging status is "{charging_status}"')
+            logger.debug(f'charging status is "{charging_status}"')
             if not ((charging_status == SolarbankStatus.discharge) or
                     (charging_status == SolarbankStatus.charge) or
-                    (charging_status == SolarbankStatus.bypass) or
-                    (charging_status == SolarbankStatus.bypass_charge)):
+                    (charging_status == SolarbankStatus.bypass)):
                 logger.warning(f'wrong charging status "{charging_status}"')
                 return False
 
