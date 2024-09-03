@@ -72,34 +72,41 @@ async def main(sp: Smartplug,
                power_mean_export_closed: f64, # when to close switch
                power_samples: int, f: Any) -> int:
 
+    if power_samples < 2:
+        logger.error(f'Wrong number of power samples "{power_samples}"')
+        return 11
+
     c = await get_columns_from_csv()
     if c is None:
         logger.info(f'Samples from stdin are not valid')
         return 10
 
-    smp = c['SMP']
-    if smp.size != power_samples:
-        logger.error(f'Wrong number of smartmeter records "{smp.size}"')
-        return 11
+
+    smp = c['SMP'][-2:]
     smp_mean = smp.mean()
     logger.info(f'Last smartmeter mean "{smp_mean:.0f}W"')
 
-    sbpb = c['SBPB']
-    if sbpb.size != power_samples:
-        logger.error(f'Wrong number of smartmeter records "{sbpb.size}"')
-        return 11
+    sbpb = c['SBPB'][-2:]
     sbpb_mean = sbpb.mean()
-    logger.info(f'Last battery power  mean "{sbpb_mean:.0f}W"')
+    logger.info(f'Last charge power  mean "{sbpb_mean:.0f}W"')
 
+    spps = c[{'plug0': 'SPP4', 'plug1': 'SPP1', 'plug2': 'SPP2','plug3': 'SPP3'}[sp.name]]
+    if spps.size != power_samples:
+        logger.error(f'Wrong number of sink power records "{spps.size}"')
+        return 12
+    spps_mean = spps.mean()
+    logger.info(f'Last plug sink power mean "{spps_mean:.0f}W"')
+
+    
     """ The power which exported to the grid or charging the battery
     is subject to immediate consumption """
-    free_power = smp_mean + (sbpb_mean if sbpb_mean < 0 else 0)
-    logger.info(f'Last free_power "{free_power:.0f}W"')
+    import_power = smp_mean + (sbpb_mean if sbpb_mean < 0 else 0)
+    logger.info(f'Last import_power "{import_power:.0f}W"')
     
     # Switch to be Open if above import average
-    is_to_open =  free_power > power_mean_import_open
+    is_to_open =  import_power > power_mean_import_open
     # Switch to be Closed if below export average
-    is_to_closed =  free_power < -power_mean_export_closed
+    is_to_closed =  import_power < -power_mean_export_closed
 
     ss_actual = await tuya_smartplug_switch_get(sp)
     logger.info(f'The smartplug switch currently is "{ss_actual}"')
@@ -107,7 +114,6 @@ async def main(sp: Smartplug,
     # What has to be done now?
     ss_desired = Switch_Status('Open' if is_to_open else
                                'Closed' if is_to_closed else 'Null')
-    logger.info(f'The smartplug switch goal is "{ss_desired}"')
 
     if ss_actual != ss_desired and Switch_Status('Null') != ss_desired:
         logger.info(f'The smartplug "{sp.name}" is desired to "{ss_desired}"')
@@ -119,6 +125,16 @@ async def main(sp: Smartplug,
         # ss_result and ss_desired to be the same 
         logger.info(f'The smartplug switch "{sp.name}" became "{ss_result}"')
 
+    elif spps.min() == spps.max():
+        logger.info(f'The smartplug switch "{sp.name}" has to be opened"')
+        
+        try:
+            ss_result = await tuya_smartplug_switch_set(sp, Switch_Status.open) 
+        except ClientConnectorError:
+            logger.error('Cannot connect to smartplug "{sp.name}".')
+            return 3
+        logger.info(f'The smartplug switch "{sp.name}" is  "{ss_result}"')
+        
     else:
         logger.info(f'The smartplug switch "{sp.name}" has to be kept awake"')
         
