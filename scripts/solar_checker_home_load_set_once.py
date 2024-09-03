@@ -25,18 +25,18 @@ logger = logging.getLogger(os.path.basename(__file__))
 
 
 async def anker_home_load_set(sb: Solarbank, home_load: int) -> bool:
-    logger.info(f'anker_home_load_set started "{home_load}"')
+    logger.info(f'anker_home_load_set begin"')
 
     try:
         is_done = await sb.set_home_load(home_load)
     except:
         is_done = False
     if is_done:
-        logger.info("anker solarbank home load set.")
+        logger.info("solarbank home load set.")
     else:
         logger.warning("anker solarbank home load not set.")
         
-    logger.info(f"anker_home_load_set finished {'ok' if is_done else 'with problem'}")        
+    logger.info(f"anker_home_load_set end")        
     return is_done
 
 
@@ -47,17 +47,38 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.info(f'samples from stdin are not valid')
         return 0
 
-    """ The normalised smartmeter power """
+    """ The normalised smart meter power """
     smp = c['SMP']
     if smp.size != samples:
-        logger.error(f'wrong number of smartmeter records "{smp.size}"')
+        logger.error(f'wrong number of smart meter records "{smp.size}"')
         return 0
+    smp_mean = int(smp.mean())
+    
+    """ The normalised solarbank power input """
+    #sbpi = c['SBPI']
+    #if sbpi.size != samples:
+    #    logger.error(f'wrong number of solarbank records "{sbpi.size}"')
+    #    return 0
     
     """ The normalised solarbank power output """
     sbpo = c['SBPO']
     if sbpo.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return 0
+
+    """ The normalised solarbank charge power """
+    sbpb = c['SBPB']
+    if sbpb.size != samples:
+        logger.error(f'wrong number of solarbank records "{sbpb.size}"')
+        return 0
+    sbpb_mean = int(sbpb.mean())
+    
+    """ The normalised solarbank battery status """
+    sbsb = c['SBSB']
+    if sbsb.size != samples:
+        logger.error(f'wrong number of solarbank records "{sbsb.size}"')
+        return 0
+    sbsb_mean = 100 * int(sbsb.mean())
     
     """ The normalised inverter power samples channel 1 """
     ivp1 = c['IVP1']
@@ -75,7 +96,7 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
 
-    estimate = smp
+    estimate = smp # !! Shared !!
     if (sbpo>0.0).any():
         estimate += sbpo
     elif (ivp>0.0).any():
@@ -83,20 +104,31 @@ async def get_home_load_estimate(samples: int) -> int:
     elif (spph>0.0).any():
         estimate += spph
 
-    """
-    estimate = int((estimate.min()+2*estimate.mean())/30)*10
-    """
-    
-    """ Parabolic extrapolation
-    y = smp + sbpo
-    a = (y[-1]+y[-3])/2 - y[-2]
-    b = (y[-1]-y[-3])/2
-    c = y[-2]
-    estimate = int(4*a + 2*b + c)
-    """
-    
-    estimate = int(estimate.mean())
-    logger.info(f"home load estimate is '{estimate:.0f}W'")
+    # Weighted average
+    estimate = int(sum((2**w)*v for w, v in enumerate(estimate)) /
+                   sum(2**w for w, v in enumerate(estimate)))
+    logger.info(f"home load proposal is '{estimate}W'")
+
+    if sbpb_mean < 0: # Charging
+        logger.info(f'Battery is charged')
+        if ((smp_mean + sbpb_mean) < -600):
+            # Impossible to achieve. Bank will ignore any setting!
+            logger.warning(f'Disregard! Is the inverter hot?')
+            estimate = 800 # Ignored
+
+        if ((smp_mean + sbpb_mean) < -100 and sbsb_mean > 90):
+            # Impossible to achieve. Energy has to go sommewhere! Bank
+            # will anyhow not care!
+            logger.warning(f'Disregard!Is the inverter hot?')
+            esimate = 100 # Ignored
+
+    elif sbpb_mean > 0: # Discharging
+        logger.info(f'Battery is discharged')
+
+    else:
+        logger.info(f'Battery is bypassed')
+        estimate = 800 # Ignored
+        
     return min(max(estimate,100), 800)
 
 
@@ -149,5 +181,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt: 
         err = 99
 
-    logger.info(f'solar_checker_home_load_set_once done (err={err}).')
+    logger.info(f'solar_checker_home_load_set_once end (err={err}).')
     sys.exit(err)
