@@ -3,7 +3,6 @@
 ## Schedule example
 ##
 ## # Record the latest power of the smartmeter and inverter
-## # OBSOLETE * * * * * tasmota_latest_get_cron.sh && apsystems_latest_get_cron.sh
 ## * * * * * solar_checker_latest_once.sh
 ##
 ## ## Needs a few minutes to settle
