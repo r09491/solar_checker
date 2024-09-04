@@ -110,6 +110,10 @@ the ip addresses and add it to 'cron'. Be sure to have the 'PATH and
 'SOLAR_CHECKER_STORE_DIR* environment variables set as documented in
 the script!
 
+To start the http server run 'p12run' under the server/mein directory.
+
+You may have to addapt some ip addresses in the scripts.
+
 ---
 
 ## Examples
