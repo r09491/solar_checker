@@ -84,7 +84,7 @@ async def main(sp: Smartplug,
 
     smp = c['SMP'][-2:]
     smp_mean = smp.mean()
-    logger.info(f'Last smartmeter mean "{smp_mean:.0f}W"')
+    logger.info(f'Last smart meter mean "{smp_mean:.0f}W"')
 
     sbpb = c['SBPB'][-2:]
     sbpb_mean = sbpb.mean()
