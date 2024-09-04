@@ -110,24 +110,17 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f"home load proposal is '{estimate}W'")
 
     if sbpb_mean < 0: # Charging
-        logger.info(f'Battery is charged')
-        if ((smp_mean + sbpb_mean) < -600):
-            # Impossible to achieve. Bank will ignore any setting!
-            logger.warning(f'Disregard! Is the inverter hot?')
-            estimate = 800 # Ignored
+        logger.info(f'Battery is charging')
 
-        if ((smp_mean + sbpb_mean) < -100 and sbsb_mean > 90):
-            # Impossible to achieve. Energy has to go sommewhere! Bank
-            # will anyhow not care!
-            logger.warning(f'Disregard!Is the inverter hot?')
-            esimate = 100 # Ignored
+        ##if ((smp_mean + sbpb_mean) < -600):
+        ## estimate = 100 # Ignored!
 
     elif sbpb_mean > 0: # Discharging
         logger.info(f'Battery is discharged')
 
     else:
-        logger.info(f'Battery is bypassed')
-        estimate = 800 # Ignored
+        logger.info(f'Battery is passed by')
+        ##estimate = 100 # Ignored
         
     return min(max(estimate,100), 800)
 
