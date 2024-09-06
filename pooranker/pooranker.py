@@ -87,12 +87,12 @@ class Solarbank():
                               battery_power, battery_soc)
 
     """ Set the output power of the Anker Solarbank. During
-    discharging the output power drops down initially. Then approaches
-    the commanded value. It takes upto three minutes to settle after
-    start.  There are conditions the bank is not able to meet the
-    request, eg when the battery is full and/or low solar radiation
-    even if commanded. Be aware of the latencies in the Anker cloud!
-    """
+    discharging the output power drops down in the first minute. Then
+    approaches the commanded value in the next two minutes. The solix
+    will not serve home load settings if in bypass.  There are other
+    conditions the bank is not able to meet the request, eg when the
+    battery is full and/or low solar radiation even if commanded. Be
+    aware of the latencies in the Anker cloud!  """
     async def set_home_load(self,
                             home_load: int, # Watt
                             start_time: str = "00:00",
