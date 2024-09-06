@@ -54,25 +54,19 @@ async def get_home_load_estimate(samples: int) -> int:
         return 0
     smp_mean = int(smp.mean())
     
-    """ The normalised solarbank power input """
-    #sbpi = c['SBPI']
-    #if sbpi.size != samples:
-    #    logger.error(f'wrong number of solarbank records "{sbpi.size}"')
-    #    return 0
-    
     """ The normalised solarbank power output """
     sbpo = c['SBPO']
     if sbpo.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return 0
 
-    """ The normalised solarbank charge power """
+    """ The normalised solarbank power output """
     sbpb = c['SBPB']
     if sbpb.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpb.size}"')
         return 0
     sbpb_mean = int(sbpb.mean())
-    
+
     """ The normalised solarbank battery status """
     sbsb = c['SBSB']
     if sbsb.size != samples:
@@ -96,31 +90,45 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
 
-    estimate = smp # !! Shared !!
-    if (sbpo>0.0).any():
-        estimate += sbpo
+    """
+    Data in local mode are faster acquired than those from the
+    cloud. Here the cloud solar bank data are at least one minute
+    older than those of the local inverter. After some time the data
+    will stabilize and look reasonable at least, ie values from
+    solarbank are larger than those of the inverter. Home load value
+    shall only be set in stable situation.
+    """
+    logger.info(f'{sbpo} sbpo')
+    logger.info(f'{ivp} ivp')
+    if (ivp[-2:] > (sbpo[-2:] + 10)).any(): # Some tolerance for roundings ...
+        logger.error(f'Bank less then inverter')
+        return 0
+
+        
+    voted = smp.copy()
+    if (spph>0.0).any():
+        logger.info(f'Using home smart plug power')
+        voted += spph
     elif (ivp>0.0).any():
-        estimate += ivp
-    elif (spph>0.0).any():
-        estimate += spph
+        logger.info(f'Using inverter power')
+        voted += ivp
+    elif (sbpo>0.0).any():
+        logger.info(f'Using solarbank power')
+        voted += sbpo
 
     # Weighted average
-    estimate = int(sum((2**w)*v for w, v in enumerate(estimate)) /
-                   sum(2**w for w, v in enumerate(estimate)))
+    estimate = int(sum((2**w)*v for w, v in enumerate(voted)) /
+                   sum(2**w for w, v in enumerate(voted)))
     logger.info(f"home load proposal is '{estimate}W'")
-
-    if sbpb_mean < 0: # Charging
-        logger.info(f'Battery is charging')
-
-        ##if ((smp_mean + sbpb_mean) < -600):
-        ## estimate = 100 # Ignored!
-
-    elif sbpb_mean > 0: # Discharging
-        logger.info(f'Battery is discharged')
-
+    
+    if (sbpb > 0).all(): 
+        logger.info(f'Battery is discharged.')
+    elif (sbpb < 0).all(): 
+        logger.info(f'Battery is charged.')
     else:
-        logger.info(f'Battery is passed by')
-        ##estimate = 100 # Ignored
+        logger.info(f'Battery is bypassed.')
+        logger.info(f'Solarbank ignores estimate.')
+        estimate = 100 # Ignored
         
     return min(max(estimate,100), 800)
 
