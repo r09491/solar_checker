@@ -10,7 +10,8 @@ import numpy as np
 import asyncio
 
 from .types import f64, f64s, t64, t64s, strings
-    
+from .common import sample_names
+
 import logging
 logging.basicConfig(
     level=logging.INFO,
@@ -19,8 +20,8 @@ logging.basicConfig(
 logger = logging.getLogger(os.path.basename(__file__))
     
     
-def _get_logdays(logprefix: str, logdir: str) -> strings:
-    pattern = os.path.join(logdir, f'{logprefix}_*.log')
+def _get_logdays(logprefix: str, logdir: str, logdayformat: str = '*') -> strings:
+    pattern = os.path.join(logdir, f'{logprefix}_{logdayformat}.log')
     logpaths = glob.glob(pattern)
     logfiles = [os.path.basename(lp) for lp in logpaths]
     lognames = [os.path.splitext(lf)[0] for lf in logfiles]
@@ -28,7 +29,7 @@ def _get_logdays(logprefix: str, logdir: str) -> strings:
     logdays.sort()
     return logdays
 
-async def get_logdays(logprefix: str, logdir: str) -> strings:
+async def get_logdays(logprefix: str, logdir: str, logdayformat: str = '*') -> strings:
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(
             _get_logdays, **vars()) # type: ignore[unused-ignore]
@@ -61,7 +62,7 @@ def _get_columns_from_csv(
         logdir: str = None) -> dict:
 
     __me__='_get_columns_from_csv'
-    logger.info(f'{__me__}: started "{logday}"')
+    logger.info(f'{__me__}: started')
 
     if logday is None and logprefix is None and logdir is None:
         logger.info(f'{__me__}:Reading CSV data from "stdin"')
@@ -73,9 +74,7 @@ def _get_columns_from_csv(
             logger.warning(f'{__me__}:CSV data file not found "{logfile}"')
             return None
         
-    sep = ','
-    names = 'TIME,SMP,SME,IVP1,IVE1,IVTE1,IVP2,IVE2,IVTE2,SPPH,SBPI,SBPO,SBPB,SBSB,SPP1,SPP2,SPP3,SPP4'.split(',')
-    df = read_csv(logfile, sep=sep, names=names)
+    df = read_csv(logfile, names=sample_names)
 
     """ The timestamps """
     time = np.array(df.TIME.apply(_iso2date))
