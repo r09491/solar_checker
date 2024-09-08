@@ -105,6 +105,7 @@ async def get_home_load_estimate(samples: int) -> int:
         return 0
 
         
+    """
     voted = smp.copy()
     if (spph>0.0).any():
         logger.info(f'Using home smart plug power')
@@ -115,19 +116,23 @@ async def get_home_load_estimate(samples: int) -> int:
     elif (sbpo>0.0).any():
         logger.info(f'Using solarbank power')
         voted += sbpo
-
-    # Weighted average
+    """
+    # Use data from the solarbank to set data in the solarbank
+    voted = smp + sbpo 
+    logger.info(f'using solarbank power')
+    
+    # Weighted average (last samples have more influence)
     estimate = int(sum((2**w)*v for w, v in enumerate(voted)) /
                    sum(2**w for w, v in enumerate(voted)))
     logger.info(f"home load proposal is '{estimate}W'")
     
     if (sbpb > 0).all(): 
-        logger.info(f'Battery is discharged.')
+        logger.info(f'battery is discharged.')
     elif (sbpb < 0).all(): 
-        logger.info(f'Battery is charged.')
+        logger.info(f'battery is charged.')
     else:
-        logger.info(f'Battery is bypassed.')
-        logger.info(f'Solarbank ignores estimate.')
+        logger.info(f'battery is bypassed.')
+        logger.info(f'solarbank ignores estimate.')
         estimate = 100 # Ignored
         
     return min(max(estimate,100), 800)
@@ -139,7 +144,7 @@ async def main(sb: Solarbank, samples: int) -> int:
     if estimate == 0:
         return 10
     
-    logger.info(f'home load goal is "{estimate:.0f}W"')
+    logger.info(f'evaluated home load goal is "{estimate:.0f}W"')
     is_done = await anker_home_load_set(sb, estimate)
     logger.info(f"home load goal is {'ok' if is_done else 'failed'}")
 
