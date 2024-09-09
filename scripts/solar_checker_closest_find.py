@@ -35,38 +35,42 @@ async def find_closest(
         logdir: str,
         start_time: t64,
         stop_time: t64,
-        column: t64) -> int:
+        columns: str) -> Any:
 
-    # Get the columns of the reference day
-    c = await get_columns_from_csv(logday, logprefix, logdir)
-    if c is None:
-        logger.error(f'Log file for "{logday}" not found')
-        return 1
-    
-    time = c['TIME']
-    time_slot = (time >= start_time) & (time < stop_time)
-    if time_slot.size == 0:
-        logger.error(f'Major slot is empty')
-        return 2
-
-    base_mean = c[column][time_slot].mean()
-    logger.info(f'The base line for comparison is "{base_mean:.0f}"')
-
-    
     logdays = await get_logdays(
         logprefix, logdir, logdayformat)
-    columns = await asyncio.gather(
+    logcolumns = await asyncio.gather(
         *[get_columns_from_csv(ld, logprefix, logdir) for ld in logdays])
+
+    """ Get the energy for the samples in the given time slot"""
+    logcols = columns.split(',')
+
+    """ Extract the samples in watt """
+    logsamples = []
+    for c in logcols:
+        logsamples.append(
+            [lc[c][(lc['TIME']>=start_time) & (lc['TIME']<stop_time)]
+             for ld, lc in zip(logdays, logcolumns) if lc[c] is not None]
+        )
     
-    time_dict = dict((d, abs(c[column][(c['TIME']>=start_time) & (c['TIME']<stop_time)].mean() - base_mean)) \
-        for (d, c) in zip(logdays, columns) if c[column] is not None)
-    time_sorted = dict(sorted(time_dict.items(), key = lambda kv : kv[1]))
+    """ Start the log dictionary in kWh """
+    logdict = {'LOGDAY': logdays}
+    for c, s in zip(logcols, logsamples):
+        logdict[c] = np.array([kw.sum()/60*kw.size/60 for kw in s])
 
-    time_df = pd.DataFrame(list(time_sorted.items())[1:], columns=['logday', 'closeness'])
+    """ Build the state vector from the energy """
+    vector = logdict[logcols[0]]
+    for c in logcols[1:]:
+        vector = np.sqrt(vector**2 + logdict[c]**2)
+    logdict['VECTOR'] = vector
 
-    logger.info(f'\n{time_df.head(n=5)}')
+    """ Check against the base vector """
+    logdict['CLOSENESS'] = abs(logdict['VECTOR'] - logdict['VECTOR'][-1])
 
-    return 0
+    logdf = pd.DataFrame(logdict)
+    logdf.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
+    logdf.set_index('LOGDAY', inplace = True)
+    return logdf
 
 
 def hm2time(hm: str) -> t64s:
@@ -81,10 +85,10 @@ class Script_Arguments:
     logdir: str
     start_time: t64
     stop_time: t64
-    column: str
+    columns: str
 
 def parse_arguments() -> Script_Arguments:
-    description='Show some statistics for time slots'
+    description='Find a list of the closest log files for the given basefile'
     parser = argparse.ArgumentParser(description)
 
     parser.add_argument('--version', action = 'version',
@@ -115,7 +119,7 @@ def parse_arguments() -> Script_Arguments:
         help = "The end time of the slot")
 
     parser.add_argument(
-        '--column', type=str,
+        '--columns', type=str,
         help = "The col to select for major slot")
 
     args = parser.parse_args()
@@ -127,16 +131,21 @@ def parse_arguments() -> Script_Arguments:
         args.logdir,
         args.start_time,
         args.stop_time,
-        args.column,
+        args.columns,
     )
 
 
 async def main( args: Script_Arguments) -> int:
     args = parse_arguments()
 
-    err = await find_closest(**vars(args))
+    closest = await find_closest(**vars(args))
+    print(closest.head(n=5))
+
+    start = args.start_time.astype(datetime).strftime("%H:%M")
+    stop = args.stop_time.astype(datetime).strftime("%H:%M")
+    print(f'\nUsed samples from "{start}" to "{stop}"')
     
-    return err
+    return 0
 
 
 if __name__ == '__main__':
@@ -146,9 +155,10 @@ if __name__ == '__main__':
         logger.error(f'time slot is empty')
         sys.exit(1)
 
-    if not args.column in sample_names:
-        logger.error(f'column is a wrong sample name')
-        sys.exit(2)
+    for c in args.columns.split(','):
+        if not c in sample_names:
+            logger.error(f'column is a wrong sample name')
+            sys.exit(2)
                     
     logger.info(f'solar_checker_closest_find begin')
 
