@@ -18,7 +18,6 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 
 from utils.types import t64, t64s, timeslots, Any
-from utils.common import sample_names
 from utils.samples import get_columns_from_csv
 from utils.samples import get_logdays
 
@@ -26,6 +25,19 @@ from utils.samples import get_logdays
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
+
+"""
+Only power samples may be used. For some sanmple it is possible to
+split between positive and negative values.
+"""
+POWER_NAMES = [
+    'SMP', 'SMP+', 'SMP-', 
+    'IVP1',
+    'IVP2',
+    'SPPH',
+    'SBPI', 'SBPO', 'SBPB', 'SBPB+','SBPB-',
+    'SPP1', 'SPP2', 'SPP3', 'SPP4'
+]
 
         
 async def find_closest(
@@ -47,7 +59,7 @@ async def find_closest(
 
     """ Extract the samples in watt """
     logsamples = []
-    for c in logcols:
+    for c in [cc[:-1] if cc[-1] in "+,-" else cc for cc in logcols]:
         logsamples.append(
             [lc[c][(lc['TIME']>=start_time) & (lc['TIME']<stop_time)]
              for ld, lc in zip(logdays, logcolumns) if lc[c] is not None]
@@ -56,16 +68,21 @@ async def find_closest(
     """ Start the log dictionary in kWh """
     logdict = {'LOGDAY': logdays}
     for c, s in zip(logcols, logsamples):
-        logdict[c] = np.array([kw.sum()/60*kw.size/60 for kw in s])
+        if c[-1] == '+':
+            logdict[c] = np.array([int(kw[kw>0].sum()/60) for kw in s])
+        elif c[-1] == '-':
+            logdict[c] = np.array([int(kw[kw<0].sum()/60) for kw in s])
+        else:
+            logdict[c] = np.array([int(kw.sum()/60) for kw in s])
 
     """ Build the state vector from the energy """
-    vector = logdict[logcols[0]]
+    state = logdict[logcols[0]]**2
     for c in logcols[1:]:
-        vector = np.sqrt(vector**2 + logdict[c]**2)
-    logdict['VECTOR'] = vector
+        state += logdict[c]**2
+    logdict['STATE'] = np.array([int(v) for v in np.sqrt(state)])
 
-    """ Check against the base vector """
-    logdict['CLOSENESS'] = abs(logdict['VECTOR'] - logdict['VECTOR'][-1])
+    """ Check against the base state """
+    logdict['CLOSENESS'] = np.array([int(v) for v in abs(logdict['STATE'] - logdict['STATE'][-1])])
 
     logdf = pd.DataFrame(logdict)
     logdf.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
@@ -139,7 +156,7 @@ async def main( args: Script_Arguments) -> int:
     args = parse_arguments()
 
     closest = await find_closest(**vars(args))
-    print(closest.head(n=5))
+    print(closest.head(n=20))
 
     start = args.start_time.astype(datetime).strftime("%H:%M")
     stop = args.stop_time.astype(datetime).strftime("%H:%M")
@@ -156,7 +173,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     for c in args.columns.split(','):
-        if not c in sample_names:
+        if not c in POWER_NAMES:
             logger.error(f'column is a wrong sample name')
             sys.exit(2)
                     
