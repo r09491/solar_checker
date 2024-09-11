@@ -10,7 +10,7 @@ import numpy as np
 import asyncio
 
 from .types import f64, f64s, t64, t64s, strings
-from .common import sample_names
+from .common import SAMPLE_NAMES
 
 import logging
 logging.basicConfig(
@@ -74,7 +74,7 @@ def _get_columns_from_csv(
             logger.warning(f'{__me__}:CSV data file not found "{logfile}"')
             return None
         
-    df = read_csv(logfile, names=sample_names)
+    df = read_csv(logfile, names=SAMPLE_NAMES)
 
     """ The timestamps """
     time = np.array(df.TIME.apply(_iso2date))

@@ -1,4 +1,4 @@
-sample_names = [
+SAMPLE_NAMES = [
     'TIME',
     'SMP', 'SME',
     'IVP1', 'IVE1', 'IVTE1',
