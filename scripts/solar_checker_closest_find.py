@@ -39,7 +39,11 @@ POWER_NAMES = [
     'SPP1', 'SPP2', 'SPP3', 'SPP4'
 ]
 
-        
+
+def hm2time(hm: str) -> t64s:
+    return t64(datetime.strptime(hm, "%H:%M"))
+
+
 async def find_closest(
         logday: str,
         logdayformat: str,
@@ -47,17 +51,40 @@ async def find_closest(
         logdir: str,
         start_time: t64,
         stop_time: t64,
-        columns: str) -> Any:
+        columns: str) -> list:
 
+    """ Get the requested samples """
+    logcols = columns.split(',')
+
+    """ Get the list of logdays """
     logdays = await get_logdays(
         logprefix, logdir, logdayformat)
+    """ Get the list of associated columns """
     logcolumns = await asyncio.gather(
         *[get_columns_from_csv(ld, logprefix, logdir) for ld in logdays])
 
-    """ Get the energy for the samples in the given time slot"""
-    logcols = columns.split(',')
 
+    """ Get the start and stop time of the radiation of the base day """
+
+    ilogday = logdays.index(logday)
+    sbpi = logcolumns[ilogday]['SBPI']
+    issbpion = sbpi>0
+    if issbpion.any(): # radiation
+
+        time = logcolumns[ilogday]['TIME']
+        timeon = time[issbpion]
+
+        start_time = timeon[0] if start_time is None else max(timeon[0], start_time)
+        stop_time = timeon[-1] if stop_time is None else min(timeon[-1], stop_time)
+
+    else: # no radiation
+
+        start_time = hm2time("00:00") if start_time is None else start_time
+        stop_time =  hm2time("23:59") if stop_time is None else stop_time
+
+        
     """ Extract the samples in watt """
+
     logsamples = []
     for c in [cc[:-1] if cc[-1] in "+,-" else cc for cc in logcols]:
         logsamples.append(
@@ -65,7 +92,9 @@ async def find_closest(
              for ld, lc in zip(logdays, logcolumns) if lc[c] is not None]
         )
     
+
     """ Start the log dictionary in kWh """
+
     logdict = {'LOGDAY': logdays}
     for c, s in zip(logcols, logsamples):
         if c[-1] == '+':
@@ -82,16 +111,12 @@ async def find_closest(
     logdict['STATE'] = np.array([int(v) for v in np.sqrt(state)])
 
     """ Check against the base state """
-    logdict['CLOSENESS'] = np.array([int(v) for v in abs(logdict['STATE'] - logdict['STATE'][-1])])
+    logdict['CLOSENESS'] = np.array([int(v) for v in abs(logdict['STATE'] - logdict['STATE'][ilogday])])
 
-    logdf = pd.DataFrame(logdict)
-    logdf.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
-    logdf.set_index('LOGDAY', inplace = True)
-    return logdf
-
-
-def hm2time(hm: str) -> t64s:
-    return t64(datetime.strptime(hm, "%H:%M"))
+    df = pd.DataFrame(logdict)
+    df.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
+    df.set_index('LOGDAY', inplace = True)
+    return start_time, stop_time, df
 
 
 @dataclass
@@ -128,11 +153,11 @@ def parse_arguments() -> Script_Arguments:
         help = "The directory the logfiles are stored")
     
     parser.add_argument(
-        '--start_time', type=hm2time,
+        '--start_time', type=hm2time, default=None,
         help = "The start time of the slot")
 
     parser.add_argument(
-        '--stop_time', type=hm2time,
+        '--stop_time', type=hm2time, default=None,
         help = "The end time of the slot")
 
     parser.add_argument(
@@ -155,11 +180,17 @@ def parse_arguments() -> Script_Arguments:
 async def main( args: Script_Arguments) -> int:
     args = parse_arguments()
 
-    closest = await find_closest(**vars(args))
+    start_time, stop_time, closest = await find_closest(**vars(args))
+    if (start_time is None or
+        stop_time is None or
+        closest is None):
+        print(f'No radiation detected!')
+        return 1
+    
     print(closest.head(n=20))
 
-    start = args.start_time.astype(datetime).strftime("%H:%M")
-    stop = args.stop_time.astype(datetime).strftime("%H:%M")
+    start = pd.to_datetime(str(start_time)).strftime("%H:%M")
+    stop = pd.to_datetime(str(stop_time)).strftime("%H:%M")
     print(f'\nUsed samples from "{start}" to "{stop}"')
     
     return 0
@@ -168,7 +199,9 @@ async def main( args: Script_Arguments) -> int:
 if __name__ == '__main__':
     args = parse_arguments()
 
-    if args.stop_time <= args.start_time:
+    if (args.stop_time is not None and
+        args.start_time is not None and
+        args.stop_time <= args.start_time):
         logger.error(f'time slot is empty')
         sys.exit(1)
 
