@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 
 from dataclasses import dataclass
 
-from utils.types import t64, t64s, timeslots, Any
+from utils.types import t64, t64s, timeslots, Any, Optional, List
 from utils.samples import get_columns_from_csv
 from utils.samples import get_logdays
 
@@ -44,51 +44,77 @@ def hm2time(hm: str) -> t64s:
     return t64(datetime.strptime(hm, "%H:%M"))
 
 
-async def find_closest(
-        logday: str,
+
+async def get_loglists(
         logdayformat: str,
         logprefix: str,
-        logdir: str,
-        start_time: t64,
-        stop_time: t64,
-        columns: str) -> list:
-
-    """ Get the requested samples """
-    logcols = columns.split(',')
-
+        logdir: str) -> list:
+    
     """ Get the list of logdays """
     logdays = await get_logdays(
         logprefix, logdir, logdayformat)
     """ Get the list of associated columns """
     logcolumns = await asyncio.gather(
         *[get_columns_from_csv(ld, logprefix, logdir) for ld in logdays])
+    
+    return logdays, logcolumns
 
 
-    """ Get the start and stop time of the radiation of the base day """
+def get_ontimes(
+        logday: str,
+        logdays: list,
+        logcolumns: list) -> Optional[List[t64]]:
 
     ilogday = logdays.index(logday)
     sbpi = logcolumns[ilogday]['SBPI']
     issbpion = sbpi>0
-    if issbpion.any(): # radiation
+    if ~issbpion.any(): # no radiation
+        return None, None
 
-        time = logcolumns[ilogday]['TIME']
-        timeon = time[issbpion]
+    time = logcolumns[ilogday]['TIME']
+    timeon = time[issbpion]
 
-        start_time = timeon[0] if start_time is None else max(timeon[0], start_time)
-        stop_time = timeon[-1] if stop_time is None else min(timeon[-1], stop_time)
+    return timeon[0], timeon[-1]
+    
+    
+async def find_closest(
+        logday: str,
+        logdayformat: str,
+        logprefix: str,
+        logdir: str,
+        starttime: t64,
+        stoptime: t64,
+        columns: str) -> list:
 
-    else: # no radiation
+    """ Get the requested columns """
+    logcols = columns.split(',')
 
-        start_time = hm2time("00:00") if start_time is None else start_time
-        stop_time =  hm2time("23:59") if stop_time is None else stop_time
+    """ Associate the logdays with the logcolumns """
+    logdays, logcolumns = await get_loglists(
+        logdayformat, logprefix, logdir)
+    
+    """ Get the start and stop time of the radiation of the base day """
 
-        
+    start_ontime, stop_ontime = get_ontimes(
+        logday, logdays, logcolumns)
+
+    
+    """ Override under certain conditions """
+    
+    starttime = hm2time("00:00") if starttime is None else \
+        start_ime if start_ontime is None else \
+        max(starttime, start_ontime)
+    stoptime = hm2time("23:59") if stoptime is None else \
+        stoptime if stop_ontime is None else \
+        min(stoptime, stopontime)
+
+    
     """ Extract the samples in watt """
 
-    logsamples = []
+    logwatts = []
     for c in [cc[:-1] if cc[-1] in "+,-" else cc for cc in logcols]:
-        logsamples.append(
-            [lc[c][(lc['TIME']>=start_time) & (lc['TIME']<stop_time)]
+        logwatts.append(
+            [lc[c][(lc['TIME']>=starttime) & (lc['TIME']<stoptime)]
              for ld, lc in zip(logdays, logcolumns) if lc[c] is not None]
         )
     
@@ -96,13 +122,13 @@ async def find_closest(
     """ Start the log dictionary in kWh """
 
     logdict = {'LOGDAY': logdays}
-    for c, s in zip(logcols, logsamples):
+    for c, ws in zip(logcols, logwatts):
         if c[-1] == '+':
-            logdict[c] = np.array([int(kw[kw>0].sum()/60) for kw in s])
+            logdict[c] = np.array([int(w[w>0].sum()/60) for w in ws])
         elif c[-1] == '-':
-            logdict[c] = np.array([int(kw[kw<0].sum()/60) for kw in s])
+            logdict[c] = np.array([int(w[w<0].sum()/60) for w in ws])
         else:
-            logdict[c] = np.array([int(kw.sum()/60) for kw in s])
+            logdict[c] = np.array([int(w.sum()/60) for w in ws])
 
     """ Build the state vector from the energy """
     state = logdict[logcols[0]]**2
@@ -111,12 +137,13 @@ async def find_closest(
     logdict['STATE'] = np.array([int(v) for v in np.sqrt(state)])
 
     """ Check against the base state """
-    logdict['CLOSENESS'] = np.array([int(v) for v in abs(logdict['STATE'] - logdict['STATE'][ilogday])])
+    logdict['CLOSENESS'] = np.array([int(v) for v in abs(
+        logdict['STATE'] - logdict['STATE'][logdays.index(logday)])])
 
     df = pd.DataFrame(logdict)
     df.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
     df.set_index('LOGDAY', inplace = True)
-    return start_time, stop_time, df
+    return starttime, stoptime, df
 
 
 @dataclass
@@ -125,8 +152,8 @@ class Script_Arguments:
     logdayformat: str
     logprefix: str
     logdir: str
-    start_time: t64
-    stop_time: t64
+    starttime: t64
+    stoptime: t64
     columns: str
 
 def parse_arguments() -> Script_Arguments:
@@ -153,11 +180,11 @@ def parse_arguments() -> Script_Arguments:
         help = "The directory the logfiles are stored")
     
     parser.add_argument(
-        '--start_time', type=hm2time, default=None,
+        '--starttime', type=hm2time, default=None,
         help = "The start time of the slot")
 
     parser.add_argument(
-        '--stop_time', type=hm2time, default=None,
+        '--stoptime', type=hm2time, default=None,
         help = "The end time of the slot")
 
     parser.add_argument(
@@ -171,8 +198,8 @@ def parse_arguments() -> Script_Arguments:
         args.logdayformat,
         args.logprefix,
         args.logdir,
-        args.start_time,
-        args.stop_time,
+        args.starttime,
+        args.stoptime,
         args.columns,
     )
 
@@ -180,17 +207,17 @@ def parse_arguments() -> Script_Arguments:
 async def main( args: Script_Arguments) -> int:
     args = parse_arguments()
 
-    start_time, stop_time, closest = await find_closest(**vars(args))
-    if (start_time is None or
-        stop_time is None or
+    starttime, stoptime, closest = await find_closest(**vars(args))
+    if (starttime is None or
+        stoptime is None or
         closest is None):
         print(f'No radiation detected!')
         return 1
     
     print(closest.head(n=20))
 
-    start = pd.to_datetime(str(start_time)).strftime("%H:%M")
-    stop = pd.to_datetime(str(stop_time)).strftime("%H:%M")
+    start = pd.to_datetime(str(starttime)).strftime("%H:%M")
+    stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
     print(f'\nUsed samples from "{start}" to "{stop}"')
     
     return 0
@@ -199,9 +226,9 @@ async def main( args: Script_Arguments) -> int:
 if __name__ == '__main__':
     args = parse_arguments()
 
-    if (args.stop_time is not None and
-        args.start_time is not None and
-        args.stop_time <= args.start_time):
+    if (args.stoptime is not None and
+        args.starttime is not None and
+        args.stoptime <= args.starttime):
         logger.error(f'time slot is empty')
         sys.exit(1)
 

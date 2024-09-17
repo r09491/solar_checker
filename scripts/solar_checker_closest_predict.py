@@ -86,16 +86,117 @@ async def get_logs_as_dataframe(
 
 """ Get the start and stop of the evaluation slot """
 def get_on_times(logdata: list) -> Optional[List[t64]]:
-    ison = logdata[-1]>0
+    ison = logdata[-1]>0 # The data of the log day are at the very end
     if ~ison.any(): # no radiation
         return None, None
     time = logdata['TIME'] # Ensure time is always present!
     timeon = time[ison]
     return timeon[0], timeon[-1]
 
+""" 
+Find the list of closest log days for the requested log day for the
+specified time slot.
 
-""" Get the prediction dictionary. The first day in the closest days
-list is the day to be predicted. The followers are used for prediction """
+For each logday the norm of the sample vector in the sample space is
+built. The closest log day is the one where the difference of to
+specified logday is a minimum.
+"""    
+async def find_closest(
+        logsdf: Any,
+        logday: str,
+        starttime: t64,
+        stoptime: t64,
+        columns: str) -> list:
+
+    """ Get the requested columns """
+    incols = ('TIME,' + columns).split(',')
+
+    " Extrect the vector with log days"
+    logdays = list(logsdf.index.values.tolist())
+
+    
+    """ Get the start and stop of the radiation """
+
+    startontime, stopontime = get_on_times(
+        logsdf.loc[logday, incols[:2]] # TIME and first column
+    )
+
+    """ Override under certain conditions """
+    starttime = startontime if starttime is None else \
+        hm2time("00:00") if startontime is None else \
+        max(starttime, startontime)
+    stoptime = stopontime if stoptime is None else \
+        hm2time("00:00") if stopontime is None else \
+        min(stoptime, stopontime)
+
+    
+    
+    """ Extract the slot samples in watt """
+
+    # All basic input cols without extension
+    basecols = set([c for c in [cc[:-1]
+                if cc[-1] in "+-" else
+                    cc for cc in incols]])
+
+    # All basic samples for all log days in the full time range
+    basedfs = [pd.DataFrame(
+        dict(logsdf.loc[ld, basecols])
+    ) for ld in logdays]
+
+    
+    # All basic samples for all log days for the requested time slot
+    slotdfs = []
+    for bdf in basedfs:
+        bdf.set_index('TIME', inplace=True)
+        slotdfs.append(bdf.loc[starttime:stoptime,:])
+        bdf.reset_index(inplace=True)
+
+    # All samples including extensions for all log days and requested slot
+    eslotdfs = []
+    for sdf in slotdfs:
+        inseries = [sdf[c[:-1] if c[-1] in '+-' else c] for c in incols[1:]]
+        eslotdfs.append(pd.DataFrame(dict(zip(incols[1:], inseries))))
+
+    plus = [c for c in incols[1:] if c[-1] in '+']
+    minus = [c for c in incols[1:] if c[-1] in '-']
+    for edf in eslotdfs:
+        for p in plus:
+            pcol = edf.loc[:, p]
+            pcol[pcol<0] = 0
+            edf.loc[:, p] = pcol
+        for m in minus:
+            mcol = edf.loc[:, m]
+            mcol[mcol>0] = 0
+            edf.loc[:, m] = mcol
+
+    
+    """ Create the energy (kWh) dataframe for all logdays """
+
+    wattsdf = pd.concat(
+        [pd.DataFrame({'LOGDAY':logdays}),
+         pd.DataFrame([edf.sum()/60/1000 for edf in eslotdfs])], axis=1
+    )
+    
+    """ Calculate the norm vector from the watts """
+    norm = wattsdf[incols[1]]**2 # after TIME
+    for c in incols[2:]:
+        norm += wattsdf[c]**2
+    wattsdf['NORM'] = np.sqrt(norm)
+    
+    """ Calculate the closeness vector from norm """
+    norm = wattsdf['NORM']
+    bnorm = norm[logdays.index(logday)]
+    wattsdf['CLOSENESS'] = abs(norm - bnorm)
+    
+    """ Add the logdays which can be used as index """
+    wattsdf.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
+    return starttime, stoptime, wattsdf
+
+
+""" 
+Get the prediction dictionary. The first day in the closest days
+list is the day to be predicted. The followers are used for prediction 
+"""
 async def assemble_predict(
         logsdf: Any,
         starttime: t64,
@@ -136,83 +237,6 @@ async def assemble_predict(
     #TODO Add morning hours similar to evening hours
     
     
-    
-    
-async def find_closest(
-        logsdf: Any,
-        logday: str,
-        starttime: t64,
-        stoptime: t64,
-        columns: str) -> list:
-
-    """ Get the requested columns """
-    logcols = ('TIME,' + columns).split(',')
-
-    " Extrect the vector with log days"
-    logdays = list(logsdf.index.values.tolist())
-
-    """ Get the start and stop time of the radiation from time vector
-    and first column """
-    startontime, stopontime = get_on_times(
-        logsdf.loc[logday, logcols[:2]] # TIME and first column
-    )
-
-    """ Override under certain conditions """
-    starttime = startontime if starttime is None else \
-        hm2time("00:00") if startontime is None else \
-        max(starttime, startontime)
-    stoptime = stopontime if stoptime is None else \
-        hm2time("00:00") if stopontime is None else \
-        min(stoptime, stopontime)
-
-    
-    """ Extract the slot samples in watt """
-
-    slotcols = set(c for c in [cc[:-1]
-                if cc[-1] in "+,-" else
-                    cc for cc in logcols])
-
-    coldfs = [pd.DataFrame(
-        dict(logsdf.loc[ld, slotcols]))
-        for ld in logdays]
-
-    slotdfs = []
-    for cdf in coldfs:
-        cdf.set_index('TIME', inplace=True)
-        slotdfs.append(cdf.loc[starttime:stoptime,:])
-
-        
-    """ Add the +/-extensions to the the log dataframe """
-
-    srccols = (c[:-1] for c in logcols if c[-1] in "+,-" )
-    dstcols = (c for c in logcols if c[-1] in "+,-" )
-
-    for sdf in slotdfs:
-        for d,s in zip(dstcols ,srccols):
-            sdf[d] = sdf[s].copy()
-            if d[-1] == '-':
-                sdf[d][sdf[s]>0] = 0
-            else:
-                sdf[d][sdf[s]<0] = 0
-        sdf.reset_index(inplace=True)
-
-    wattsdf = pd.DataFrame([sdf.sum()/60 for sdf in slotdfs])
-    
-    """ Build the state vector from the watts """
-    state = wattsdf[logcols[1]]**2 # after TIME
-    for c in logcols[2:]:
-        state += wattsdf[c]**2
-    wattsdf['STATE'] = np.sqrt(state)
-    
-    """ Calculate the closeness vector from state """
-    state = wattsdf['STATE']
-    bstate = state[logdays.index(logday)]
-    wattsdf['CLOSENESS'] = state - bstate
-    
-    """ Add the logdays which can be used as index """
-    wattsdf['LOGDAY'] = logdays
-    wattsdf.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
-    return starttime, stoptime, wattsdf
 
 
 @dataclass
@@ -288,7 +312,7 @@ async def main( args: Script_Arguments) -> int:
     if (starttime is None or
         stoptime is None or
         closestdays is None):
-        print(f'No radiation detected!')
+        print(f'No radiation for the log day detected!')
         return 1
     
     print(closestdays.head(n=20))
@@ -316,11 +340,11 @@ if __name__ == '__main__':
 
     for c in args.columns.split(','):
         if not c in INPUT_NAMES:
-            logger.error(f'column is a wrong sample name')
+            print(f'"{c}" is a wrong sample name')
             sys.exit(2)
 
     if args.columns.split(',')[0][-1] in ['+', '-']:
-            logger.error(f'First column must not have extension')
+            print(f'first column must not have extension')
             sys.exit(3)
             
     logger.info(f'solar_checker_closest_find begin')

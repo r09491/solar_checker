@@ -15,7 +15,7 @@ if sys.version_info >= (3, 9):
     strings = list[str]
     timeslots = list[str] 
 else:
-    from typing import Any, List
+    from typing import Any, List, Optional, Dict
 
     f64 = np.float64
     f64s = np.array
