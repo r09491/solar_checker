@@ -2,7 +2,7 @@
 
 SOLAR_CHECKER_PREFIX="solar_checker_latest"
 SOLAR_CHECKER_LOGFORMAT="24[0,0][8,9]*"
-SOLAR_CHECKER_LOGDAY=$(date -d "6 day ago" +\%y\%m\%d)
+SOLAR_CHECKER_LOGDAY=$(date -d "7 day ago" +\%y\%m\%d)
 ##SOLAR_CHECKER_STARTTIME=$(date -d "3 hour ago" +\%H:\%M) 
 ##SOLAR_CHECKER_STOPTIME=$(date +\%H:\%M) 
 solar_checker_closest_predict.py \

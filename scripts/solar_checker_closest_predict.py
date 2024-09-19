@@ -172,27 +172,36 @@ async def find_closest(
             mcol[mcol>0] = 0
             edf.loc[:, m] = mcol
 
-    
     """ Create the energy (kWh) dataframe for all logdays """
 
     wattsdf = pd.concat(
         [pd.DataFrame({'LOGDAY':logdays}),
          pd.DataFrame([edf.sum()/60/1000 for edf in eslotdfs])], axis=1
     )
-    
+
+    """ Use logday as index """
+    wattsdf.set_index('LOGDAY', inplace = True)
+
+    """ Remove apriori impossible list entries  list entries """
+    watts = [wattsdf[d] for d in wattsdf.loc[:,incols[2:]]]
+    wattsdrops = [list(w[~((w<0)|(w>0))
+                         if (w[logdays.index(logday)]<0 or
+                             w[logdays.index(logday)]>0)
+                         else ((w<0)|(w>0))]
+                       .index.values)
+                  for w in watts]
+    flatdrops = [alldrops for drops in wattsdrops for alldrops in drops]
+    wattsdf.drop(flatdrops, inplace = True)
+
+        
     """ Calculate the norm vector from the watts """
-    norm = wattsdf[incols[1]]**2 # after TIME
+    closeness = (wattsdf[incols[1]] - wattsdf.loc[logday, incols[1]])**2 # after TIME
     for c in incols[2:]:
-        norm += wattsdf[c]**2
-    wattsdf['NORM'] = np.sqrt(norm)
-    
-    """ Calculate the closeness vector from norm """
-    norm = wattsdf['NORM']
-    bnorm = norm[logdays.index(logday)]
-    wattsdf['CLOSENESS'] = abs(norm - bnorm)
-    
-    """ Add the logdays which can be used as index """
+        closeness += (wattsdf[c] - wattsdf.loc[logday, c])**2
+    wattsdf['CLOSENESS'] = np.sqrt(closeness)
+
     wattsdf.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )
+
     return starttime, stoptime, wattsdf
 
 
