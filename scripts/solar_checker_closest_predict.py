@@ -118,7 +118,10 @@ async def find_closest(
     """ Get the start and stop of the radiation """
 
     startontime, stopontime = get_on_times(
-        logsdf.loc[logday, incols[:2]] # TIME and first column
+        logsdf.loc[logday, [incols[0],
+                            incols[1][:-1]
+                            if incols[1][-1] == '+' else
+                            incols[1]]] # TIME and first column
     )
 
     """ Override under certain conditions """
@@ -247,6 +250,7 @@ class Script_Arguments:
     logdir: str
     starttime: t64
     stoptime: t64
+    predict: bool
     columns: str
 
 def parse_arguments() -> Script_Arguments:
@@ -281,6 +285,10 @@ def parse_arguments() -> Script_Arguments:
         help = "The end time of the slot")
 
     parser.add_argument(
+        '--predict', type=bool, default=False,
+        help = "Disable/Enable prediction")
+
+    parser.add_argument(
         '--columns', type=str,
         help = "The list names of the to be used. The first determines the time slot for the evaluation an prediction"
     )
@@ -294,6 +302,7 @@ def parse_arguments() -> Script_Arguments:
         args.logdir,
         args.starttime,
         args.stoptime,
+        args.predict,
         args.columns,
     )
 
@@ -321,11 +330,11 @@ async def main( args: Script_Arguments) -> int:
     stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
     print(f'\nUsed samples from "{start}" to "{stop}"')
 
-    """
-    predict = await assemble_predict(
-        logsdf, starttime, stoptime, closestdays.head(n=4)
-    )
-    """
+    if args.predict:
+        predict = await assemble_predict(
+            logsdf, starttime, stoptime, closestdays.head(n=4)
+        )
+    
     return 0
 
 
@@ -343,7 +352,7 @@ if __name__ == '__main__':
             print(f'"{c}" is a wrong sample name')
             sys.exit(2)
 
-    if args.columns.split(',')[0][-1] in ['+', '-']:
+    if args.columns.split(',')[0][-1] in ['-']:
             print(f'first column must not have extension')
             sys.exit(3)
             
