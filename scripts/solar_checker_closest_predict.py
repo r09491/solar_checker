@@ -238,10 +238,10 @@ async def assemble_predict(
     """ The data already recorded """
     todayseries = logsdf.loc[today]
     todaydf = pd.DataFrame(index = todayseries[0], data = dict(todayseries[1:]))
-    todaykw = todaydf.loc[starttime:stoptime,:]/1000
-    todaykwh = todaykw.sum()/60
+    todaywatts = todaydf.loc[starttime:stoptime,:]
+    todaykwh = todaywatts.sum()/1000/60
 
-    print(f'\nRecorded kWh between "{start}" and "{stop}"')
+    print(f'\nRecorded kWh between today "{start}" and today "{stop}"')
     print(todaykwh)
 
     
@@ -249,21 +249,21 @@ async def assemble_predict(
     
     predictseries = [logsdf.loc[pd] for pd in predictdays]
     predictdfs = [pd.DataFrame(index = ps[0], data = dict(ps[1:])) for ps in predictseries]
-    predictkws = [pdf.loc[stoptime:,:]/1000 for pdf in predictdfs]
+    predictwatts = [pdf.loc[stoptime:,:] for pdf in predictdfs]
 
     # Merge the individual kw's into one vector
-    predictkw = predictkws[0] 
-    for kw in predictkws[1:]:
-        predictkw += kw
-    predictkw /= len(predictkws) 
+    predictwatt = predictwatts[0] 
+    for watt in predictwatts[1:]:
+        predictwatt += watt
+    predictwatt /= len(predictwatts) 
 
     # the predicted kwh until 24:00 """
-    predictkwh = predictkw.sum()/60
+    predictkwh = predictwatt.sum()/1000/60
 
-    print(f'\nPropable kWh between "{stop}" and "24:00"')
+    print(f'\nPropable kWh between today "{stop}" and today "24:00"')
     print( predictkwh)
 
-    print(f'\nPropable kWh  @ "24:00"')
+    print(f'\nPropable kWh  @ today "24:00"')
     print( todaykwh + predictkwh)
 
 
@@ -271,23 +271,26 @@ async def assemble_predict(
     
     tomorrowseries = [logsdf.loc[td] for td in tomorrowdays]
     tomorrowdfs = [pd.DataFrame(index = ts[0], data = dict(ts[1:])) for ts in tomorrowseries]
-    tomorrowkws = [tdf.loc[:starttime,:]/1000 for tdf in tomorrowdfs]
+    tomorrowwatts = [tdf.loc[:starttime,:] for tdf in tomorrowdfs]
 
     # Merge the individual kw's into one vector
-    tomorrowkw = tomorrowkws[0] 
-    for kw in tomorrowkws[1:]:
-        tomorrowkw += kw
-    tomorrowkw /= len(tomorrowkws) 
+    tomorrowwatt= tomorrowwatts[0] 
+    for watt in tomorrowwatts[1:]:
+        tomorrowwatt+= watt
+    tomorrowwatt/= len(tomorrowwatts) 
 
     # the tomorrowed kwh until start """
-    tomorrowkwh = tomorrowkw.sum()/60
+    tomorrowkwh = tomorrowwatt.sum()/1000/60
 
-    print(f'\nPropable kWh between "24:00" and "{start}"')
+    print(f'\nPropable kWh between today "24:00" and tomorrow "{start}"')
     print( tomorrowkwh)
 
-    print(f'\nPropable total kWh in 24h @ "{start}"')
+    print(f'\nPropable total kWh from today "{stop}" until tomorrow "{start}"')
     print( predictkwh + tomorrowkwh)
 
+    print(f'\nPropable 24h total kWh from today "{stop}" until tomorrow "{stop}"')
+    print( todaykwh + predictkwh + tomorrowkwh)
+    
 
     ### In order to plot concat kw and cast to dict ###
     
