@@ -11,6 +11,7 @@ solar_checker_closest_predict.py \
     --logprefix $SOLAR_CHECKER_PREFIX \
     --logdir $SOLAR_CHECKER_STORE_DIR \
     --stoptime $SOLAR_CHECKER_STOPTIME \
+    --predict True \
     --column $1 2>/dev/null
 
 

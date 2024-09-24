@@ -215,39 +215,83 @@ async def assemble_predict(
         stoptime: t64,
         closestdays: list) -> Dict:
 
+    # The days of interest
+    the_days = list(closestdays.index.values)
+
+    # The day for prediction
+    today = the_days[0]
+
+    # The closest days used for prediction
+    predictdays = the_days[1:]
+
+    # The days after the closest days
+    tomorrowdays = [(datetime.strptime(pd, "%y%m%d") +
+                  timedelta(days=1)).
+                 strftime("%y%m%d") for  pd in predictdays]
+
+    # As strings
+    start = pd.to_datetime(str(starttime)).strftime("%H:%M")
+    stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
+
+    
+    
     """ The data already recorded """
-    bday = closestdays.iloc[0]['LOGDAY']
-    bdata = logsdf.loc[bday]
-    bdict = dict(bdata)
-    bdf = pd.DataFrame(bdict)
-    bdf.set_index('TIME', inplace=True)
-    bdf = bdf.loc[starttime:stoptime,:]
+    todayseries = logsdf.loc[today]
+    todaydf = pd.DataFrame(index = todayseries[0], data = dict(todayseries[1:]))
+    todaykw = todaydf.loc[starttime:stoptime,:]/1000
+    todaykwh = todaykw.sum()/60
 
-    """ The predicted day """
+    print(f'\nRecorded kWh between "{start}" and "{stop}"')
+    print(todaykwh)
 
-    pdays = closestdays.iloc[1:]['LOGDAY']
-    pdata = [logsdf.loc[d] for d in pdays]
-    pdict = [dict(d) for d in pdata]
-    pdfs = [pd.DataFrame(d) for d in pdict]
-
-    for pdf in pdfs:
-        pdf.set_index('TIME', inplace=True)
-        pdf = pdf.loc[stoptime:,:]
-
-    """ Reduce """
-            
-    rdf = pdfs[0]
-    for pdf in pdfs[1:]:
-        rdf += pdf
-    rdf /= len(pdfs)
-
-    """ Assemble recorded and predicted """
-    bdf.append(pdf)
-    print(bdf.head(n=5))
-    print(bdf.tail(n=5))
     
-    #TODO Add morning hours similar to evening hours
+    """ The predicted data for the day until 24:00 """
     
+    predictseries = [logsdf.loc[pd] for pd in predictdays]
+    predictdfs = [pd.DataFrame(index = ps[0], data = dict(ps[1:])) for ps in predictseries]
+    predictkws = [pdf.loc[stoptime:,:]/1000 for pdf in predictdfs]
+
+    # Merge the individual kw's into one vector
+    predictkw = predictkws[0] 
+    for kw in predictkws[1:]:
+        predictkw += kw
+    predictkw /= len(predictkws) 
+
+    # the predicted kwh until 24:00 """
+    predictkwh = predictkw.sum()/60
+
+    print(f'\nPropable kWh between "{stop}" and "24:00"')
+    print( predictkwh)
+
+    print(f'\nPropable kWh  @ "24:00"')
+    print( todaykwh + predictkwh)
+
+
+    """ The tomorrow data for the day from midnight """
+    
+    tomorrowseries = [logsdf.loc[td] for td in tomorrowdays]
+    tomorrowdfs = [pd.DataFrame(index = ts[0], data = dict(ts[1:])) for ts in tomorrowseries]
+    tomorrowkws = [tdf.loc[:starttime,:]/1000 for tdf in tomorrowdfs]
+
+    # Merge the individual kw's into one vector
+    tomorrowkw = tomorrowkws[0] 
+    for kw in tomorrowkws[1:]:
+        tomorrowkw += kw
+    tomorrowkw /= len(tomorrowkws) 
+
+    # the tomorrowed kwh until start """
+    tomorrowkwh = tomorrowkw.sum()/60
+
+    print(f'\nPropable kWh between "24:00" and "{start}"')
+    print( tomorrowkwh)
+
+    print(f'\nPropable total kWh in 24h @ "{start}"')
+    print( predictkwh + tomorrowkwh)
+
+
+    ### In order to plot concat kw and cast to dict ###
+    
+    return 0
     
 
 
