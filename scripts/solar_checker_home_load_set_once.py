@@ -133,9 +133,9 @@ async def get_home_load_estimate(samples: int) -> int:
     else:
         logger.info(f'battery is bypassed.')
         logger.info(f'solarbank ignores estimate.')
-        estimate = 100 # Ignored
+        #estimate = 100 # Ignored
         
-    return min(max(estimate,100), 800)
+    return min(max(estimate,100), 400) # My solix only uses on one channel
 
 
 async def main(sb: Solarbank, samples: int) -> int:
