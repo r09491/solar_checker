@@ -238,12 +238,22 @@ async def assemble_predict(
     """ The data already recorded """
     todayseries = logsdf.loc[today]
     todaydf = pd.DataFrame(index = todayseries[0], data = dict(todayseries[1:]))
-    todaywatts = todaydf.loc[starttime:stoptime,:]
-    todaykwh = todaywatts.sum()/1000/60
+
+    pastwatts = todaydf.loc[hm2time("00:00"):starttime,:]
+    pastkwh = pastwatts.sum()/1000/60
+
+    print(f'\nRecorded kWh between today "00:00" and today "{start}"')
+    print(pastkwh)
+    
+    nowwatts = todaydf.loc[starttime:stoptime,:]
+    nowkwh = nowwatts.sum()/1000/60
 
     print(f'\nRecorded kWh between today "{start}" and today "{stop}"')
-    print(todaykwh)
+    print(nowkwh)
 
+    print(f'\nRecorded kWh between today "00:00" and today "{stop}"')
+    print(pastkwh + nowkwh)
+    
     
     """ The predicted data for the day until 24:00 """
     
@@ -263,9 +273,12 @@ async def assemble_predict(
     print(f'\nPropable kWh between today "{stop}" and today "24:00"')
     print( predictkwh)
 
-    print(f'\nPropable kWh  @ today "24:00"')
-    print( todaykwh + predictkwh)
+    print(f'\nPropable kWh between today "{start}" and today "24:00"')
+    print( nowkwh + predictkwh)
 
+    print(f'\nPropable kWh between today "00:00" and today "24:00"')
+    print( pastkwh + nowkwh + predictkwh)
+    
 
     """ The tomorrow data for the day from midnight """
     
@@ -285,11 +298,11 @@ async def assemble_predict(
     print(f'\nPropable kWh between today "24:00" and tomorrow "{start}"')
     print( tomorrowkwh)
 
-    print(f'\nPropable total kWh from today "{stop}" until tomorrow "{start}"')
+    print(f'\nPropable kWh from today "{stop}" until tomorrow "{start}"')
     print( predictkwh + tomorrowkwh)
 
-    print(f'\nPropable 24h total kWh from today "{stop}" until tomorrow "{stop}"')
-    print( todaykwh + predictkwh + tomorrowkwh)
+    print(f'\nPropable 24h kWh from today "{start}" until tomorrow "{start}"')
+    print( nowkwh + predictkwh + tomorrowkwh)
     
 
     ### In order to plot concat kw and cast to dict ###
