@@ -90,6 +90,18 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of smartmeter records "{spph.size}"')
         return 0
 
+    logger.info(f'{sbpb} sbpb')
+    logger.info(f'{sbpo} sbpo')
+    logger.info(f'{ivp} ivp')
+    
+    if not sbpo.any() and not ivp.any() and not sbpb.any():
+        logger.info(f'bank in STANDBY, defaulting!')
+        return 100
+
+    if not sbpo.all() or not ivp.all():
+        logger.info(f'bank in TRANSITION, defaulting!')
+        return 100
+    
     """
     Data in local mode are faster acquired than those from the
     cloud. Here the cloud solar bank data are at least one minute
@@ -98,25 +110,11 @@ async def get_home_load_estimate(samples: int) -> int:
     solarbank are larger than those of the inverter. Home load value
     shall only be set in stable situation.
     """
-    logger.info(f'{sbpo} sbpo')
-    logger.info(f'{ivp} ivp')
-    if (ivp[-2:] > (sbpo[-2:] + 10)).any(): # Some tolerance for roundings ...
-        logger.error(f'Bank less then inverter')
+    if (ivp > (sbpo + 10)).any(): # Some tolerance for roundings ...
+        logger.error(f'bank in ERROR, skipping!')
         return 0
 
         
-    """
-    voted = smp.copy()
-    if (spph>0.0).any():
-        logger.info(f'Using home smart plug power')
-        voted += spph
-    elif (ivp>0.0).any():
-        logger.info(f'Using inverter power')
-        voted += ivp
-    elif (sbpo>0.0).any():
-        logger.info(f'Using solarbank power')
-        voted += sbpo
-    """
     # Use data from the solarbank to set data in the solarbank
     voted = smp + sbpo 
     logger.info(f'using solarbank power')
@@ -127,13 +125,11 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f"home load proposal is '{estimate}W'")
     
     if (sbpb > 0).all(): 
-        logger.info(f'battery is discharged.')
+        logger.info(f'bank in DISCHARGE.')
     elif (sbpb < 0).all(): 
-        logger.info(f'battery is charged.')
+        logger.info(f'bank in CHARGE.')
     else:
-        logger.info(f'battery is bypassed.')
-        logger.info(f'solarbank ignores estimate.')
-        #estimate = 100 # Ignored
+        logger.info(f'bank in BYPASS.')
         
     return min(max(estimate,100), 400) # My solix only uses on one channel
 

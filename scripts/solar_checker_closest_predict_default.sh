@@ -12,5 +12,5 @@ solar_checker_closest_predict.py \
     --logdir $SOLAR_CHECKER_STORE_DIR \
     --stoptime $SOLAR_CHECKER_STOPTIME \
     --predict True \
-    --column SBPI,SBPO,SBPB,SMP,SPP1,SPP2,SPP3,SPP3,SPP4 2>/dev/null
+    --column SBPI,SBPB,SMP,SPP1,SPP2,SPP3,SPP3,SPP4 2>/dev/null
 
