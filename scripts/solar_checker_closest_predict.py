@@ -10,9 +10,13 @@ import sys
 import argparse
 import asyncio
 
-import pandas as pd
-import numpy as np
+from functools import reduce
+#from tabulate import tabulate
 
+import numpy as np
+import pandas as pd
+pd.options.display.float_format = '{:,.0f}'.format
+        
 from datetime import datetime, timedelta
 
 from dataclasses import dataclass
@@ -211,11 +215,11 @@ async def find_closest(
 Get the prediction dictionary. The first day in the closest days
 list is the day to be predicted. The followers are used for prediction 
 """
-async def assemble_predict(
+async def predict_closest(
         logsdf: Any,
         starttime: t64,
         stoptime: t64,
-        closestdays: list) -> Dict:
+        closestdays: list) -> Any:
 
     # The days of interest
     the_days = list(closestdays.index.values)
@@ -231,86 +235,104 @@ async def assemble_predict(
                   timedelta(days=1)).
                  strftime("%y%m%d") for  pd in predictdays]
 
-    # As strings
-    start = pd.to_datetime(str(starttime)).strftime("%H:%M")
-    stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
-
-    
     
     """ The data already recorded """
     todayseries = logsdf.loc[today]
     todaydf = pd.DataFrame(index = todayseries[0], data = dict(todayseries[1:]))
 
-    pastwatts = todaydf.loc[hm2time("00:00"):starttime,:]
-    pastkwh = pastwatts[:-1].sum()/60
+    """ The frame with the watts of the past """
+    pastwatts = todaydf.loc[hm2time("00:00"):starttime,:][:-1]
 
-    print(f'\nRecorded Wh between today "00:00" and today "{start}"')
-    print(pastkwh)
-    
-    nowwatts = todaydf.loc[starttime:stoptime,:]
-    nowkwh = nowwatts[:-1].sum()/60
+    """ The frame with the watts in the search slot  """
+    nowwatts = todaydf.loc[starttime:stoptime,:][:-1]
 
-    print(f'\nRecorded Wh between today "{start}" and today "{stop}"')
-    print(nowkwh)
-
-    print(f'\nRecorded Wh between today "00:00" and today "{stop}"')
-    print(pastkwh + nowkwh)
     
-    
-    """ The predicted data for the day until 24:00 """
-    
+    """ The predicted data for the day until 24:00 """    
     predictseries = [logsdf.loc[pd] for pd in predictdays]
-    predictdfs = [pd.DataFrame(index = ps[0], data = dict(ps[1:])) for ps in predictseries]
-    predictwatts = [pdf.loc[stoptime:,:] for pdf in predictdfs]
+    predictdfs = [
+        pd.DataFrame(
+            index = ps[0], data = dict(ps[1:])
+        ) for ps in predictseries
+    ]
+    predictwatts = reduce(
+        lambda x,y: x+y,
+        [pdf.loc[stoptime:,:] for pdf in predictdfs]
+    ) / len(predictdays)
 
-    # Merge the individual kw's into one vector
-    predictwatt = predictwatts[0] 
-    for watt in predictwatts[1:]:
-        predictwatt += watt
-    predictwatt /= len(predictwatts) 
-
-    # the predicted kwh until 24:00 """
-    predictkwh = predictwatt[:-1].sum()/60
-
-    print(f'\nPropable Wh between today "{stop}" and today "24:00"')
-    print( predictkwh)
-
-    print(f'\nPropable Wh between today "{start}" and today "24:00"')
-    print( nowkwh + predictkwh)
-
-    print(f'\nPropable Wh between today "00:00" and today "24:00"')
-    print( pastkwh + nowkwh + predictkwh)
     
-
-    """ The tomorrow data for the day from midnight """
-    
+    """ The tomorrow data for the day from midnight """    
     tomorrowseries = [logsdf.loc[td] for td in tomorrowdays]
-    tomorrowdfs = [pd.DataFrame(index = ts[0], data = dict(ts[1:])) for ts in tomorrowseries]
-    tomorrowwatts = [tdf.loc[:starttime,:] for tdf in tomorrowdfs]
+    tomorrowdfs = [
+        pd.DataFrame(
+            index = ts[0], data = dict(ts[1:])
+        ) for ts in tomorrowseries
+    ]
+    tomorrowwatts = reduce(
+        lambda x,y: x+y,
+        [tdf.loc[:starttime,:][:-1] for tdf in tomorrowdfs]
+    ) / len(tomorrowdays)
 
-    # Merge the individual kw's into one vector
-    tomorrowwatt= tomorrowwatts[0] 
-    for watt in tomorrowwatts[1:]:
-        tomorrowwatt+= watt
-    tomorrowwatt/= len(tomorrowwatts) 
-
-    # the tomorrowed kwh until start """
-    tomorrowkwh = tomorrowwatt[:-1].sum()/60
-
-    print(f'\nPropable Wh between today "24:00" and tomorrow "{start}"')
-    print( tomorrowkwh)
-
-    print(f'\nPropable Wh from today "{stop}" until tomorrow "{start}"')
-    print( predictkwh + tomorrowkwh)
-
-    print(f'\nPropable 24h Wh from today "{start}" until tomorrow "{start}"')
-    print( nowkwh + predictkwh + tomorrowkwh)
+    return pastwatts, nowwatts, predictwatts, tomorrowwatts
     
 
-    ### In order to plot concat kw and cast to dict ###
+""" 
+Print the prediction data frames. 
+"""
+def print_predict(
+        pastwatts: pd.DataFrame,
+        nowwatts: pd.DataFrame,
+        predictwatts: pd.DataFrame,
+        tomorrowwatts: pd.DataFrame) -> None:
+
+    pastkwh = pastwatts.sum()/60
+    pastslot = pastwatts.index.values
+    paststart = pd.to_datetime(str(pastslot[0])).strftime("%H:%M")
+    paststop = pd.to_datetime(str(pastslot[-1])).strftime("%H:%M")
+    #print(f'\nRecorded Wh between today "{paststart}" and today "{paststop}"')
+    #print(pastkwh)
+
+    nowkwh = nowwatts.sum()/60
+    nowslot = nowwatts.index.values
+    nowstart = pd.to_datetime(str(nowslot[0])).strftime("%H:%M")
+    nowstop = pd.to_datetime(str(nowslot[-1])).strftime("%H:%M")
+    #print(f'\nRecorded Wh between today "{nowstart}" and today "{nowstop}"')
+    #print(nowkwh)
+
+    predictkwh = predictwatts.sum()/60
+    predictslot = predictwatts.index.values
+    predictstart = pd.to_datetime(str(predictslot[0])).strftime("%H:%M")
+    predictstop = pd.to_datetime(str(predictslot[-1])).strftime("%H:%M")
+    #print(f'\nPropable Wh between today "{predictstart}" and today "{predictstop}"')
+    #print(predictkwh)
     
-    return 0
+    tomorrowkwh = tomorrowwatts.sum()/60
+    tomorrowslot = tomorrowwatts.index.values
+    tomorrowstart = pd.to_datetime(str(tomorrowslot[0])).strftime("%H:%M")
+    tomorrowstop = pd.to_datetime(str(tomorrowslot[-1])).strftime("%H:%M")
+    ##print(f'\nProbable Wh between today "{tomorrowstart}" and tomorrow "{tomorrowstop}"')
+    ##print(tomorrowkwh)
+
+    print(f'\nPropable 24h Wh between today "{paststart}" and today "{predictstop}"')
+    print( pastkwh + nowkwh + predictkwh)
+
+    #print(f'\nPropable 24h Wh between today "{predictstart}" and tomorrow "{nowstop}"')
+    #print( predictkwh + tomorrowkwh + nowkwh )
+
     
+""" 
+Assembly the prediction data frames. 
+"""
+def assemble_predict_24_past(
+        pastwatts: pd.DataFrame,
+        nowwatts: pd.DataFrame,
+        predictwatts: pd.DataFrame) -> pd.DataFrame:
+    return pd.concat([pastwatts,nowwatts,predictwatts])
+
+def assemble_predict_24_tomorrow(
+        nowwatts: pd.DataFrame,
+        predictwatts: pd.DataFrame,
+        tomorrowwatts: pd.DataFrame) -> pd.DataFrame:
+    return pd.concat([predictwatts, tomorrowwatts, nowwatts])
 
 
 @dataclass
@@ -399,12 +421,31 @@ async def main( args: Script_Arguments) -> int:
     stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
     print(f'Using watt samples from "{start}" to "{stop}"')
 
-    print(closestdays.head(n=20))
+    print(closestdays.head(n=10))
 
     if args.predict:
-        predict = await assemble_predict(
+        predict = await predict_closest(
             logsdf, starttime, stoptime, closestdays.head(n=4)
         )
+
+
+        pd.options.display.float_format = '{:,.1f}'.format
+        
+        print_predict(*predict)
+
+        past_24 = assemble_predict_24_past(*predict[:-1])
+        print("\nPast Predict")
+        print(past_24.tail())
+        print()
+        print(past_24.sum()/60)
+        #print(tabulate(past_24, headers = 'keys', tablefmt = 'grid'))
+
+        tomorrow_24 = assemble_predict_24_tomorrow(*predict[1:])
+        print("\nTomorrow Predict")
+        print(tomorrow_24.tail())
+        print()
+        print(tomorrow_24.sum()/60)
+        #print(tabulate(tomorrow_24, headers = 'keys', tablefmt = 'grid'))
     
     return 0
 
