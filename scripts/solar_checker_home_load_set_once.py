@@ -53,13 +53,14 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'wrong number of smart meter records "{smp.size}"')
         return 0
     smp_mean = int(smp.mean())
-    
-    """ The normalised solarbank power output """
-    sbpo = c['SBPO']
-    if sbpo.size != samples:
-        logger.error(f'wrong number of solarbank records "{sbpo.size}"')
-        return 0
 
+    """ The normalised solarbank power input """
+    sbpi = c['SBPI']
+    if sbpi.size != samples:
+        logger.error(f'wrong number of solarbank records "{sbpi.size}"')
+        return 0
+    sbpi_mean = int(sbpi.mean())
+    
     """ The normalised solarbank power output """
     sbpb = c['SBPB']
     if sbpb.size != samples:
@@ -67,13 +68,12 @@ async def get_home_load_estimate(samples: int) -> int:
         return 0
     sbpb_mean = int(sbpb.mean())
 
-    """ The normalised solarbank battery status """
-    sbsb = c['SBSB']
-    if sbsb.size != samples:
-        logger.error(f'wrong number of solarbank records "{sbsb.size}"')
+    """ The normalised solarbank power output """
+    sbpo = c['SBPO']
+    if sbpo.size != samples:
+        logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return 0
-    sbsb_mean = 100 * int(sbsb.mean())
-    
+
     """ The normalised inverter power samples channel 1 """
     ivp1 = c['IVP1']
     """ The normalised inverter power samples channel 2 """
@@ -83,22 +83,17 @@ async def get_home_load_estimate(samples: int) -> int:
     if ivp.size != samples:
         logger.error(f'wrong number of smartmeter records "{ivp.size}"')
         return 0
-    
-    """ The normalised smartplug power """
-    spph = c['SPPH']
-    if spph.size != samples:
-        logger.error(f'wrong number of smartmeter records "{spph.size}"')
-        return 0
 
+    logger.info(f'{sbpi} sbpi')
     logger.info(f'{sbpb} sbpb')
     logger.info(f'{sbpo} sbpo')
     logger.info(f'{ivp} ivp')
     
-    if not sbpo.any() and not ivp.any() and not sbpb.any():
-        logger.info(f'bank in STANDBY, defaulting!')
-        return 100
+    if not sbpo.any() and not sbpb.any():
+        logger.info(f'bank in STANDBY, skipping!')
+        return 0
 
-    if not sbpo.all() or not ivp.all():
+    if not sbpo.all():
         logger.info(f'bank in TRANSITION, defaulting!')
         return 100
     
@@ -110,7 +105,7 @@ async def get_home_load_estimate(samples: int) -> int:
     solarbank are larger than those of the inverter. Home load value
     shall only be set in stable situation.
     """
-    if (ivp > (sbpo + 10)).any(): # Some tolerance for roundings ...
+    if (ivp[-2:] > (sbpo + 10)[-2:]).any(): # Some tolerance for roundings ...
         logger.error(f'bank in ERROR, skipping!')
         return 0
 
@@ -129,9 +124,9 @@ async def get_home_load_estimate(samples: int) -> int:
     elif (sbpb < 0).all(): 
         logger.info(f'bank in CHARGE.')
     else:
-        logger.info(f'bank in BYPASS.')
-        
-    return min(max(estimate,100), 400) # My solix only uses on one channel
+        logger.info(f'bank in BYPASS')
+            
+    return min(max(estimate,100), 480) # My solix only uses one channel
 
 
 async def main(sb: Solarbank, samples: int) -> int:
@@ -140,7 +135,7 @@ async def main(sb: Solarbank, samples: int) -> int:
     if estimate == 0:
         return 10
     
-    logger.info(f'evaluated home load goal is "{estimate:.0f}W"')
+    logger.info(f'home load goal is "{estimate:.0f}W"')
     is_done = await anker_home_load_set(sb, estimate)
     logger.info(f"home load goal is {'ok' if is_done else 'failed'}")
 
