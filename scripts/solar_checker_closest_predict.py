@@ -124,15 +124,15 @@ async def find_closest(
                             incols[1]]] # TIME and first column
     )
 
+    if startontime is None or  stopontime is None:
+        return None, None, None
+    
     """ Override under certain conditions """
     starttime = startontime if starttime is None else \
-        hm2time("00:00") if startontime is None else \
         max(starttime, startontime)
     stoptime = stopontime if stoptime is None else \
-        hm2time("00:00") if stopontime is None else \
         min(stoptime, stopontime)
 
-    
     
     """ Extract the slot samples in watt """
 
@@ -146,12 +146,14 @@ async def find_closest(
         dict(logsdf.loc[ld, basecols])
     ) for ld in logdays]
 
-    
+
     # All basic samples for all log days for the requested time slot
     slotdfs = []
     for bdf in basedfs:
         bdf.set_index('TIME', inplace=True)
-        slotdfs.append(bdf.loc[starttime:stoptime,:])
+        slotdfs.append(
+            bdf.loc[starttime:stoptime,:]
+        )
         bdf.reset_index(inplace=True)
 
     # All samples including extensions for all log days and requested slot
@@ -172,11 +174,11 @@ async def find_closest(
             mcol[mcol>0] = 0
             edf.loc[:, m] = mcol
 
-    """ Create the energy (kWh) dataframe for all logdays """
+    """ Create the energy (Wh) dataframe for all logdays """
 
     wattsdf = pd.concat(
         [pd.DataFrame({'LOGDAY':logdays}),
-         pd.DataFrame([edf.sum()/60/1000 for edf in eslotdfs])], axis=1
+         pd.DataFrame([edf.sum()/60 for edf in eslotdfs])], axis=1
     )
 
     """ Use logday as index """
@@ -240,18 +242,18 @@ async def assemble_predict(
     todaydf = pd.DataFrame(index = todayseries[0], data = dict(todayseries[1:]))
 
     pastwatts = todaydf.loc[hm2time("00:00"):starttime,:]
-    pastkwh = pastwatts[:-1].sum()/1000/60
+    pastkwh = pastwatts[:-1].sum()/60
 
-    print(f'\nRecorded kWh between today "00:00" and today "{start}"')
+    print(f'\nRecorded Wh between today "00:00" and today "{start}"')
     print(pastkwh)
     
     nowwatts = todaydf.loc[starttime:stoptime,:]
-    nowkwh = nowwatts[:-1].sum()/1000/60
+    nowkwh = nowwatts[:-1].sum()/60
 
-    print(f'\nRecorded kWh between today "{start}" and today "{stop}"')
+    print(f'\nRecorded Wh between today "{start}" and today "{stop}"')
     print(nowkwh)
 
-    print(f'\nRecorded kWh between today "00:00" and today "{stop}"')
+    print(f'\nRecorded Wh between today "00:00" and today "{stop}"')
     print(pastkwh + nowkwh)
     
     
@@ -268,15 +270,15 @@ async def assemble_predict(
     predictwatt /= len(predictwatts) 
 
     # the predicted kwh until 24:00 """
-    predictkwh = predictwatt[:-1].sum()/1000/60
+    predictkwh = predictwatt[:-1].sum()/60
 
-    print(f'\nPropable kWh between today "{stop}" and today "24:00"')
+    print(f'\nPropable Wh between today "{stop}" and today "24:00"')
     print( predictkwh)
 
-    print(f'\nPropable kWh between today "{start}" and today "24:00"')
+    print(f'\nPropable Wh between today "{start}" and today "24:00"')
     print( nowkwh + predictkwh)
 
-    print(f'\nPropable kWh between today "00:00" and today "24:00"')
+    print(f'\nPropable Wh between today "00:00" and today "24:00"')
     print( pastkwh + nowkwh + predictkwh)
     
 
@@ -293,15 +295,15 @@ async def assemble_predict(
     tomorrowwatt/= len(tomorrowwatts) 
 
     # the tomorrowed kwh until start """
-    tomorrowkwh = tomorrowwatt[:-1].sum()/1000/60
+    tomorrowkwh = tomorrowwatt[:-1].sum()/60
 
-    print(f'\nPropable kWh between today "24:00" and tomorrow "{start}"')
+    print(f'\nPropable Wh between today "24:00" and tomorrow "{start}"')
     print( tomorrowkwh)
 
-    print(f'\nPropable kWh from today "{stop}" until tomorrow "{start}"')
+    print(f'\nPropable Wh from today "{stop}" until tomorrow "{start}"')
     print( predictkwh + tomorrowkwh)
 
-    print(f'\nPropable 24h kWh from today "{start}" until tomorrow "{start}"')
+    print(f'\nPropable 24h Wh from today "{start}" until tomorrow "{start}"')
     print( nowkwh + predictkwh + tomorrowkwh)
     
 
@@ -395,7 +397,7 @@ async def main( args: Script_Arguments) -> int:
     
     start = pd.to_datetime(str(starttime)).strftime("%H:%M")
     stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
-    print(f'Using samples from "{start}" to "{stop}"')
+    print(f'Using watt samples from "{start}" to "{stop}"')
 
     print(closestdays.head(n=20))
 
