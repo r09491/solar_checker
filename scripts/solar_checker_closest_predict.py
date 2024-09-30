@@ -240,13 +240,13 @@ async def assemble_predict(
     todaydf = pd.DataFrame(index = todayseries[0], data = dict(todayseries[1:]))
 
     pastwatts = todaydf.loc[hm2time("00:00"):starttime,:]
-    pastkwh = pastwatts.sum()/1000/60
+    pastkwh = pastwatts[:-1].sum()/1000/60
 
     print(f'\nRecorded kWh between today "00:00" and today "{start}"')
     print(pastkwh)
     
     nowwatts = todaydf.loc[starttime:stoptime,:]
-    nowkwh = nowwatts.sum()/1000/60
+    nowkwh = nowwatts[:-1].sum()/1000/60
 
     print(f'\nRecorded kWh between today "{start}" and today "{stop}"')
     print(nowkwh)
@@ -268,7 +268,7 @@ async def assemble_predict(
     predictwatt /= len(predictwatts) 
 
     # the predicted kwh until 24:00 """
-    predictkwh = predictwatt.sum()/1000/60
+    predictkwh = predictwatt[:-1].sum()/1000/60
 
     print(f'\nPropable kWh between today "{stop}" and today "24:00"')
     print( predictkwh)
@@ -293,7 +293,7 @@ async def assemble_predict(
     tomorrowwatt/= len(tomorrowwatts) 
 
     # the tomorrowed kwh until start """
-    tomorrowkwh = tomorrowwatt.sum()/1000/60
+    tomorrowkwh = tomorrowwatt[:-1].sum()/1000/60
 
     print(f'\nPropable kWh between today "24:00" and tomorrow "{start}"')
     print( tomorrowkwh)
@@ -393,11 +393,11 @@ async def main( args: Script_Arguments) -> int:
         print(f'No radiation for the log day detected!')
         return 1
     
-    print(closestdays.head(n=20))
-
     start = pd.to_datetime(str(starttime)).strftime("%H:%M")
     stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
-    print(f'\nUsed samples from "{start}" to "{stop}"')
+    print(f'Using samples from "{start}" to "{stop}"')
+
+    print(closestdays.head(n=20))
 
     if args.predict:
         predict = await assemble_predict(
