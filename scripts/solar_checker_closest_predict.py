@@ -194,7 +194,7 @@ async def find_closest(
     """ Use logday as index """
     wattsdf.set_index('LOGDAY', inplace = True)
 
-    """ Remove apriori impossible list entries  list entries """
+    """ Remove apriori impossible list entries """
     watts = [wattsdf[d] for d in wattsdf.loc[:,incols[2:]]]
     wattsdrops = [list(w[~((w<0)|(w>0))
                          if (w[logdays.index(logday)]<0 or
@@ -447,9 +447,14 @@ async def main( args: Script_Arguments) -> int:
 
         past_24 = assemble_predict_24_past(*predict[:-1])
         print("\nToday Predict")
+        sbpi = past_24['SBPI'].sum()/60/1000
+        sbpb = past_24['SBPB'].sum()/60/1000
+        ivp = (past_24['IVP1']+past_24['IVP2']).sum()/60/1000
+        smp = (past_24['SMP'][past_24['SMP']>0]).sum()/60/1000
+        print(f'SBPI {sbpi:.1f}kWh  SBPB {sbpb:.1f}kWh  IVP {ivp:.1f}kWh  SMP+ {smp:.1f}kWh = {ivp+smp:.1f}kWh')
         ##print(past_24.tail())
         ##print()
-        print(past_24.sum()/60)
+        #print(past_24.sum()/60)
         #print(tabulate(past_24, headers = 'keys', tablefmt = 'grid'))
 
         #tomorrow_24 = assemble_predict_24_tomorrow(*predict[1:])
