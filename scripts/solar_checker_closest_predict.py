@@ -61,16 +61,20 @@ def hm2time(hm: str) -> t64s:
 """ Get the list of logdays and the list of dictionaries with all the
 recordings """
 async def get_logs_as_lists(
+        logmaxdays: int,
         logdayformat: str,
         logprefix: str,
         logdir: str) -> list:
-    
+
     """ Get the list of logdays """
-    logdays = await get_logdays(
-        logprefix, logdir, logdayformat)
+    logdays = (await get_logdays(
+        logprefix, logdir, logdayformat
+    ))[-logmaxdays:]
+    
     """ Get the list of associated columns """
     logcolumns = await asyncio.gather(
-        *[get_columns_from_csv(ld, logprefix, logdir) for ld in logdays])
+        *[get_columns_from_csv(ld, logprefix, logdir) for ld in logdays]
+    )
     
     return logdays, logcolumns
 
@@ -79,12 +83,14 @@ async def get_logs_as_lists(
 dictionaries with all the recordings """
 async def get_logs_as_dataframe(
         logcols: list,
+        logmaxdays: int,
         logdayformat: str,
         logprefix: str,
         logdir: str) -> list:
     
     logdays, logcolumns = await get_logs_as_lists(
-        logdayformat, logprefix, logdir)
+        logmaxdays, logdayformat, logprefix, logdir
+    )
 
     return pd.DataFrame(index = logdays, data=logcolumns)[logcols]
 
@@ -106,7 +112,7 @@ built. The closest log day is the one where the difference of to
 specified logday is a minimum.
 """    
 async def find_closest(
-        logsdf: Any,
+        logsdf: pd.DataFrame,
         logday: str,
         starttime: t64,
         stoptime: t64,
@@ -338,6 +344,7 @@ def assemble_predict_24_tomorrow(
 @dataclass
 class Script_Arguments:
     logday: str
+    logmaxdays: int
     logdayformat: str
     logprefix: str
     logdir: str
@@ -356,6 +363,10 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument(
         '--logday', type=str,
         help = "Day to which to find the closest")
+
+    parser.add_argument(
+        '--logmaxdays', type=int, default=50,
+        help = "Days to which to find the closest")
 
     parser.add_argument(
         '--logdayformat', type=str,
@@ -390,6 +401,7 @@ def parse_arguments() -> Script_Arguments:
     
     return Script_Arguments(
         args.logday,
+        args.logmaxdays,
         args.logdayformat,
         args.logprefix,
         args.logdir,
@@ -405,7 +417,7 @@ async def main( args: Script_Arguments) -> int:
 
     """ Get the dictionary with all the power recordings per logdays """
     logsdf = await get_logs_as_dataframe(
-        POWER_NAMES, args.logdayformat, args.logprefix, args.logdir
+        POWER_NAMES, args.logmaxdays, args.logdayformat, args.logprefix, args.logdir
     )
 
     starttime, stoptime, closestdays = await find_closest(
@@ -431,20 +443,20 @@ async def main( args: Script_Arguments) -> int:
 
         pd.options.display.float_format = '{:,.1f}'.format
         
-        print_predict(*predict)
+        ##print_predict(*predict)
 
         past_24 = assemble_predict_24_past(*predict[:-1])
-        print("\nPast Predict")
-        print(past_24.tail())
-        print()
+        print("\nToday Predict")
+        ##print(past_24.tail())
+        ##print()
         print(past_24.sum()/60)
         #print(tabulate(past_24, headers = 'keys', tablefmt = 'grid'))
 
-        tomorrow_24 = assemble_predict_24_tomorrow(*predict[1:])
-        print("\nTomorrow Predict")
-        print(tomorrow_24.tail())
-        print()
-        print(tomorrow_24.sum()/60)
+        #tomorrow_24 = assemble_predict_24_tomorrow(*predict[1:])
+        #print("\nTomorrow Predict")
+        #print(tomorrow_24.tail())
+        #print()
+        ##print(tomorrow_24.sum()/60)
         #print(tabulate(tomorrow_24, headers = 'keys', tablefmt = 'grid'))
     
     return 0
