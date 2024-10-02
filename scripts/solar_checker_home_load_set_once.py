@@ -106,8 +106,8 @@ async def get_home_load_estimate(samples: int) -> int:
     shall only be set in stable situation.
     """
     if (ivp[-2:] > (sbpo + 10)[-2:]).any(): # Some tolerance for roundings ...
-        logger.error(f'bank in ERROR, skipping!')
-        return 0
+        logger.error(f'bank in ERROR, defaulting!')
+        return 100
 
         
     # Use data from the solarbank to set data in the solarbank
