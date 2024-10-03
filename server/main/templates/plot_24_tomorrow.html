@@ -4,15 +4,11 @@
 
 {% block content %} 
 <div id='menu' style='display:flex;justify-content:center;'>
-  <a href='/plot_24_today/{{ logday }}'>Predict 24h Today</a>&nbsp
-  <a href='/plot_24_tomorrow/{{ logday }}'>Predict 24h Tomorrow</a>
+  <a href='/plot_24_today/{{ logday }}'>Predict 24h Today</a>
 </div>
 
-<h1 style='margin:4px;'>Log Day {{ logday }}</h1>
+<h1 style='margin:4px;'>24h Tomorrow {{ logday }}</h1>
 
-<div style='display:flex;justify-content:center;' >
-  <img src='data:image/png;base64,{{blocks}}'/>
-</div>
 <div style='display:flex;justify-content:center;' >
   <img src='data:image/png;base64,{{w}}'/>
 </div>

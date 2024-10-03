@@ -82,11 +82,11 @@ async def get_logs_as_lists(
 """ Get the dataframe with the list of logdays and the list of
 dictionaries with all the recordings """
 async def get_logs_as_dataframe(
-        logcols: list,
+        logcols: List,
         logmaxdays: int,
         logdayformat: str,
         logprefix: str,
-        logdir: str) -> list:
+        logdir: str) -> pd.DataFrame:
     
     logdays, logcolumns = await get_logs_as_lists(
         logmaxdays, logdayformat, logprefix, logdir
@@ -95,11 +95,11 @@ async def get_logs_as_dataframe(
     return pd.DataFrame(index = logdays, data=logcolumns)[logcols]
 
 """ Get the start and stop of the evaluation slot """
-def get_on_times(logdata: list) -> Optional[List[t64]]:
-    ison = logdata[-1]>0 # The data of the log day are at the very end
+def get_on_times(log: list) -> Optional[List[t64]]:
+    ison = log[-1]>0 # The data of the log day are at the very end
     if ~ison.any(): # no radiation
         return None, None
-    time = logdata['TIME'] # Ensure time is always present!
+    time = log['TIME'] # Ensure time is always present!
     timeon = time[ison]
     return timeon[0], timeon[-1]
 
@@ -118,7 +118,7 @@ async def find_closest(
         stoptime: t64,
         columns: str) -> list:
 
-    """ Get the requested columns """
+    """ Get the requested input columns """
     incols = ('TIME,' + columns).split(',')
 
     " Extrect the vector with log days"
@@ -222,10 +222,10 @@ Get the prediction dictionary. The first day in the closest days
 list is the day to be predicted. The followers are used for prediction 
 """
 async def predict_closest(
-        logsdf: Any,
+        logsdf: pd.DataFrame,
         starttime: t64,
         stoptime: t64,
-        closestdays: list) -> Any:
+        closestdays: List) -> Any:
 
     # The days of interest
     the_days = list(closestdays.index.values)
