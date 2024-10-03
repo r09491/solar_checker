@@ -2,21 +2,29 @@
 
 {% extends 'base.html' %}
 
-{% block content %} 
-<div id='menu' style='display:flex;justify-content:center;'>
+{% block content %}
+
+{% if blocks is not none %}
+<div style='display:flex;justify-content:center;'>
   <a href='/plot_24_today/{{ logday }}'>Predict 24h Today</a>&nbsp
-  <a href='/plot_24_tomorrow/{{ logday }}'>Predict 24h Tomorrow</a>
+  {% if 1< 0 %}
+    <a href='/plot_24_tomorrow/{{ logday }}'>Predict 24h Tomorrow</a>
+  {% endif %}
 </div>
+{% endif %}
 
 <h1 style='margin:4px;'>Log Day {{ logday }}</h1>
 
-<div style='display:flex;justify-content:center;' >
-  <img src='data:image/png;base64,{{blocks}}'/>
-</div>
+{% if blocks is not none %}
+  <div style='display:flex;justify-content:center;' >
+    <img src='data:image/png;base64,{{blocks}}'/>
+  </div>
+{% endif %}
 <div style='display:flex;justify-content:center;' >
   <img src='data:image/png;base64,{{w}}'/>
 </div>
 <div style='display:flex;justify-content:center;' >
   <img src='data:image/png;base64,{{kwh}}'/>
 </div>
+
 {% endblock content %}

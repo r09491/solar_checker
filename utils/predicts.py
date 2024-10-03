@@ -71,7 +71,7 @@ async def get_logs_as_dataframe(
     logdays, logcolumns = await get_logs_as_lists(
         logmaxdays, logdayformat, logprefix, logdir
     )
-
+    
     return pd.DataFrame(index = logdays, data=logcolumns)[logcols]
 
 
@@ -188,7 +188,8 @@ async def find_closest(
 
         
     """ Calculate the norm vector from the watts """
-    closeness = (wattsdf[incols[1]] - wattsdf.loc[logday, incols[1]])**2 # after TIME
+    closeness = (wattsdf[incols[1]] -
+                 wattsdf.loc[logday, incols[1]])**2 # after TIME
     for c in incols[2:]:
         closeness += (wattsdf[c] - wattsdf.loc[logday, c])**2
     wattsdf['CLOSENESS'] = np.sqrt(closeness)

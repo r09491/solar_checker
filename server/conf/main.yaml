@@ -4,6 +4,10 @@ port : 9442
 logdir : /home/r09491/storage/solar_checker
 logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
+logpredictformat : '24*'
+logpredictmaxdays : 50
+logpredictdays : 4
+logpredictcolumns: 'SBPI,SBPB,SMP+'
 
 power_slots : ['00:00', '07:00', '20:00', '23:59']
 

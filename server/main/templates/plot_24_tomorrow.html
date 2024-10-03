@@ -3,11 +3,19 @@
 {% extends 'base.html' %}
 
 {% block content %} 
-<div id='menu' style='display:flex;justify-content:center;'>
+<div style='display:flex;justify-content:center;'>
   <a href='/plot_24_today/{{ logday }}'>Predict 24h Today</a>
 </div>
 
 <h1 style='margin:4px;'>24h Tomorrow {{ logday }}</h1>
+
+<div style='display:flex;justify-content:center;margin:4px;''>
+  Using&nbsp;closest&nbsp;days
+  {% for pd in predictdays %}
+  <a href='/plot_day/{{pd}}'>&nbsp;{{pd}}</a>
+  {% endfor %}
+  &nbsp;from&nbsp;{{start}}&nbsp;TO&nbsp;{{stop}}</br>
+</div>
 
 <div style='display:flex;justify-content:center;' >
   <img src='data:image/png;base64,{{w}}'/>

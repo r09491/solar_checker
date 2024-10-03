@@ -22,24 +22,21 @@ from dataclasses import dataclass
 
 from utils.types import (
     t64, Any, Optional, List, Dict
-    )
-
+)
 from utils.common import (
     PREDICT_NAMES,
     POWER_NAMES
-    )
-
+)
 from utils.common import (
     hm2time
-    )
-
+)
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     predict_closest,
     concat_predict_24_today,
     concat_predict_24_tomorrow
-    )
+)
 
 import logging
 logging.basicConfig(level=logging.INFO)
