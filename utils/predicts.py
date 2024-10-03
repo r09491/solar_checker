@@ -105,8 +105,9 @@ async def find_closest(
     " Extrect the vector with log days"
     logdays = list(logsdf.index.values.tolist())
 
-    
-    """ Get the start and stop of the radiation """
+    """ Get the start and stop of the radiation. The times are
+    determined from the first input power column with TIME as the
+    index. """
 
     startontime, stopontime = get_on_times(
         logsdf.loc[logday, [incols[0],
@@ -223,17 +224,25 @@ async def predict_closest(
                   timedelta(days=1)).
                  strftime("%y%m%d") for  pd in predictdays]
 
-    
+    # Time of the first and last sample
+    logstarttime = logsdf.loc[today, 'TIME'][0]
+    logstoptime = logsdf.loc[today, 'TIME'][-1]
+
     """ The data already recorded """
     todayseries = logsdf.loc[today]
     todaydf = pd.DataFrame(index = todayseries[0], data = dict(todayseries[1:]))
 
-    """ The frame with the watts of the past """
-    pastwatts = todaydf.loc[hm2time("00:00"):starttime,:][:-1]
+    """ The frame with the watts before teh watts use for searching  """
+    prewatts = todaydf.loc[logstarttime:starttime,:][:-1]
 
     """ The frame with the watts in the search slot  """
-    nowwatts = todaydf.loc[starttime:stoptime,:][:-1]
+    findwatts = todaydf.loc[starttime:stoptime,:]
 
+    """ The frame with the watts after the search slot  """
+    postwatts = todaydf.loc[stoptime:logstoptime,:][1:]
+    
+    ##logger.info(f'prewatts {prewatts.iloc[-1,:]}')
+    ##logger.info(f'findwatts {findwatts.iloc[0,:]}')
     
     """ The predicted data for the day until 24:00 """    
     predictseries = [logsdf.loc[pd] for pd in predictdays]
@@ -242,12 +251,19 @@ async def predict_closest(
             index = ps[0], data = dict(ps[1:])
         ) for ps in predictseries
     ]
-    predictwatts = reduce(
+    predictwatts = (reduce(
         lambda x,y: x+y,
-        [pdf.loc[stoptime:,:] for pdf in predictdfs]
-    ) / len(predictdays)
+        [pdf.loc[logstoptime:,:] for pdf in predictdfs]
+    ) / len(predictdays))[1:]
 
     
+    ##logger.info(f'findwatts {findwatts.iloc[-1,:]}')
+    ##logger.info(f'predictwatts {predictwatts.iloc[0,:]}')
+    offset = postwatts.iloc[-1,:] - predictwatts.iloc[0,:]
+    logger.info(f'offset {offset}')
+    predictwatts += offset
+    ##logger.info(f'adapted {adaptedwatts}')
+
     """ The tomorrow data for the day from midnight """    
     tomorrowseries = [logsdf.loc[td] for td in tomorrowdays]
     tomorrowdfs = [
@@ -255,24 +271,34 @@ async def predict_closest(
             index = ts[0], data = dict(ts[1:])
         ) for ts in tomorrowseries
     ]
-    tomorrowwatts = reduce(
+    tomorrowwatts = (reduce(
         lambda x,y: x+y,
-        [tdf.loc[:starttime,:][:-1] for tdf in tomorrowdfs]
-    ) / len(tomorrowdays)
+        [tdf.loc[:logstarttime,:] for tdf in tomorrowdfs]
+    ) / len(tomorrowdays))[:-1]
 
-    return pastwatts, nowwatts, predictwatts, tomorrowwatts
+    return prewatts, findwatts, postwatts, predictwatts, tomorrowwatts
 
 
 """ Assemble the prediction data frames for today  """
 def concat_predict_24_today(
-        pastwatts: pd.DataFrame,
-        nowwatts: pd.DataFrame,
+        prewatts: pd.DataFrame,
+        findwatts: pd.DataFrame,
+        postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([pastwatts,nowwatts,predictwatts])
+    return pd.concat([prewatts,
+                      findwatts,
+                      postwatts,
+                      predictwatts])
 
 """ Assemble the prediction data frames for tomorrow  """
 def concat_predict_24_tomorrow(
-        nowwatts: pd.DataFrame,
+        prewatts: pd.DataFrame,
+        findwatts: pd.DataFrame,
+        postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame,
         tomorrowwatts: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([predictwatts, tomorrowwatts, nowwatts])
+    return pd.concat([predictwatts,
+                      tomorrowwatts,
+                      prewatts,
+                      findwatts,
+                      postwatts])

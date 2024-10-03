@@ -327,7 +327,7 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
     )
 
     """ Assemble the prediction elements """
-    c = concat_predict_24_tomorrow(*predict[1:])
+    c = concat_predict_24_tomorrow(*predict[:-1])
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
