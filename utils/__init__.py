@@ -1,1 +1,1 @@
-from . import types, common, samples, plots
+from . import types, common, samples, plots, predicts

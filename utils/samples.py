@@ -1,3 +1,8 @@
+__doc__="""
+"""
+__version__ = "0.0.0"
+__author__ = "r09491@gmail.com"
+
 import sys
 import os.path
 import glob
@@ -11,6 +16,7 @@ import asyncio
 
 from .types import f64, f64s, t64, t64s, strings
 from .common import SAMPLE_NAMES
+from .common import hm2time
 
 import logging
 logging.basicConfig(
