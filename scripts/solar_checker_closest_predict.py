@@ -44,49 +44,40 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
 
+def t2hm(t: t64) -> str:
+    return pd.to_datetime(str(t)).strftime("%H:%M")
+
 """ 
 Print the prediction data frames. 
 """
 def print_predict(
-        pastwatts: pd.DataFrame,
-        nowwatts: pd.DataFrame,
-        predictwatts: pd.DataFrame,
-        tomorrowwatts: pd.DataFrame) -> None:
+        prewatts: pd.DataFrame,
+        findwatts: pd.DataFrame,
+        postwatts: pd.DataFrame,
+        predictwatts: pd.DataFrame) -> None:
 
-    pastkwh = pastwatts.sum()/60
-    pastslot = pastwatts.index.values
-    paststart = pd.to_datetime(str(pastslot[0])).strftime("%H:%M")
-    paststop = pd.to_datetime(str(pastslot[-1])).strftime("%H:%M")
-    #print(f'\nRecorded Wh between today "{paststart}" and today "{paststop}"')
-    #print(pastkwh)
 
-    nowkwh = nowwatts.sum()/60
-    nowslot = nowwatts.index.values
-    nowstart = pd.to_datetime(str(nowslot[0])).strftime("%H:%M")
-    nowstop = pd.to_datetime(str(nowslot[-1])).strftime("%H:%M")
-    #print(f'\nRecorded Wh between today "{nowstart}" and today "{nowstop}"')
-    #print(nowkwh)
+    input = vars()
 
-    predictkwh = predictwatts.sum()/60
-    predictslot = predictwatts.index.values
-    predictstart = pd.to_datetime(str(predictslot[0])).strftime("%H:%M")
-    predictstop = pd.to_datetime(str(predictslot[-1])).strftime("%H:%M")
-    #print(f'\nPropable Wh between today "{predictstart}" and today "{predictstop}"')
-    #print(predictkwh)
+    phase = [k for (k,v) in input.items() if len(v) >0]
+    start = [t2hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
+    stop = [t2hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
+    watts = pd.concat([v.sum()/60 for (k,v) in input.items() if v.size >0], axis=1)
+
+    wattphases = pd.concat(
+        [pd.DataFrame(
+            {'PHASE':phase,
+             'START': start,
+             'STOP': stop}), watts.T
+        ], sort=False, axis=1)
+    wattphases.set_index('PHASE', inplace=True)
+
+    print(f'\nPhases:\n{wattphases}')
+
+    watttotal = pd.DataFrame(wattphases.iloc[:,2:].sum(axis=0))
+    print(f'\nTotal:\n{watttotal.T}\n')
+
     
-    tomorrowkwh = tomorrowwatts.sum()/60
-    tomorrowslot = tomorrowwatts.index.values
-    tomorrowstart = pd.to_datetime(str(tomorrowslot[0])).strftime("%H:%M")
-    tomorrowstop = pd.to_datetime(str(tomorrowslot[-1])).strftime("%H:%M")
-    ##print(f'\nProbable Wh between today "{tomorrowstart}" and tomorrow "{tomorrowstop}"')
-    ##print(tomorrowkwh)
-
-    print(f'\nPropable 24h Wh between today "{paststart}" and today "{predictstop}"')
-    print( pastkwh + nowkwh + predictkwh)
-
-    #print(f'\nPropable 24h Wh between today "{predictstart}" and tomorrow "{nowstop}"')
-    #print( predictkwh + tomorrowkwh + nowkwh )
-
 
 @dataclass
 class Script_Arguments:
@@ -191,29 +182,8 @@ async def main( args: Script_Arguments) -> int:
             logsdf, starttime, stoptime, closestdays.head(n=4)
         )
 
-
         pd.options.display.float_format = '{:,.1f}'.format
-        
-        ##print_predict(*predict)
-
-        past_24 = concat_predict_24_today(*predict[:-1])
-        print("\nToday Predict")
-        sbpi = past_24['SBPI'].sum()/60/1000
-        sbpb = past_24['SBPB'].sum()/60/1000
-        ivp = (past_24['IVP1']+past_24['IVP2']).sum()/60/1000
-        smp = (past_24['SMP'][past_24['SMP']>0]).sum()/60/1000
-        print(f'SBPI {sbpi:.1f}kWh  SBPB {sbpb:.1f}kWh  IVP {ivp:.1f}kWh  SMP+ {smp:.1f}kWh = {ivp+smp:.1f}kWh')
-        ##print(past_24.tail())
-        ##print()
-        #print(past_24.sum()/60)
-        #print(tabulate(past_24, headers = 'keys', tablefmt = 'grid'))
-
-        #tomorrow_24 = concat_predict_24_tomorrow(*predict[1:])
-        #print("\nTomorrow Predict")
-        #print(tomorrow_24.tail())
-        #print()
-        ##print(tomorrow_24.sum()/60)
-        #print(tabulate(tomorrow_24, headers = 'keys', tablefmt = 'grid'))
+        print_predict(*predict[:-1]) # Without tomorrow
     
     return 0
 
