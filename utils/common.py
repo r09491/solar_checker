@@ -3,7 +3,10 @@ __doc__="""
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
-from datetime import datetime
+from datetime import (
+    datetime,
+    timedelta
+    )
 
 import pandas as pd
 
@@ -61,11 +64,40 @@ def ymd_over_t64(t: t64, day: str) -> t64:
                         minute=dt_t.minute,
                         hour=dt_t.hour))
 
-def ymd_clear_t64(t: t64) -> t64:
+def ymd_tomorrow(today: str) -> t64:
+    dt_today = datetime.strptime(today, "%y%m%d")
+    return (dt_today + timedelta(days=1)).strftime("%y%m%d")
+
+
+def t64_clear(t: t64) -> t64:
     dt_ymd = pd.to_datetime(str(t))
     return t64(datetime(year=1954,
                         month=12,
                         day=10,
                         minute=dt_ymd.minute,
-                        hour=dt_ymd.hour))
+                        hour=dt_ymd.hour,
+                        second=dt_ymd.second,
+                        microsecond=dt_ymd.microsecond))
+
+def t64_first(t: t64) -> t64:
+    dt = pd.to_datetime(str(t))
+    return t64(datetime(year=dt.year,
+                        month=dt.month,
+                        day=dt.day,
+                        minute=dt.minute,
+                        hour=dt.hour,
+                        second=0,
+                        microsecond=0))
+
+def t64_last(t: t64) -> t64:
+    dt = pd.to_datetime(str(t))
+    return t64(datetime(year=dt.year,
+                        month=dt.month,
+                        day=dt.day,
+                        minute=dt.minute,
+                        hour=dt.hour,
+                        second=59,
+                        microsecond=999))
+
+
 

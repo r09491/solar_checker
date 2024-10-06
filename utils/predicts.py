@@ -21,7 +21,9 @@ from .types import (
     t64, Any, Optional, List, Dict
     )
 from .common import (
-    ymd_clear_t64,
+    t64_first,
+    t64_last,
+    ymd_tomorrow,
     ymd_over_t64
     )
 from .samples import (
@@ -137,6 +139,8 @@ async def find_closest(
     stoptime = stopontime if stoptime is None else \
         min(ymd_over_t64(stoptime,logday), stopontime)
 
+    starttime = t64_first(starttime)
+    stoptime = t64_last(stoptime)
 
     """ All basic samples for all log days for the requested time slot """
     slotdfs = [bdf.loc[ymd_over_t64(starttime,ld):
@@ -229,10 +233,10 @@ async def predict_closest(
                            data = dict(todayseries[1:]))
 
     """ The frame with the watts before teh watts use for searching  """
-    prewatts = todaydf.loc[logstarttime:starttime,:][:-1]
+    prewatts = todaydf.loc[logstarttime:starttime,:]
 
     """ The frame with the watts in the search slot  """
-    findwatts = todaydf.loc[starttime:stoptime,:][:-1]
+    findwatts = todaydf.loc[starttime:stoptime,:]
 
     """ The frame with the watts after the search slot  """
     postwatts = todaydf.loc[stoptime:logstoptime,:]
@@ -249,22 +253,31 @@ async def predict_closest(
         [pdf.loc[logstoptime:,:] for pdf in predictdfs]
     ) / len(predictdfs)
 
-    
+    #TODO Suppress battery discharge if radiation (insider knowledge)
+
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
-            index = [ymd_over_t64(t, today) for t in ts[0]],
+            index = [ymd_over_t64(t, ymd_tomorrow(today)) for t in ts[0]],
             data = dict(ts[1:])
         ) for ts in [logsdf.loc[td] for td in tomorrowdays]]
-    
-    tomorrowwatts = reduce(
+
+
+    tomorrowwatts1 = reduce(
         lambda x,y: x+y,
-        [tdf.loc[:logstarttime,:] for tdf in tomorrowdfs]
+        [tdf.loc[:ymd_over_t64(starttime, ymd_tomorrow(today))][:-1]
+         for tdf in tomorrowdfs
+        ]
     ) / len(tomorrowdfs)
 
-    ## TODO one day to be added in tomorrowwatts index
+    tomorrowwatts2 = reduce(
+        lambda x,y: x+y,
+        [tdf.loc[ymd_over_t64(starttime, ymd_tomorrow(today)):]
+         for tdf in tomorrowdfs
+        ]
+    ) / len(tomorrowdfs)
     
-    return prewatts, findwatts, postwatts, predictwatts, tomorrowwatts
+    return prewatts, findwatts, postwatts, predictwatts, tomorrowwatts1, tomorrowwatts2
 
 
 """ Assemble the prediction data frames for today  """
@@ -279,14 +292,21 @@ def concat_predict_24_today(
                       predictwatts])
 
 """ Assemble the prediction data frames for tomorrow  """
-def concat_predict_24_tomorrow(
-        prewatts: pd.DataFrame,
+def concat_predict_24_tomorrow1(
         findwatts: pd.DataFrame,
         postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame,
-        tomorrowwatts: pd.DataFrame) -> pd.DataFrame:
+        tomorrowwatts1: pd.DataFrame) -> pd.DataFrame:
+    return pd.concat([findwatts,
+                      postwatts,
+                      predictwatts,
+                      tomorrowwatts1])
+
+""" Assemble the prediction data frames for tomorrow  """
+def concat_predict_24_tomorrow2(
+        predictwatts: pd.DataFrame,
+        tomorrowwatts1: pd.DataFrame,
+        tomorrowwatts2: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([predictwatts,
-                      tomorrowwatts,
-                      prewatts,
-                      findwatts,
-                      postwatts])
+                      tomorrowwatts1,
+                      tomorrowwatts2])
