@@ -34,7 +34,8 @@ from utils.common import (
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
-    predict_closest
+    predict_closest,
+    concat_predict_24_today
 )
 
 import logging
@@ -72,16 +73,18 @@ def print_predict(
     watts = swattphases.iloc[:-2,:].loc[:,['SBPI','SBPO','SBPB']]
     smp = swattphases.iloc[:-2,:].loc[:,['SMP']]
 
+    relative_watts = pd.concat([startstop, smp, watts], axis=1)
     print(
-        "\nRelative Watts\n", pd.concat(
-            [startstop, smp, watts], axis=1)
+        "\nRelative Watts\n", relative_watts
     )
+
+    absolute_watts = pd.concat([startstop, smp.cumsum(), watts.cumsum()], axis=1)
     print(
-        "\nAbsolute Watts\n", pd.concat(
-            [startstop, smp.cumsum(), watts.cumsum()], axis=1)
+        "\nAbsolute Watts\n", absolute_watts
     )
     print()
-    
+
+    #print(concat_predict_24_today(prewatts,findwatts,postwatts,predictwatts)['SBPB'].sum())
 
     
 @dataclass
