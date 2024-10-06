@@ -234,10 +234,9 @@ async def plot_24_today(request: web.Request) -> dict:
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBPB'].clip(empty_wh, full_wh) / full_wh
+    sbpi, sbpo, sbpb = c['SBPI'], c['SBPO'], c['SBPB']
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
-    ## TODO Fix SBSB
     
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
@@ -263,7 +262,7 @@ async def plot_24_today(request: web.Request) -> dict:
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
-            sbsb*full_kwh if sbsb is not None else None,
+            empty_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
             empty_kwh, full_kwh, price))
 
     return {'logday': logday,
@@ -337,9 +336,10 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBPB'].clip(empty_wh, full_wh) / full_wh
+    sbpi, sbpo, sbpb = c['SBPI'], c['SBPO'], c['SBPB']
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
+    
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
@@ -349,7 +349,7 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
     sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
     sbpbdischarge = np.zeros_like(sbpb)
     sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
-    
+
     
     w, kwh = await asyncio.gather(
         get_w_line(time, smp, ivp1, ivp2,
@@ -364,7 +364,7 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
-            sbsb*full_kwh if sbsb is not None else None,
+            empty_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
             empty_kwh, full_kwh, price))
 
     return {'logday': logday,
