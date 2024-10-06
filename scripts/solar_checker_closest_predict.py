@@ -28,24 +28,19 @@ from utils.common import (
     POWER_NAMES
 )
 from utils.common import (
-    hm2time
+    hm_to_t64,
+    t64_to_hm
 )
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
-    predict_closest,
-    concat_predict_24_today,
-    concat_predict_24_tomorrow
+    predict_closest
 )
 
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
-
-
-def t2hm(t: t64) -> str:
-    return pd.to_datetime(str(t)).strftime("%H:%M")
 
 """ 
 Print the prediction data frames. 
@@ -54,31 +49,31 @@ def print_predict(
         prewatts: pd.DataFrame,
         findwatts: pd.DataFrame,
         postwatts: pd.DataFrame,
-        predictwatts: pd.DataFrame) -> None:
-
+        predictwatts: pd.DataFrame,
+        tomorrowwatts1: pd.DataFrame,
+        tomorrowwatts2: pd.DataFrame) -> None:
 
     input = vars()
 
     phase = [k for (k,v) in input.items() if len(v) >0]
-    start = [t2hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
-    stop = [t2hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
-    watts = pd.concat([v.sum()/60 for (k,v) in input.items() if v.size >0], axis=1)
+    start = [t64_to_hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
+    stop = [t64_to_hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
+    swatts = pd.concat([v.sum()/60 for (k,v) in input.items() if v.size >0], axis=1)
 
-    wattphases = pd.concat(
+    swattphases = pd.concat(
         [pd.DataFrame(
             {'PHASE':phase,
              'START': start,
-             'STOP': stop}), watts.T
+             'STOP': stop}), swatts.T
         ], sort=False, axis=1)
-    wattphases.set_index('PHASE', inplace=True)
+    swattphases.set_index('PHASE', inplace=True)
 
-    print(f'\nPhases:\n{wattphases}')
+    print(f'\nRelative Watts:\n{swattphases}')
 
-    watttotal = pd.DataFrame(wattphases.iloc[:,2:].sum(axis=0))
+    watttotal = pd.DataFrame(swattphases.iloc[:,2:].sum(axis=0))
     print(f'\nTotal:\n{watttotal.T}\n')
 
     
-
 @dataclass
 class Script_Arguments:
     logday: str
@@ -119,11 +114,11 @@ def parse_arguments() -> Script_Arguments:
         help = "The directory the logfiles are stored")
     
     parser.add_argument(
-        '--starttime', type=hm2time, default=None,
+        '--starttime', type=hm_to_t64, default=None,
         help = "The start time of the slot")
 
     parser.add_argument(
-        '--stoptime', type=hm2time, default=None,
+        '--stoptime', type=hm_to_t64, default=None,
         help = "The end time of the slot")
 
     parser.add_argument(
@@ -163,7 +158,10 @@ async def main( args: Script_Arguments) -> int:
     )
 
     starttime, stoptime, closestdays = await find_closest(
-        logsdf, args.logday, args.starttime, args.stoptime, args.columns
+        logsdf, args.logday,
+        args.starttime,
+        args.stoptime,
+        args.columns
     )
     if (starttime is None or
         stoptime is None or
@@ -183,7 +181,7 @@ async def main( args: Script_Arguments) -> int:
         )
 
         pd.options.display.float_format = '{:,.1f}'.format
-        print_predict(*predict[:-1]) # Without tomorrow
+        print_predict(*predict)
     
     return 0
 

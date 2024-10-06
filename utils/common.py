@@ -5,6 +5,8 @@ __author__ = "r09491@gmail.com"
 
 from datetime import datetime
 
+import pandas as pd
+
 from .types import t64
 
 """ The samples in the record logs """
@@ -43,7 +45,27 @@ PREDICT_NAMES = [
 ]
 
 
+def t64_to_hm(t: t64) -> str:
+    return pd.to_datetime(str(t)).strftime("%H:%M")
+
 """ Converts hm format to t64 """
-def hm2time(hm: str) -> t64:
+def hm_to_t64(hm: str) -> t64:
     return t64(datetime.strptime(hm, "%H:%M"))
+
+def ymd_over_t64(t: t64, day: str) -> t64:
+    dt_day = datetime.strptime(day, "%y%m%d")
+    dt_t = pd.to_datetime(str(t))
+    return t64(datetime(year=dt_day.year,
+                        month=dt_day.month,
+                        day=dt_day.day,
+                        minute=dt_t.minute,
+                        hour=dt_t.hour))
+
+def ymd_clear_t64(t: t64) -> t64:
+    dt_ymd = pd.to_datetime(str(t))
+    return t64(datetime(year=1954,
+                        month=12,
+                        day=10,
+                        minute=dt_ymd.minute,
+                        hour=dt_ymd.hour))
 

@@ -21,7 +21,8 @@ from .types import (
     t64, Any, Optional, List, Dict
     )
 from .common import (
-    hm2time
+    ymd_clear_t64,
+    ymd_over_t64
     )
 from .samples import (
     get_columns_from_csv,
@@ -102,9 +103,22 @@ async def find_closest(
     """ Get the requested input columns """
     incols = ('TIME,' + columns).split(',')
 
-    " Extrect the vector with log days"
+    """ Extract the vector with log days """
     logdays = list(logsdf.index.values.tolist())
 
+    
+    """ All basic input cols without extension """
+    basecols = set([c for c in [cc[:-1]
+                    if cc[-1] in "+-"
+                    else cc for cc in incols[1:]]])
+
+    """ All basic samples for all log days in the full time range """
+    basedfs = [pd.DataFrame(
+        index = logsdf.loc[ld, 'TIME'],
+        data = dict(logsdf.loc[ld, basecols])
+    ) for ld in logdays]
+
+    
     """ Get the start and stop of the radiation. The times are
     determined from the first input power column after TIME """
 
@@ -116,36 +130,18 @@ async def find_closest(
     )
 
     if startontime is None or  stopontime is None:
-        return None, None, None
-    
-    """ Override under certain conditions """
+        return None, None, None 
+
     starttime = startontime if starttime is None else \
-        max(starttime, startontime)
+        max(ymd_over_t64(starttime,logday), startontime)
     stoptime = stopontime if stoptime is None else \
-        min(stoptime, stopontime)
-
-    
-    """ Extract the slot samples in watt """
-
-    # All basic input cols without extension
-    basecols = set([c for c in [cc[:-1]
-                if cc[-1] in "+-" else
-                    cc for cc in incols]])
-
-    # All basic samples for all log days in the full time range
-    basedfs = [pd.DataFrame(
-        dict(logsdf.loc[ld, basecols])
-    ) for ld in logdays]
+        min(ymd_over_t64(stoptime,logday), stopontime)
 
 
-    # All basic samples for all log days for the requested time slot
-    slotdfs = []
-    for bdf in basedfs:
-        bdf.set_index('TIME', inplace=True)
-        slotdfs.append(
-            bdf.loc[starttime:stoptime,:]
-        )
-        bdf.reset_index(inplace=True)
+    """ All basic samples for all log days for the requested time slot """
+    slotdfs = [bdf.loc[ymd_over_t64(starttime,ld):
+                       ymd_over_t64(stoptime,ld),:]
+               for ld, bdf in zip (logdays, basedfs)]
 
     # All samples including extensions for all log days and requested slot
     eslotdfs = []
@@ -239,33 +235,35 @@ async def predict_closest(
     findwatts = todaydf.loc[starttime:stoptime,:][:-1]
 
     """ The frame with the watts after the search slot  """
-    postwatts = todaydf.loc[stoptime:logstoptime,:][:-1]
+    postwatts = todaydf.loc[stoptime:logstoptime,:]
 
     """ The predicted data for the day until time of last sample """    
     predictdfs = [
         pd.DataFrame(
-            index = ps[0], data = dict(ps[1:])
-        ) for ps in [logsdf.loc[pd]
-                     for pd in predictdays]
-    ]
+            index = [ymd_over_t64(t, today) for t in ps[0]], 
+            data = dict(ps[1:])
+        ) for ps in [logsdf.loc[pd] for pd in predictdays]]
+
     predictwatts = reduce(
         lambda x,y: x+y,
-        [pdf.loc[logstoptime:,:][:-1] for pdf in predictdfs]
-    ) / len(predictdays)
+        [pdf.loc[logstoptime:,:] for pdf in predictdfs]
+    ) / len(predictdfs)
 
     
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
-            index = ts[0], data = dict(ts[1:])
-        ) for ts in [logsdf.loc[td]
-                     for td in tomorrowdays]
-    ]
+            index = [ymd_over_t64(t, today) for t in ts[0]],
+            data = dict(ts[1:])
+        ) for ts in [logsdf.loc[td] for td in tomorrowdays]]
+    
     tomorrowwatts = reduce(
         lambda x,y: x+y,
         [tdf.loc[:logstarttime,:] for tdf in tomorrowdfs]
-    ) / len(tomorrowdays)
+    ) / len(tomorrowdfs)
 
+    ## TODO one day to be added in tomorrowwatts index
+    
     return prewatts, findwatts, postwatts, predictwatts, tomorrowwatts
 
 
