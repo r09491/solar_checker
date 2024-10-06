@@ -68,10 +68,20 @@ def print_predict(
         ], sort=False, axis=1)
     swattphases.set_index('PHASE', inplace=True)
 
-    print(f'\nRelative Watts:\n{swattphases}')
+    startstop = swattphases.iloc[:-2,:].loc[:, ['START', 'STOP']]
+    watts = swattphases.iloc[:-2,:].loc[:,['SBPI','SBPO','SBPB']]
+    smp = swattphases.iloc[:-2,:].loc[:,['SMP']]
 
-    watttotal = pd.DataFrame(swattphases.iloc[:,2:].sum(axis=0))
-    print(f'\nTotal:\n{watttotal.T}\n')
+    print(
+        "\nRelative Watts\n", pd.concat(
+            [startstop, smp, watts], axis=1)
+    )
+    print(
+        "\nAbsolute Watts\n", pd.concat(
+            [startstop, smp.cumsum(), watts.cumsum()], axis=1)
+    )
+    print()
+    
 
     
 @dataclass

@@ -29,7 +29,7 @@ POWER_NAMES = [
     'IVP1',
     'IVP2',
     'SPPH',
-    'SBPI', 'SBPO', 'SBPB', 'SBSB',
+    'SBPI', 'SBPO', 'SBPB',
     'SPP1', 'SPP2', 'SPP3', 'SPP4'
 ]
 

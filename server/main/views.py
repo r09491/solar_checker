@@ -25,7 +25,7 @@ from utils.predicts import (
     find_closest,
     predict_closest,
     concat_predict_24_today,
-    concat_predict_24_tomorrow
+    concat_predict_24_tomorrow1
 )
 from utils.plots import (
     get_blocks,
@@ -50,7 +50,8 @@ async def plot_day(request: web.Request) -> dict:
 
     price = conf['energy_price']
     slots = conf['power_slots']
-    full_kwh = conf['battery_full_wh'] / 1000
+    full_wh = conf['battery_full_wh']
+    full_kwh = full_wh / 1000
     empty_kwh = conf['battery_min_percent'] /100 * full_kwh
     
     logdir = conf['logdir']
@@ -72,7 +73,7 @@ async def plot_day(request: web.Request) -> dict:
     time, spph = c['TIME'], c['SPPH']
     sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
+    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB'] 
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
     smpon = np.zeros_like(smp)
@@ -175,7 +176,9 @@ async def plot_24_today(request: web.Request) -> dict:
 
     price = conf['energy_price']
     slots = conf['power_slots']
-    full_kwh = conf['battery_full_wh'] / 1000
+    full_wh = conf['battery_full_wh'] 
+    full_kwh = full_wh / 1000
+    empty_wh = conf['battery_min_percent'] / 100 * full_wh
     empty_kwh = conf['battery_min_percent'] / 100 * full_kwh
     
     logdir = conf['logdir']
@@ -227,13 +230,15 @@ async def plot_24_today(request: web.Request) -> dict:
     )
 
     """ Assemble the prediction elements """
-    c = concat_predict_24_today(*predict[:-1])
+    c = concat_predict_24_today(*predict[:-2])
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
+    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBPB'].clip(empty_wh, full_wh) / full_wh
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
+    ## TODO Fix SBSB
+    
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
@@ -276,6 +281,7 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
     price = conf['energy_price']
     slots = conf['power_slots']
     full_kwh = conf['battery_full_wh'] / 1000
+    empty_wh = conf['battery_min_percent'] / 100 * full_wh
     empty_kwh = conf['battery_min_percent'] / 100 * full_kwh
     
     logdir = conf['logdir']
@@ -331,7 +337,7 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
+    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBPB'].clip(empty_wh, full_wh) / full_wh
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
     smpon = np.zeros_like(smp)
