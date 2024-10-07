@@ -304,9 +304,13 @@ def concat_predict_24_tomorrow1(
 
 """ Assemble the prediction data frames for tomorrow  """
 def concat_predict_24_tomorrow2(
+        findwatts: pd.DataFrame,
+        postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame,
         tomorrowwatts1: pd.DataFrame,
         tomorrowwatts2: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([predictwatts,
+    return pd.concat([findwatts,
+                      postwatts,
+                      predictwatts,
                       tomorrowwatts1,
                       tomorrowwatts2])

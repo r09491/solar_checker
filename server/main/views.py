@@ -25,7 +25,8 @@ from utils.predicts import (
     find_closest,
     predict_closest,
     concat_predict_24_today,
-    concat_predict_24_tomorrow1
+    concat_predict_24_tomorrow1,
+    concat_predict_24_tomorrow2
 )
 from utils.plots import (
     get_blocks,
@@ -169,8 +170,8 @@ async def plot_year(request: web.Request) -> dict:
     return {'logyear': logyear, 'kwh': uyplot}
 
 
-@aiohttp_jinja2.template('plot_24_today.html')
-async def plot_24_today(request: web.Request) -> dict:
+@aiohttp_jinja2.template('plot_predict.html')
+async def plot_predict(request: web.Request) -> dict:
 
     conf = request.app['conf']
 
@@ -193,108 +194,11 @@ async def plot_24_today(request: web.Request) -> dict:
     except KeyError:
         logday = datetime.strftime(datetime.now(), logdayformat)
 
-        
-    """ Get the dictionary with all the power recordings for logdays """
-    logsdf = await get_logs_as_dataframe(
-        POWER_NAMES,
-        logpredictmaxdays,
-        logpredictformat,
-        logprefix,
-        logdir
-    )
-
-
-    """ Get the start and stop time for the reference slot """
-    starttime, stoptime = None, None
-    starttime, stoptime, closestdays = await find_closest(
-        logsdf, logday, starttime, stoptime, logpredictcolumns
-    )
-    if (starttime is None or stoptime is None or closestdays is None):
-        return aiohttp_jinja2.render_template('error.html', request,
-            {'error' : f'No radiation detected for the log day  "{logday}"'}
-        )
-    
-    start = pd.to_datetime(str(starttime)).strftime("%H:%M")
-    stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
-    logger.info(f'Using watt samples from "{start}" to "{stop}"')
-    
-    predictdays = closestdays.index.values[1:logpredictdays]
-    logger.info(f'Using days "{",".join(predictdays)}"')
-
-    """ Get the prediction slots """
-    predict = await predict_closest(
-        logsdf,
-        starttime,
-        stoptime,
-        closestdays.head(n=logpredictdays)
-    )
-
-    """ Assemble the prediction elements """
-    c = concat_predict_24_today(*predict[:-2])
-
-    time = np.array(list(c.index.values))
-    spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb = c['SBPI'], c['SBPO'], c['SBPB']
-    spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
-
-    
-    smpon = np.zeros_like(smp)
-    smpon[smp>0] = smp[smp>0]
-    smpoff = np.zeros_like(smp)
-    smpoff[smp<=0] = -smp[smp<=0]
-
-    sbpbcharge = np.zeros_like(sbpb)
-    sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
-    sbpbdischarge = np.zeros_like(sbpb)
-    sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
-    
-    
-    w, kwh = await asyncio.gather(
-        get_w_line(time, smp, ivp1, ivp2,
-                   spph, sbpi, sbpo, sbpb, slots),
-        get_kwh_line(time,
-            smpon.cumsum()/1000/60 if smpon is not None else None,
-            smpoff.cumsum()/1000/60 if smpoff is not None else None,
-            ivp1.cumsum()/1000/60 if ivp1 is not None else None,
-            ivp2.cumsum()/1000/60 if ivp2 is not None else None,
-            spph.cumsum()/1000/60 if spph is not None else None,
-            sbpi.cumsum()/1000/60 if sbpi is not None else None,
-            sbpo.cumsum()/1000/60 if sbpo is not None else None,
-            sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
-            sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
-            empty_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
-            empty_kwh, full_kwh, price))
-
-    return {'logday': logday,
-            'w': w, 'kwh': kwh,
-            'start': start, 'stop': stop,
-            'predictdays': predictdays}
-
-
-
-@aiohttp_jinja2.template('plot_24_tomorrow.html')
-async def plot_24_tomorrow(request: web.Request) -> dict:
-
-    conf = request.app['conf']
-
-    price = conf['energy_price']
-    slots = conf['power_slots']
-    full_kwh = conf['battery_full_wh'] / 1000
-    empty_wh = conf['battery_min_percent'] / 100 * full_wh
-    empty_kwh = conf['battery_min_percent'] / 100 * full_kwh
-    
-    logdir = conf['logdir']
-    logprefix = conf['logprefix']
-    logpredictformat = conf['logpredictformat']
-    logpredictmaxdays = conf['logpredictmaxdays']
-    logpredictdays = conf['logpredictdays']
-    logpredictcolumns = conf['logpredictcolumns']
-
     try:
-        logday = request.match_info['logday']
+        what = request.match_info['what'].capitalize()
     except KeyError:
-        logday = datetime.strftime(datetime.now(), logdayformat)
-
+        what = 'Today'
+        
         
     """ Get the dictionary with all the power recordings for logdays """
     logsdf = await get_logs_as_dataframe(
@@ -332,8 +236,13 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
     )
 
     """ Assemble the prediction elements """
-    c = concat_predict_24_tomorrow(*predict[:-1])
-
+    if what == 'Today':
+        c = concat_predict_24_today(*predict[:-2])
+    elif what == 'Early':
+        c = concat_predict_24_tomorrow1(*predict[1:-1])
+    elif what == 'Late':
+        c = concat_predict_24_tomorrow2(*predict[1:])
+        
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
     sbpi, sbpo, sbpb = c['SBPI'], c['SBPO'], c['SBPB']
@@ -349,7 +258,7 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
     sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
     sbpbdischarge = np.zeros_like(sbpb)
     sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
-
+    
     
     w, kwh = await asyncio.gather(
         get_w_line(time, smp, ivp1, ivp2,
@@ -367,7 +276,8 @@ async def plot_24_tomorrow(request: web.Request) -> dict:
             empty_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
             empty_kwh, full_kwh, price))
 
-    return {'logday': logday,
+    return {'what': what,
+            'logday': logday,
             'w': w, 'kwh': kwh,
             'start': start, 'stop': stop,
             'predictdays': predictdays}

@@ -4,8 +4,7 @@ from views import (
     plot_day,
     plot_month,
     plot_year,
-    plot_24_today,
-    plot_24_tomorrow
+    plot_predict
 )
 
 def setup_routes(app: web.Application):
@@ -16,8 +15,7 @@ def setup_routes(app: web.Application):
     app.router.add_get('/plot_month/{logmonth}', plot_month)
     app.router.add_get('/plot_year', plot_year)
     app.router.add_get('/plot_year/{logyear}', plot_year)
-    app.router.add_get('/plot_24_today/{logday}', plot_24_today)
-    app.router.add_get('/plot_24_tomorrow/{logday}', plot_24_tomorrow)
+    app.router.add_get('/plot_predict/{logday}/{what}', plot_predict)
     
     app.router.add_static('/static/',
                           path= BASE_DIR / 'main' / 'static',

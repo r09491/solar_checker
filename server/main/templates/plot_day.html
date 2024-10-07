@@ -6,10 +6,9 @@
 
 {% if blocks is not none %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_24_today/{{ logday }}'>Predict 24h Today</a>&nbsp
-  {% if 1< 0 %}
-    <a href='/plot_24_tomorrow/{{ logday }}'>Predict 24h Tomorrow</a>
-  {% endif %}
+  <a href='/plot_predict/{{ logday }}/today'>Today Predict</a>&nbsp;&nbsp
+  <a href='/plot_predict/{{ logday }}/early'>Early Predict</a>&nbsp;&nbsp
+  <a href='/plot_predict/{{ logday }}/late'>Late Predict</a>
 </div>
 {% endif %}
 

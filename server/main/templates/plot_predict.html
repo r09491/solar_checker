@@ -1,0 +1,49 @@
+{% set title = 'P12 Kraftwerk' %}
+
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% if what == 'Today' %}
+<div style='display:flex;justify-content:center;'>
+  <a href='/plot_predict/{{ logday }}/early'>Early Predict</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/late'>Late Predict</a>
+</div>
+
+<h1 style='margin:4px;'>Today Predict {{ logday }}</h1>
+{% endif %}
+
+{% if what == 'Early' %}
+<div style='display:flex;justify-content:center;'>
+  <a href='/plot_predict/{{ logday }}/today'>Todax Predict</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/late'>Late Predict</a>
+</div>
+
+<h1 style='margin:4px;'>Tomorrow Early Predict {{ logday }}</h1>
+{% endif %}
+
+{% if what == 'Late' %}
+<div style='display:flex;justify-content:center;'>
+  <a href='/plot_predict/{{ logday }}/today'>Todax Predict</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/early'>Early Predict</a>
+</div>
+
+<h1 style='margin:4px;'>Tomorrow Late Predict {{ logday }}</h1>
+{% endif %}
+
+
+<div style='display:flex;justify-content:center;margin:4px;''>
+  Using&nbsp;closest&nbsp;days
+  {% for pd in predictdays %}
+  <a href='/plot_day/{{pd}}'>&nbsp;{{pd}}</a>
+  {% endfor %}
+  &nbsp;from&nbsp;{{start}}&nbsp;TO&nbsp;{{stop}}</br>
+</div>
+
+<div style='display:flex;justify-content:center;' >
+  <img src='data:image/png;base64,{{w}}'/>
+</div>
+<div style='display:flex;justify-content:center;' >
+  <img src='data:image/png;base64,{{kwh}}'/>
+</div>
+{% endblock content %}
