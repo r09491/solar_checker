@@ -86,8 +86,7 @@ async def plot_day(request: web.Request) -> dict:
     sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
     sbpbdischarge = np.zeros_like(sbpb)
     sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
-    
-    
+
     blocks, w, kwh = await asyncio.gather(
         get_blocks(time[-1], smp[-1], ivp1[-1], ivp2[-1],
                    spph[-1] if spph is not None else 0,
@@ -254,12 +253,16 @@ async def plot_predict(request: web.Request) -> dict:
     smpoff = np.zeros_like(smp)
     smpoff[smp<=0] = -smp[smp<=0]
 
+    # Plausibiliity check
+    ivp = ivp1+ivp2
+    sbpb[(sbpb>0) & (sbpb<ivp)] = ivp[(sbpb>0) & (sbpb<ivp)]
+
     sbpbcharge = np.zeros_like(sbpb)
     sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
     sbpbdischarge = np.zeros_like(sbpb)
     sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
-    
-    
+
+        
     w, kwh = await asyncio.gather(
         get_w_line(time, smp, ivp1, ivp2,
                    spph, sbpi, sbpo, sbpb, slots),
