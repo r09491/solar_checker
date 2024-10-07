@@ -631,7 +631,7 @@ def _get_blocks(time: t64, smp: f64,
     _add_box_to_ax(ax, *plug4, 'PLUG4\nSINK', 'white')
     
 
-    if sbpi>1 :
+    if sbpi>0 :
         _add_link_to_ax(
             ax, *panel_1, 'S', *solix_mppt, 'N',
             sbpi/2, 'green', show_power = False) # Measured only
@@ -642,11 +642,11 @@ def _get_blocks(time: t64, smp: f64,
             ax, *solix_mppt, 'E', *solix_split, 'W',
             sbpi, 'grey')
 
-    if sbpb<0 :
+    if sbpb<0 : #Charging
         _add_link_to_ax(
             ax, *solix_split, 'N', *solix_bat, 'W', sbpb, 'm')
     
-    if sbpb>0 :
+    if sbpb>0 : #Discharging
         _add_link_to_ax(ax, *solix_bat, 'E', *solix_out, 'N',
                         sbpb, 'm',
                         show_power = sbpi+sbpb>ivp1+ivp2)
@@ -662,7 +662,7 @@ def _get_blocks(time: t64, smp: f64,
                         ivp1 if ivp1>0 else sbpo/2,
                         'c' if ivp1>0 else 'grey',
                         show_power = ivp1>0)
-    elif (ivp1>0):
+    elif (ivp1>0) and not ((sbpb <0) or (sbpb >0)):
         _add_link_to_ax(ax, *panel_1, 'N', *inv_mppt_1, 'N',
                         ivp1, 'c',
                         show_power = ivp1>0)
@@ -677,7 +677,7 @@ def _get_blocks(time: t64, smp: f64,
                         ivp2 if ivp2>0 else sbpo/2,
                         'c' if ivp2>0 else 'grey',
                         show_power = ivp2>0)
-    elif (ivp2>0):
+    elif (ivp2>0) and not ((sbpb <0) or (sbpb >0)):
         _add_link_to_ax(ax, *panel_2, 'S', *inv_mppt_2, 'S',
                         ivp2, 'c',
                         show_power = ivp2>0)
