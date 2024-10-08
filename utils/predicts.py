@@ -24,6 +24,7 @@ from .common import (
     t64_first,
     t64_last,
     ymd_tomorrow,
+    ymd_yesterday,
     ymd_over_t64
     )
 from .samples import (
@@ -220,8 +221,10 @@ async def predict_closest(
 
     # The days after the closest days
     tomorrowdays = [(datetime.strptime(pd, "%y%m%d") +
-                  timedelta(days=1)).
-                 strftime("%y%m%d") for  pd in predictdays]
+                     timedelta(days=1)).
+                    strftime("%y%m%d")
+                    for  pd in predictdays
+                    if pd != ymd_yesterday(today)]
 
     # Time of the first and last sample
     logstarttime = logsdf.loc[today, 'TIME'][0]
@@ -260,7 +263,7 @@ async def predict_closest(
     ivp = predictwatts.IVP1+predictwatts.IVP2
     sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
     predictwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
-    
+
     sbpo = predictwatts.SBPO
     sbpb = predictwatts.SBPB
     sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
@@ -270,55 +273,43 @@ async def predict_closest(
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
-            index = [ymd_over_t64(t, ymd_tomorrow(today)) for t in ts[0]],
+            index = [ymd_over_t64(
+                t, ymd_tomorrow(today)
+            ) for t in ts[0]],
             data = dict(ts[1:])
         ) for ts in [logsdf.loc[td] for td in tomorrowdays]]
 
-
-    tomorrowwatts1 = reduce(
+    # Arittmetic middle of days
+    tomorrowwatts = reduce(
         lambda x,y: x+y,
-        [tdf.loc[:ymd_over_t64(starttime, ymd_tomorrow(today))][:-1]
-         for tdf in tomorrowdfs
-        ]
+        [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
-
+   
     #Plausibility
 
-    sbpb = tomorrowwatts1.SBPB
-    ivp = tomorrowwatts1.IVP1+tomorrowwatts1.IVP2
+    sbpb = tomorrowwatts.SBPB
+    ivp = tomorrowwatts.IVP1+tomorrowwatts.IVP2
     sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
-    tomorrowwatts1.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] #shared
+    tomorrowwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] #shared
 
-    sbpo = tomorrowwatts1.SBPO
-    sbpb = tomorrowwatts1.SBPB
+    sbpo = tomorrowwatts.SBPO
+    sbpb = tomorrowwatts.SBPB
     sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
-    tomorrowwatts1.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
+    tomorrowwatts.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
 
+    tomorrowwatts1 = tomorrowwatts.loc[
+        :ymd_over_t64(starttime, ymd_tomorrow(today))
+    ]
     
-    tomorrowwatts2 = reduce(
-        lambda x,y: x+y,
-        [tdf.loc[ymd_over_t64(starttime, ymd_tomorrow(today)):]
-         for tdf in tomorrowdfs
-        ]
-    ) / len(tomorrowdfs)
-    
-    #Plausibility
-
-    sbpb = tomorrowwatts2.SBPB
-    ivp = tomorrowwatts2.IVP1+tomorrowwatts2.IVP2
-    sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
-    tomorrowwatts2.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] #shared
-
-    sbpo = tomorrowwatts2.SBPO
-    sbpb = tomorrowwatts2.SBPB
-    sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
-    tomorrowwatts2.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
+    tomorrowwatts2 = tomorrowwatts.loc[
+        ymd_over_t64(starttime, ymd_tomorrow(today)):
+    ]
     
     return prewatts, findwatts, postwatts, predictwatts, tomorrowwatts1, tomorrowwatts2
 
 
 """ Assemble the prediction data frames for today  """
-def concat_predict_24_today(
+def concat_predict_today(
         prewatts: pd.DataFrame,
         findwatts: pd.DataFrame,
         postwatts: pd.DataFrame,
@@ -329,7 +320,7 @@ def concat_predict_24_today(
                       predictwatts])
 
 """ Assemble the prediction data frames for tomorrow  """
-def concat_predict_24_tomorrow1(
+def concat_predict_tomorrow1(
         findwatts: pd.DataFrame,
         postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame,
@@ -340,7 +331,7 @@ def concat_predict_24_tomorrow1(
                       tomorrowwatts1])
 
 """ Assemble the prediction data frames for tomorrow  """
-def concat_predict_24_tomorrow2(
+def concat_predict_tomorrow2(
         findwatts: pd.DataFrame,
         postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame,

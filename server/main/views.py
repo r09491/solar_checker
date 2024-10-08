@@ -24,9 +24,9 @@ from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     predict_closest,
-    concat_predict_24_today,
-    concat_predict_24_tomorrow1,
-    concat_predict_24_tomorrow2
+    concat_predict_today,
+    concat_predict_tomorrow1,
+    concat_predict_tomorrow2
 )
 from utils.plots import (
     get_blocks,
@@ -236,11 +236,11 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Assemble the prediction elements """
     if what == 'Today':
-        c = concat_predict_24_today(*predict[:-2])
+        c = concat_predict_today(*predict[:-2])
     elif what == 'Early':
-        c = concat_predict_24_tomorrow1(*predict[1:-1])
+        c = concat_predict_tomorrow1(*predict[1:-1])
     elif what == 'Late':
-        c = concat_predict_24_tomorrow2(*predict[1:])
+        c = concat_predict_tomorrow2(*predict[1:])
         
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']

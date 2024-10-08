@@ -68,6 +68,10 @@ def ymd_tomorrow(today: str) -> t64:
     dt_today = datetime.strptime(today, "%y%m%d")
     return (dt_today + timedelta(days=1)).strftime("%y%m%d")
 
+def ymd_yesterday(today: str) -> t64:
+    dt_today = datetime.strptime(today, "%y%m%d")
+    return (dt_today - timedelta(days=1)).strftime("%y%m%d")
+
 
 def t64_clear(t: t64) -> t64:
     dt_ymd = pd.to_datetime(str(t))

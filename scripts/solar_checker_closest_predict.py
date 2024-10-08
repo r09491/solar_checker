@@ -35,7 +35,7 @@ from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     predict_closest,
-    concat_predict_24_today
+    concat_predict_today
 )
 
 import logging
