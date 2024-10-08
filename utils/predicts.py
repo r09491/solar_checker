@@ -238,6 +238,7 @@ async def predict_closest(
     """ The frame with the watts in the search slot  """
     findwatts = todaydf.loc[starttime:stoptime,:]
 
+
     """ The frame with the watts after the search slot  """
     postwatts = todaydf.loc[stoptime:logstoptime,:]
 
@@ -253,8 +254,19 @@ async def predict_closest(
         [pdf.loc[logstoptime:,:] for pdf in predictdfs]
     ) / len(predictdfs)
 
-    #TODO Suppress battery discharge if radiation (insider knowledge)
+    #Plausibility
 
+    sbpb = predictwatts.SBPB
+    ivp = predictwatts.IVP1+predictwatts.IVP2
+    sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
+    predictwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
+    
+    sbpo = predictwatts.SBPO
+    sbpb = predictwatts.SBPB
+    sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
+    predictwatts.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
+
+    
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
@@ -270,12 +282,37 @@ async def predict_closest(
         ]
     ) / len(tomorrowdfs)
 
+    #Plausibility
+
+    sbpb = tomorrowwatts1.SBPB
+    ivp = tomorrowwatts1.IVP1+tomorrowwatts1.IVP2
+    sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
+    tomorrowwatts1.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] #shared
+
+    sbpo = tomorrowwatts1.SBPO
+    sbpb = tomorrowwatts1.SBPB
+    sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
+    tomorrowwatts1.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
+
+    
     tomorrowwatts2 = reduce(
         lambda x,y: x+y,
         [tdf.loc[ymd_over_t64(starttime, ymd_tomorrow(today)):]
          for tdf in tomorrowdfs
         ]
     ) / len(tomorrowdfs)
+    
+    #Plausibility
+
+    sbpb = tomorrowwatts2.SBPB
+    ivp = tomorrowwatts2.IVP1+tomorrowwatts2.IVP2
+    sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
+    tomorrowwatts2.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] #shared
+
+    sbpo = tomorrowwatts2.SBPO
+    sbpb = tomorrowwatts2.SBPB
+    sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
+    tomorrowwatts2.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
     
     return prewatts, findwatts, postwatts, predictwatts, tomorrowwatts1, tomorrowwatts2
 

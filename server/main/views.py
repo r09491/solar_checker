@@ -254,8 +254,8 @@ async def plot_predict(request: web.Request) -> dict:
     smpoff[smp<=0] = -smp[smp<=0]
 
     # Plausibiliity check
-    ivp = ivp1+ivp2
-    sbpb[(sbpb>0) & (sbpb<ivp)] = ivp[(sbpb>0) & (sbpb<ivp)]
+    #ivp = ivp1+ivp2
+    #sbpb[(sbpb>0) & (sbpb<ivp)] = ivp[(sbpb>0) & (sbpb<ivp)]
 
     sbpbcharge = np.zeros_like(sbpb)
     sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
