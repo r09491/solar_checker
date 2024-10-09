@@ -243,13 +243,24 @@ async def plot_predict(request: web.Request) -> dict:
                  'IVP2': 'INV2'}
 
     predicttables = get_predict_tables(*predict)
+
     predicttables[0].rename(columns= newcolumns, inplace=True)
     predicttables[1].rename(columns= newcolumns, inplace=True)
+
     predicttables[0]['INV'] = predicttables[0]['INV1'] + predicttables[0]['INV2']
     predicttables[1]['INV'] = predicttables[1]['INV1'] + predicttables[1]['INV2'] 
     predicttables[0].drop(columns = ['INV1', 'INV2'], inplace=True)
     predicttables[1].drop(columns = ['INV1', 'INV2'], inplace=True)
-    
+
+    predicttables[0]['NET+'] = predicttables[0]['NET'][predicttables[0]['NET']>0]
+    predicttables[0]['NET-'] = predicttables[0]['NET'][predicttables[0]['NET']<0]
+    predicttables[1]['NET+'] = predicttables[1]['NET'][predicttables[1]['NET']>0]
+    predicttables[1]['NET-'] = predicttables[1]['NET'][predicttables[1]['NET']<0]
+    predicttables[0].drop(columns = ['NET'], inplace=True)
+    predicttables[1].drop(columns = ['NET'], inplace=True)
+    predicttables[0].fillna(0, inplace=True)
+    predicttables[1].fillna(0, inplace=True)
+        
     """ Assemble the prediction elements """
     if what == 'Today':
         c = concat_predict_today(*predict[1:-2])
