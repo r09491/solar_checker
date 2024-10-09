@@ -235,42 +235,39 @@ async def plot_predict(request: web.Request) -> dict:
         closestdays.head(n=logpredictdays)
     )
 
-    newcolumns = {'SMP': 'NET',
+    
+    newcolumns = {'SMP': 'GRID',
                  'SBPI': 'SUN',
                  'SBPB': 'BAT',
                  'SBPO': 'BANK',
                  'IVP1': 'INV1',
                  'IVP2': 'INV2'}
 
-    predicttables = get_predict_tables(*predict)
+    ptables = get_predict_tables(*predict)
+    
+    for pt in ptables:
+        pt.rename(columns= newcolumns, inplace=True)
 
-    predicttables[0].rename(columns= newcolumns, inplace=True)
-    predicttables[1].rename(columns= newcolumns, inplace=True)
+        pt['INV'] = pt['INV1'] + pt['INV2']
+        pt.drop(columns = ['INV1', 'INV2'], inplace=True)
 
-    predicttables[0]['INV'] = predicttables[0]['INV1'] + predicttables[0]['INV2']
-    predicttables[1]['INV'] = predicttables[1]['INV1'] + predicttables[1]['INV2'] 
-    predicttables[0].drop(columns = ['INV1', 'INV2'], inplace=True)
-    predicttables[1].drop(columns = ['INV1', 'INV2'], inplace=True)
+        pt['GRID+'] = pt['GRID'][pt['GRID']>0]
+        pt['GRID-'] = pt['GRID'][pt['GRID']<0]
+        pt.drop(columns = ['GRID'], inplace=True)
 
-    predicttables[0]['NET+'] = predicttables[0]['NET'][predicttables[0]['NET']>0]
-    predicttables[0]['NET-'] = predicttables[0]['NET'][predicttables[0]['NET']<0]
-    predicttables[1]['NET+'] = predicttables[1]['NET'][predicttables[1]['NET']>0]
-    predicttables[1]['NET-'] = predicttables[1]['NET'][predicttables[1]['NET']<0]
-    predicttables[0].drop(columns = ['NET'], inplace=True)
-    predicttables[1].drop(columns = ['NET'], inplace=True)
-    predicttables[0].fillna(0, inplace=True)
-    predicttables[1].fillna(0, inplace=True)
+        pt.fillna(0, inplace=True)
+
         
     """ Assemble the prediction elements """
     if what == 'Today':
         c = concat_predict_today(*predict[1:-2])
-        ptables = [p[:-2] for p in predicttables]
+        ptables = [p[:-2] for p in ptables]
     elif what == 'Early':
         c = concat_predict_tomorrow1(*predict[1:-1])
-        ptables = [p[1:-1] for p in predicttables]
+        ptables = [p[1:-1] for p in ptables]
     elif what == 'Late':
         c = concat_predict_tomorrow2(*predict[1:])
-        ptables = [p[1:] for p in predicttables]
+        ptables = [p[1:] for p in ptables]
         
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
