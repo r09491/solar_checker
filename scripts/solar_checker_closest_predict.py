@@ -28,14 +28,13 @@ from utils.common import (
     POWER_NAMES
 )
 from utils.common import (
-    hm_to_t64,
-    t64_to_hm
+    hm_to_t64
 )
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     predict_closest,
-    concat_predict_today
+    get_predict_tables
 )
 
 import logging
@@ -54,37 +53,15 @@ def print_predict(
         tomorrowwatts1: pd.DataFrame,
         tomorrowwatts2: pd.DataFrame) -> None:
 
-    input = vars()
+    relative_watts, absolute_watts = get_predict_tables(**vars())
 
-    phase = [k for (k,v) in input.items() if len(v) >0]
-    start = [t64_to_hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
-    stop = [t64_to_hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
-    swatts = pd.concat([v.sum()/60 for (k,v) in input.items() if v.size >0], axis=1)
-
-    swattphases = pd.concat(
-        [pd.DataFrame(
-            {'PHASE':phase,
-             'START': start,
-             'STOP': stop}), swatts.T
-        ], sort=False, axis=1)
-    swattphases.set_index('PHASE', inplace=True)
-
-    startstop = swattphases.iloc[:-2,:].loc[:, ['START', 'STOP']]
-    watts = swattphases.iloc[:-2,:].loc[:,['SBPI','SBPO','SBPB']]
-    smp = swattphases.iloc[:-2,:].loc[:,['SMP']]
-
-    relative_watts = pd.concat([startstop, smp, watts], axis=1)
     print(
         "\nRelative Watts\n", relative_watts
     )
-
-    absolute_watts = pd.concat([startstop, smp.cumsum(), watts.cumsum()], axis=1)
     print(
         "\nAbsolute Watts\n", absolute_watts
     )
     print()
-
-    #print(concat_predict_24_today(prewatts,findwatts,postwatts,predictwatts)['SBPB'].sum())
 
     
 @dataclass

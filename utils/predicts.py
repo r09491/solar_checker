@@ -23,6 +23,7 @@ from .types import (
 from .common import (
     t64_first,
     t64_last,
+    t64_to_hm,
     ymd_tomorrow,
     ymd_yesterday,
     ymd_over_t64
@@ -220,9 +221,7 @@ async def predict_closest(
     predictdays = doi[1:]
 
     # The days after the closest days
-    tomorrowdays = [(datetime.strptime(pd, "%y%m%d") +
-                     timedelta(days=1)).
-                    strftime("%y%m%d")
+    tomorrowdays = [ymd_tomorrow(pd)
                     for  pd in predictdays
                     if pd != ymd_yesterday(today)]
 
@@ -299,7 +298,7 @@ async def predict_closest(
 
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, ymd_tomorrow(today))
-    ]
+    ][:-1]
     
     tomorrowwatts2 = tomorrowwatts.loc[
         ymd_over_t64(starttime, ymd_tomorrow(today)):
@@ -310,12 +309,10 @@ async def predict_closest(
 
 """ Assemble the prediction data frames for today  """
 def concat_predict_today(
-        prewatts: pd.DataFrame,
         findwatts: pd.DataFrame,
         postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([prewatts,
-                      findwatts,
+    return pd.concat([findwatts,
                       postwatts,
                       predictwatts])
 
@@ -342,3 +339,36 @@ def concat_predict_tomorrow2(
                       predictwatts,
                       tomorrowwatts1,
                       tomorrowwatts2])
+
+
+def get_predict_tables(
+        prewatts: pd.DataFrame,
+        findwatts: pd.DataFrame,
+        postwatts: pd.DataFrame,
+        predictwatts: pd.DataFrame,
+        tomorrowwatts1: pd.DataFrame,
+        tomorrowwatts2: pd.DataFrame) -> List:
+
+    input = vars()
+
+    phase = [k for (k,v) in input.items() if len(v) >0]
+    start = [t64_to_hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
+    stop = [t64_to_hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
+    swatts = pd.concat([v.sum()/60 for (k,v) in input.items() if v.size >0], axis=1)
+
+    swattphases = pd.concat(
+        [pd.DataFrame(
+            {'PHASE':phase,
+             'START': start,
+             'STOP': stop}), swatts.T
+        ], sort=False, axis=1)
+    swattphases.set_index('PHASE', inplace=True)
+
+    startstop = swattphases.loc[:, ['START', 'STOP']]
+    watts = swattphases.loc[:,['SBPI','SBPB','SBPO', 'IVP1', 'IVP2']]
+    smp = swattphases.loc[:,['SMP']]
+
+    relative_watts = pd.concat([startstop, smp, watts], axis=1)
+    absolute_watts = pd.concat([startstop, smp.cumsum(), watts.cumsum()], axis=1)
+
+    return relative_watts, absolute_watts

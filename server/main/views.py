@@ -26,7 +26,8 @@ from utils.predicts import (
     predict_closest,
     concat_predict_today,
     concat_predict_tomorrow1,
-    concat_predict_tomorrow2
+    concat_predict_tomorrow2,
+    get_predict_tables
 )
 from utils.plots import (
     get_blocks,
@@ -234,13 +235,20 @@ async def plot_predict(request: web.Request) -> dict:
         closestdays.head(n=logpredictdays)
     )
 
+
+    predicttables = get_predict_tables(*predict)
+
+    
     """ Assemble the prediction elements """
     if what == 'Today':
-        c = concat_predict_today(*predict[:-2])
+        c = concat_predict_today(*predict[1:-2])
+        ptables = [p[1:-2] for p in predicttables]
     elif what == 'Early':
         c = concat_predict_tomorrow1(*predict[1:-1])
+        ptables = [p[1:-1] for p in predicttables]
     elif what == 'Late':
         c = concat_predict_tomorrow2(*predict[1:])
+        ptables = [p[1:] for p in predicttables]
         
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
@@ -252,10 +260,6 @@ async def plot_predict(request: web.Request) -> dict:
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
     smpoff[smp<=0] = -smp[smp<=0]
-
-    # Plausibiliity check
-    #ivp = ivp1+ivp2
-    #sbpb[(sbpb>0) & (sbpb<ivp)] = ivp[(sbpb>0) & (sbpb<ivp)]
 
     sbpbcharge = np.zeros_like(sbpb)
     sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
@@ -283,4 +287,5 @@ async def plot_predict(request: web.Request) -> dict:
             'logday': logday,
             'w': w, 'kwh': kwh,
             'start': start, 'stop': stop,
-            'predictdays': predictdays}
+            'predictdays': predictdays,
+            'predicttables': ptables}
