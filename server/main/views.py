@@ -235,14 +235,25 @@ async def plot_predict(request: web.Request) -> dict:
         closestdays.head(n=logpredictdays)
     )
 
+    newcolumns = {'SMP': 'NET',
+                 'SBPI': 'SUN',
+                 'SBPB': 'BAT',
+                 'SBPO': 'BANK',
+                 'IVP1': 'INV1',
+                 'IVP2': 'INV2'}
 
     predicttables = get_predict_tables(*predict)
-
+    predicttables[0].rename(columns= newcolumns, inplace=True)
+    predicttables[1].rename(columns= newcolumns, inplace=True)
+    predicttables[0]['INV'] = predicttables[0]['INV1'] + predicttables[0]['INV2']
+    predicttables[1]['INV'] = predicttables[1]['INV1'] + predicttables[1]['INV2'] 
+    predicttables[0].drop(columns = ['INV1', 'INV2'], inplace=True)
+    predicttables[1].drop(columns = ['INV1', 'INV2'], inplace=True)
     
     """ Assemble the prediction elements """
     if what == 'Today':
         c = concat_predict_today(*predict[1:-2])
-        ptables = [p[1:-2] for p in predicttables]
+        ptables = [p[:-2] for p in predicttables]
     elif what == 'Early':
         c = concat_predict_tomorrow1(*predict[1:-1])
         ptables = [p[1:-1] for p in predicttables]
