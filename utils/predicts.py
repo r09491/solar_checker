@@ -264,12 +264,17 @@ async def predict_closest(
     sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
     predictwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
 
+    sbpb = predictwatts.SBPB
+    sbpbivp_illegal = (sbpb>0) & (ivp<=0)
+    #predictwatts.SBPB[sbpbivp_illegal] = 0
+    predictwatts.IVP1[sbpbivp_illegal] = sbpb[sbpbivp_illegal]/2
+    predictwatts.IVP2[sbpbivp_illegal] = sbpb[sbpbivp_illegal]/2
+    
     sbpo = predictwatts.SBPO
     sbpb = predictwatts.SBPB
     sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
     predictwatts.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
 
-    
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
