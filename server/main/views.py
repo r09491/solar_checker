@@ -27,7 +27,7 @@ from utils.predicts import (
     concat_predict_today,
     concat_predict_tomorrow1,
     concat_predict_tomorrow2,
-    get_predict_tables
+    get_predict_table
 )
 from utils.plots import (
     get_blocks,
@@ -236,45 +236,44 @@ async def plot_predict(request: web.Request) -> dict:
     )
 
     
+    # Adapt the relative predict table
+    
     newcolumns = {'SMP': 'GRID',
                  'SBPI': 'SUN',
-                 'SBPB': 'BAT',
+                 'SBPB': '-BAT',
                  'SBPO': 'BANK',
                  'IVP1': 'INV1',
                  'IVP2': 'INV2'}
 
-    ptables = get_predict_tables(*predict)
+    ptable, bat_start_soc = get_predict_table(*predict)
     
-    for pt in ptables:
-        pt.rename(columns= newcolumns, inplace=True)
+    ptable.rename(columns= newcolumns, inplace=True)
 
-        pt['INV'] = pt['INV1'] + pt['INV2']
-        pt.drop(columns = ['INV1', 'INV2'], inplace=True)
+    ptable['INV'] = ptable['INV1'] + ptable['INV2']
+    ptable.drop(columns = ['INV1', 'INV2'], inplace=True)
 
-        pt['GRID+'] = pt['GRID'][pt['GRID']>0]
-        pt['GRID-'] = pt['GRID'][pt['GRID']<0]
-        pt.drop(columns = ['GRID'], inplace=True)
+    ptable['GRID+'] = ptable['GRID'][ptable['GRID']>0]
+    ptable['GRID-'] = ptable['GRID'][ptable['GRID']<0]
+    ptable.drop(columns = ['GRID'], inplace=True)
 
-        pt.fillna(0, inplace=True)
+    ptable.fillna(0, inplace=True)
 
-        
     """ Assemble the prediction elements """
     if what == 'Today':
         c = concat_predict_today(*predict[1:-2])
-        ptables = [p[:-2] for p in ptables]
+        rtable = ptable[1:-2]
     elif what == 'Early':
         c = concat_predict_tomorrow1(*predict[1:-1])
-        ptables = [p[1:-1] for p in ptables]
+        rtable = ptable[1:-1]
     elif what == 'Late':
         c = concat_predict_tomorrow2(*predict[1:])
-        ptables = [p[1:] for p in ptables]
-        
+        rtable = ptable[1:]
+
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
-    sbpi, sbpo, sbpb = c['SBPI'], c['SBPO'], c['SBPB']
+    sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
-    
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
@@ -299,12 +298,16 @@ async def plot_predict(request: web.Request) -> dict:
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
-            empty_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
+            sbsb[0]*full_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
             empty_kwh, full_kwh, price))
+
+    atable = pd.concat([rtable.iloc[:,:2],
+                        rtable.iloc[:,2:].cumsum()], axis = 1)
+    atable['-BAT'] =  ptable['-BAT'].cumsum() - full_wh*bat_start_soc 
 
     return {'what': what,
             'logday': logday,
             'w': w, 'kwh': kwh,
             'start': start, 'stop': stop,
             'predictdays': predictdays,
-            'predicttables': ptables}
+            'predicttables': [rtable, atable]}

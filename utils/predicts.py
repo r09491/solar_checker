@@ -237,6 +237,7 @@ async def predict_closest(
     """ The frame with the watts before teh watts use for searching  """
     prewatts = todaydf.loc[logstarttime:starttime,:]
 
+
     """ The frame with the watts in the search slot  """
     findwatts = todaydf.loc[starttime:stoptime,:]
 
@@ -341,21 +342,21 @@ def concat_predict_tomorrow2(
                       tomorrowwatts2])
 
 
-def get_predict_tables(
+def get_predict_table(
         prewatts: pd.DataFrame,
         findwatts: pd.DataFrame,
         postwatts: pd.DataFrame,
         predictwatts: pd.DataFrame,
         tomorrowwatts1: pd.DataFrame,
-        tomorrowwatts2: pd.DataFrame) -> List:
-
+        tomorrowwatts2: pd.DataFrame) -> pd.DataFrame:
+    
     input = vars()
 
     phase = [k for (k,v) in input.items() if len(v) >0]
     start = [t64_to_hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
     stop = [t64_to_hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
-    swatts = pd.concat([v.sum()/60 for (k,v) in input.items() if v.size >0], axis=1)
-
+    swatts = pd.concat([v.sum()/60 for (k,v) in input.items() if (v.size >0)], axis=1)
+        
     swattphases = pd.concat(
         [pd.DataFrame(
             {'PHASE':phase,
@@ -364,11 +365,12 @@ def get_predict_tables(
         ], sort=False, axis=1)
     swattphases.set_index('PHASE', inplace=True)
 
+
     startstop = swattphases.loc[:, ['START', 'STOP']]
-    watts = swattphases.loc[:,['SBPI','SBPB','SBPO', 'IVP1', 'IVP2']]
+    watts = swattphases.loc[:,['SBPI','SBPB','SBPO','IVP1','IVP2']]
     smp = swattphases.loc[:,['SMP']]
-
     relative_watts = pd.concat([startstop, smp, watts], axis=1)
-    absolute_watts = pd.concat([startstop, smp.cumsum(), watts.cumsum()], axis=1)
 
-    return relative_watts, absolute_watts
+    bat_soc_start =  prewatts.iloc[0,:]['SBSB']
+    
+    return relative_watts, bat_soc_start # percent

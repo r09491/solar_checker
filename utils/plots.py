@@ -137,16 +137,10 @@ def _get_w_line(time: t64s, smp: f64s,
     elif ivpon is not None:
         logger.info(f'{__me__}: using inverter samples only')
         
-        ###ax.fill_between(time, 0, ivp1,
-        ###                color='c',label='INV 1', alpha=0.1)
-        ###ax.fill_between(time, ivp1, ivp1 + ivp2,
-        ###                color='c', label='INV 2', alpha=0.1)
         ax.fill_between(time, 0, ivp1 + ivp2,
                         color='c', label='INV', alpha=0.2)
         ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smpon,
                         color='b', label='HOUSE', alpha=0.3)
-
-        #ax.plot(time, ivp1 + ivp2, color='black', label='<|>', lw=1, alpha=0.7)
 
     elif sbpoon is not None:
         logger.info(f'{__me__}: using solarbank samples only')
@@ -157,8 +151,6 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, sbpo, sbpo + smpon,
                         color='b', label='HOUSE', lw=0, alpha=0.3)
         
-        #ax.plot(time, sbpo, color='black', label='<|>', lw=1, alpha=0.7)
-          
     elif smpon is not None or smpoff is not None :
         logger.info(f'{__me__}: using smartmeter samples only')
         logger.warn(f'{__me__}: other power samples are not provided')
@@ -180,10 +172,6 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, 0, smpoff,
                         color='b', lw=0, alpha=0.3)
         
-    """ A good first guess for Anker family load for Nulleinspeisung """
-    ### ax.plot(time, slot_means, 
-    ###        color='c', lw=2, ls='-', label="MEANS+", alpha=0.4)
-
     if sbpion is not None:
         ax.fill_between(timesbpion ,
                         np.full_like(sbpion, 600),

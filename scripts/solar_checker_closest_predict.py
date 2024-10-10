@@ -34,7 +34,7 @@ from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     predict_closest,
-    get_predict_tables
+    get_predict_table
 )
 
 import logging
@@ -53,14 +53,19 @@ def print_predict(
         tomorrowwatts1: pd.DataFrame,
         tomorrowwatts2: pd.DataFrame) -> None:
 
-    relative_watts, absolute_watts = get_predict_tables(**vars())
+    relative_watts = get_predict_table(**vars())
 
     print(
         "\nRelative Watts\n", relative_watts
     )
+
+    absolute_watts = pd.concat([relative_watts.iloc[:,:2],
+                                relative_watts.iloc[:,2:].cumsum()], axis=1)
+
     print(
         "\nAbsolute Watts\n", absolute_watts
     )
+    
     print()
 
     
