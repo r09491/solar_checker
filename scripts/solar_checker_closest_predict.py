@@ -175,8 +175,17 @@ async def main( args: Script_Arguments) -> int:
             logsdf, starttime, stoptime, closestdays.head(n=4)
         )
 
+        ptable = get_predict_table(*predict)
+        
         pd.options.display.float_format = '{:,.1f}'.format
-        print_predict(*predict)
+        print("\nRelative Watts")
+        print(ptable[0])
+        print("\nAbsolute Watts")
+        awatts = pd.concat([ptable[0].iloc[:,:2],
+                            ptable[0].iloc[:,2:].cumsum()-ptable[1]*1600]
+                           , axis=1)
+        awatts['START'] = '00:00'
+        print(awatts[:3])
     
     return 0
 

@@ -304,7 +304,8 @@ async def plot_predict(request: web.Request) -> dict:
     atable = pd.concat([rtable.iloc[:,:2],
                         rtable.iloc[:,2:].cumsum()], axis = 1)
     atable['-BAT'] =  ptable['-BAT'].cumsum() - full_wh*bat_start_soc 
-
+    atable['START'] = "00:00"
+    
     return {'what': what,
             'logday': logday,
             'w': w, 'kwh': kwh,

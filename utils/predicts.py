@@ -281,7 +281,12 @@ async def predict_closest(
     sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
     predictwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
 
+    smp = predictwatts.SMP
+    sbpb = predictwatts.SBPB
+    adaptsmp = (sbpb>0) & (smp>sbpb)
+    predictwatts.SMP[adaptsmp] = 0
 
+    
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
@@ -299,16 +304,26 @@ async def predict_closest(
    
     #Plausibility
 
+    sbpo = tomorrowwatts.SBPO
+    haveoutput = sbpo>0
+    ivp1 = tomorrowwatts.IVP1
+    tomorrowwatts.IVP1[~haveoutput & (ivp1>0)] = 0
+    ivp2 = tomorrowwatts.IVP2
+    tomorrowwatts.IVP2[~haveoutput & (ivp2>0)] = 0
+    spph = tomorrowwatts.SPPH
+    tomorrowwatts.SPPH[~haveoutput & (spph>0)] = 0
+    
     sbpb = tomorrowwatts.SBPB
     ivp = tomorrowwatts.IVP1+tomorrowwatts.IVP2
     sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
-    tomorrowwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] #shared
+    tomorrowwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
 
-    sbpo = tomorrowwatts.SBPO
+    smp = tomorrowwatts.SMP
     sbpb = tomorrowwatts.SBPB
-    sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
-    tomorrowwatts.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
+    adaptsmp = (sbpb>0) & (smp>sbpb)
+    tomorrowwatts.SMP[adaptsmp] = 0
 
+    
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, ymd_tomorrow(today))
     ][:-1]
