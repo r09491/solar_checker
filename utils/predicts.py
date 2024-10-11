@@ -286,6 +286,14 @@ async def predict_closest(
     adaptsmp = (sbpb>0) & (smp>sbpb)
     predictwatts.SMP[adaptsmp] = 0
 
+    smp = predictwatts.SMP
+    sbpb = predictwatts.SBPB
+    ivp = predictwatts.IVP1+predictwatts.IVP2
+    sbpo = predictwatts.SBPO
+    replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp <=0)
+    predictwatts.SMP[replacesbpb] = sbpb
+    predictwatts.SBPB[replacesbpb] = 0
+
     
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
@@ -323,6 +331,13 @@ async def predict_closest(
     adaptsmp = (sbpb>0) & (smp>sbpb)
     tomorrowwatts.SMP[adaptsmp] = 0
 
+    smp = tomorrowwatts.SMP
+    sbpb = tomorrowwatts.SBPB
+    ivp = tomorrowwatts.IVP1+tomorrowwatts.IVP2
+    sbpo = tomorrowwatts.SBPO
+    replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp <=0)
+    tomorrowwatts.SMP[replacesbpb] = sbpb
+    tomorrowwatts.SBPB[replacesbpb] = 0
     
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, ymd_tomorrow(today))

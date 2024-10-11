@@ -252,10 +252,6 @@ async def plot_predict(request: web.Request) -> dict:
     ptable['INV'] = ptable['INV1'] + ptable['INV2']
     ptable.drop(columns = ['INV1', 'INV2'], inplace=True)
 
-    ptable['HOUSE+'] = ptable['HOUSE'][ptable['HOUSE']>0]
-    ptable['HOUSE-'] = ptable['HOUSE'][ptable['HOUSE']<0]
-    ptable.drop(columns = ['HOUSE'], inplace=True)
-
     ptable.fillna(0, inplace=True)
 
     """ Assemble the prediction elements """
