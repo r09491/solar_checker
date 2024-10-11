@@ -259,21 +259,28 @@ async def predict_closest(
 
     #Plausibility
 
+    sbpi = predictwatts.SBPI
+    sbpb = predictwatts.SBPB
+    haveenergy = (sbpi>0) | (sbpb>0)
+    
+    sbpo = predictwatts.SBPO
+    clearsbpo = ~haveenergy & (sbpo>0)
+    predictwatts.SBPO[clearsbpo] = 0
+
+    sbpo = predictwatts.SBPO
+    haveoutput = sbpo>0
+    ivp1 = predictwatts.IVP1
+    predictwatts.IVP1[~haveoutput & (ivp1>0)] = 0
+    ivp2 = predictwatts.IVP2
+    predictwatts.IVP2[~haveoutput & (ivp2>0)] = 0
+    spph = predictwatts.SPPH
+    predictwatts.SPPH[~haveoutput & (spph>0)] = 0
+    
     sbpb = predictwatts.SBPB
     ivp = predictwatts.IVP1+predictwatts.IVP2
     sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
     predictwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
 
-    sbpb = predictwatts.SBPB
-    sbpbivp_illegal = (sbpb>0) & (ivp<=0)
-    #predictwatts.SBPB[sbpbivp_illegal] = 0
-    predictwatts.IVP1[sbpbivp_illegal] = sbpb[sbpbivp_illegal]/2
-    predictwatts.IVP2[sbpbivp_illegal] = sbpb[sbpbivp_illegal]/2
-    
-    sbpo = predictwatts.SBPO
-    sbpb = predictwatts.SBPB
-    sbposbpb_lower = (sbpb>0) & (sbpo<sbpb)
-    predictwatts.SBPO[sbposbpb_lower] = sbpb[sbposbpb_lower]
 
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [

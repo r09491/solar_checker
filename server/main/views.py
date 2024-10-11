@@ -238,7 +238,7 @@ async def plot_predict(request: web.Request) -> dict:
     
     # Adapt the relative predict table
     
-    newcolumns = {'SMP': 'GRID',
+    newcolumns = {'SMP': 'HOUSE',
                  'SBPI': 'SUN',
                  'SBPB': '-BAT',
                  'SBPO': 'BANK',
@@ -252,9 +252,9 @@ async def plot_predict(request: web.Request) -> dict:
     ptable['INV'] = ptable['INV1'] + ptable['INV2']
     ptable.drop(columns = ['INV1', 'INV2'], inplace=True)
 
-    ptable['GRID+'] = ptable['GRID'][ptable['GRID']>0]
-    ptable['GRID-'] = ptable['GRID'][ptable['GRID']<0]
-    ptable.drop(columns = ['GRID'], inplace=True)
+    ptable['HOUSE+'] = ptable['HOUSE'][ptable['HOUSE']>0]
+    ptable['HOUSE-'] = ptable['HOUSE'][ptable['HOUSE']<0]
+    ptable.drop(columns = ['HOUSE'], inplace=True)
 
     ptable.fillna(0, inplace=True)
 
