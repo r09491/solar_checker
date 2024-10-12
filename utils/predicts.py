@@ -261,9 +261,8 @@ async def predict_closest(
 
     sbpi = predictwatts.SBPI
     sbpb = predictwatts.SBPB
-    haveenergy = (sbpi>0) | (sbpb>0)
-    
     sbpo = predictwatts.SBPO
+    haveenergy = (sbpi>0) | (sbpb>0)
     clearsbpo = ~haveenergy & (sbpo>0)
     predictwatts.SBPO[clearsbpo] = 0
 
@@ -276,24 +275,30 @@ async def predict_closest(
     spph = predictwatts.SPPH
     predictwatts.SPPH[~haveoutput & (spph>0)] = 0
     
-    sbpb = predictwatts.SBPB
-    ivp = predictwatts.IVP1+predictwatts.IVP2
-    sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
-    predictwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
-
+    smp = predictwatts.SMP
     smp = predictwatts.SMP
     sbpb = predictwatts.SBPB
-    adaptsmp = (sbpb>0) & (smp>sbpb)
+    adaptsmp = (sbpb>0) & (smp>0)
+    predictwatts.SBPB[adaptsmp] = sbpb+smp
     predictwatts.SMP[adaptsmp] = 0
 
-    smp = predictwatts.SMP
     sbpb = predictwatts.SBPB
     ivp = predictwatts.IVP1+predictwatts.IVP2
     sbpo = predictwatts.SBPO
-    replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp <=0)
+    replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp<=0)
     predictwatts.SMP[replacesbpb] = sbpb
     predictwatts.SBPB[replacesbpb] = 0
 
+    sbpb = predictwatts.SBPB
+    ivp = predictwatts.IVP1+predictwatts.IVP2
+    sbpbivp_higher = (sbpb>0) & (sbpb>ivp)
+    predictwatts.SBPB[sbpbivp_higher] = ivp[sbpbivp_higher] 
+
+    sbpi = predictwatts.SBPI
+    sbpb = predictwatts.SBPB
+    clearsbpb = (sbpi>0) & (sbpb>0)
+    predictwatts.SBPB[clearsbpb] = 0
+    
     
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
@@ -312,23 +317,26 @@ async def predict_closest(
    
     #Plausibility
 
+    sbpi = tomorrowwatts.SBPI
+    sbpb = tomorrowwatts.SBPB
     sbpo = tomorrowwatts.SBPO
-    haveoutput = sbpo>0
+    haveenergy = (sbpi>0) | (sbpb>0)
+    clearsbpo = ~haveenergy & (sbpo>0)
+    tomorrowwatts.SBPO[clearsbpo] = 0
+
+    sbpo = tomorrowwatts.SBPO
     ivp1 = tomorrowwatts.IVP1
+    haveoutput = sbpo>0
     tomorrowwatts.IVP1[~haveoutput & (ivp1>0)] = 0
     ivp2 = tomorrowwatts.IVP2
     tomorrowwatts.IVP2[~haveoutput & (ivp2>0)] = 0
     spph = tomorrowwatts.SPPH
     tomorrowwatts.SPPH[~haveoutput & (spph>0)] = 0
     
-    sbpb = tomorrowwatts.SBPB
-    ivp = tomorrowwatts.IVP1+tomorrowwatts.IVP2
-    sbpbivp_lower = (sbpb>0) & (sbpb<ivp)
-    tomorrowwatts.SBPB[sbpbivp_lower] = ivp[sbpbivp_lower] 
-
     smp = tomorrowwatts.SMP
     sbpb = tomorrowwatts.SBPB
-    adaptsmp = (sbpb>0) & (smp>sbpb)
+    adaptsmp = (sbpb>0) & (smp>0)
+    tomorrowwatts.SBPB[adaptsmp] = sbpb+smp
     tomorrowwatts.SMP[adaptsmp] = 0
 
     smp = tomorrowwatts.SMP
@@ -339,6 +347,16 @@ async def predict_closest(
     tomorrowwatts.SMP[replacesbpb] = sbpb
     tomorrowwatts.SBPB[replacesbpb] = 0
     
+    sbpb = tomorrowwatts.SBPB
+    ivp = tomorrowwatts.IVP1+tomorrowwatts.IVP2
+    sbpbivp_higher = (sbpb>0) & (sbpb>ivp)
+    tomorrowwatts.SBPB[sbpbivp_higher] = ivp[sbpbivp_higher] 
+
+    sbpi = tomorrowwatts.SBPI
+    sbpb = tomorrowwatts.SBPB
+    clearsbpb = (sbpi>0) & (sbpb>0)
+    tomorrowwatts.SBPB[clearsbpb] = 0
+
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, ymd_tomorrow(today))
     ][:-1]
