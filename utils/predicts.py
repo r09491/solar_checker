@@ -438,9 +438,9 @@ def get_predict_table(
 
 
     startstop = swattphases.loc[:, ['START', 'STOP']]
-    watts = swattphases.loc[:,['SBPI','SBPB-','SBPB+','SBPO','IVP']]
-    smp = swattphases.loc[:,['SMP+', 'SMP-']]
-    relative_watts = pd.concat([startstop, smp, watts], axis=1)
+    watts = swattphases.loc[:,['SBPI','SBPB-','SBPB+','SBPO','IVP','SMP-','SMP+']]
+    ##smp = swattphases.loc[:,['SMP+', 'SMP-']]
+    relative_watts = pd.concat([startstop, watts], axis=1)
 
     bat_soc_start =  prewatts.iloc[0,:]['SBPB-']
     
