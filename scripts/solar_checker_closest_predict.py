@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 
 from utils.types import (
-    t64, Any, Optional, List, Dict
+    t64, f64, Any, Optional, List, Dict
 )
 from utils.common import (
     PREDICT_NAMES,
@@ -46,27 +46,20 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 Print the prediction data frames. 
 """
 def print_predict(
-        prewatts: pd.DataFrame,
-        findwatts: pd.DataFrame,
-        postwatts: pd.DataFrame,
-        predictwatts: pd.DataFrame,
-        tomorrowwatts1: pd.DataFrame,
-        tomorrowwatts2: pd.DataFrame) -> None:
+        predicttable: pd.DataFrame,
+        batpercent: f64) -> None:
 
-    relative_watts = get_predict_table(**vars())
+    pd.options.display.float_format = '{:,.1f}'.format
 
-    print(
-        "\nRelative Watts\n", relative_watts
-    )
+    print("\nRelative Watts")
+    print(predicttable)
 
-    absolute_watts = pd.concat([relative_watts.iloc[:,:2],
-                                relative_watts.iloc[:,2:].cumsum()], axis=1)
-
-    print(
-        "\nAbsolute Watts\n", absolute_watts
-    )
-    
-    print()
+    print("\nAbsolute Watts")
+    awatts = pd.concat([predicttable.iloc[:,:2],
+                        predicttable.iloc[:,2:].cumsum()-batpercent*1600]
+                       , axis=1)
+    awatts['START'] = '00:00'
+    print(awatts[:3])
 
     
 @dataclass
@@ -175,18 +168,8 @@ async def main( args: Script_Arguments) -> int:
             logsdf, starttime, stoptime, closestdays.head(n=4)
         )
 
-        ptable = get_predict_table(*predict)
-        
-        pd.options.display.float_format = '{:,.1f}'.format
-        print("\nRelative Watts")
-        print(ptable[0])
-        print("\nAbsolute Watts")
-        awatts = pd.concat([ptable[0].iloc[:,:2],
-                            ptable[0].iloc[:,2:].cumsum()-ptable[1]*1600]
-                           , axis=1)
-        awatts['START'] = '00:00'
-        print(awatts[:3])
-    
+        print_predict(*get_predict_table(*predict))
+            
     return 0
 
 
