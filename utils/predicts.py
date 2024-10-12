@@ -412,6 +412,17 @@ def get_predict_table(
     
     input = vars()
 
+    for watts in input.values():
+        if watts.size == 0:
+            continue
+        watts['SBPB-'] = watts['SBPB'][(watts['SBPB']<0)]
+        watts['SBPB+'] = watts['SBPB'][(watts['SBPB']>0)]
+        watts['SMP+'] = watts['SMP'][(watts['SMP']>0)]
+        watts['SMP-'] = watts['SMP'][(watts['SMP']<0)]
+        watts['IVP'] = watts['IVP1'] + watts['IVP2']
+        #watts.drop(['SBPB','SMP','IVP1','IVP2'], inplace=True, axis=1)
+                
+    
     phase = [k for (k,v) in input.items() if len(v) >0]
     start = [t64_to_hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
     stop = [t64_to_hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
@@ -427,10 +438,10 @@ def get_predict_table(
 
 
     startstop = swattphases.loc[:, ['START', 'STOP']]
-    watts = swattphases.loc[:,['SBPI','SBPB','SBPO','IVP1','IVP2']]
-    smp = swattphases.loc[:,['SMP']]
+    watts = swattphases.loc[:,['SBPI','SBPB-','SBPB+','SBPO','IVP']]
+    smp = swattphases.loc[:,['SMP+', 'SMP-']]
     relative_watts = pd.concat([startstop, smp, watts], axis=1)
 
-    bat_soc_start =  prewatts.iloc[0,:]['SBSB']
+    bat_soc_start =  prewatts.iloc[0,:]['SBPB-']
     
     return relative_watts, bat_soc_start # percent

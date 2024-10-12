@@ -238,19 +238,17 @@ async def plot_predict(request: web.Request) -> dict:
     
     # Adapt the relative predict table
     
-    newcolumns = {'SMP': 'HOUSE',
-                 'SBPI': 'SUN',
-                 'SBPB': '-BAT',
-                 'SBPO': 'BANK',
-                 'IVP1': 'INV1',
-                 'IVP2': 'INV2'}
+    newcolumns = {'SMP+': '>HOUSE',
+                  'SMP-': 'HOUSE>',
+                  'SBPI': 'SUN',
+                  'SBPB+': 'BAT>',
+                  'SBPB-': '>BAT',
+                  'SBPO': 'BANK',
+                  'IVP': 'INV'}
 
     ptable, bat_start_soc = get_predict_table(*predict)
     
     ptable.rename(columns= newcolumns, inplace=True)
-
-    ptable['INV'] = ptable['INV1'] + ptable['INV2']
-    ptable.drop(columns = ['INV1', 'INV2'], inplace=True)
 
     ptable.fillna(0, inplace=True)
 
@@ -299,7 +297,7 @@ async def plot_predict(request: web.Request) -> dict:
 
     atable = pd.concat([rtable.iloc[:,:2],
                         rtable.iloc[:,2:].cumsum()], axis = 1)
-    atable['-BAT'] =  ptable['-BAT'].cumsum() - full_wh*bat_start_soc 
+    #atable['BAT>'] =  ptable['BAT>'].cumsum() - full_wh*bat_start_soc 
     atable['START'] = "00:00"
     
     return {'what': what,
