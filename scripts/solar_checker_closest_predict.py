@@ -56,10 +56,10 @@ def print_predict(
 
     print("\nAbsolute Watts")
     awatts = pd.concat([predicttable.iloc[:,:2],
-                        predicttable.iloc[:,2:].cumsum()-batpercent*1600]
+                        predicttable.iloc[:,2:].cumsum()]
                        , axis=1)
     awatts['START'] = '00:00'
-    print(awatts[:3])
+    print(awatts)
 
     
 @dataclass
