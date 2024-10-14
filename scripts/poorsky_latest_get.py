@@ -25,11 +25,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def main(sky: Sky) -> int:
+async def main(sky: Sky, what: str) -> int:
 
     try:
-        sky_info = await sky.get_sky_info()
-        print(sky_info)
+        if what == "sky":
+            info = await sky.get_sky_info()
+        elif what == "solar":
+            info = await sky.get_solar_info()
+        elif what == "sources":
+            info = await sky.get_sources_info()
+        print(info)
 
         err = 0
     except ClientConnectorError:
@@ -47,6 +52,7 @@ class Script_Arguments:
     lat: float
     lon: float
     day: str
+    what: str
 
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
@@ -67,9 +73,11 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--day', type = str, default=datetime.today().strftime('%y%m%d'),
                         help = "day for forecast 'ymd'")
 
+    parser.add_argument('what', nargs='?', default='sky')
+
     args = parser.parse_args()
 
-    return Script_Arguments(args.lat, args.lon, args.day)
+    return Script_Arguments(args.lat, args.lon, args.day, args.what)
 
 
 if __name__ == '__main__':
@@ -87,6 +95,10 @@ if __name__ == '__main__':
         logger.error('day for forcast is missing.')
         sys.exit(3)
 
+    if args.what not in ['sky', 'solar', 'sources']:
+        logger.error(f'Illegal command "{what}".')
+        sys.exit(4)
+    
     try:
         day =datetime.strptime(args.day,'%y%m%d')
     except:
@@ -98,7 +110,7 @@ if __name__ == '__main__':
               day.strftime('%Y-%m-%d'))
 
     try:
-        err = asyncio.run(main(sky))
+        err = asyncio.run(main(sky, args.what))
     except KeyboardInterrupt: 
         err = 99
        
