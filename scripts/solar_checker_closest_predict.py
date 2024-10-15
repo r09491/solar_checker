@@ -33,7 +33,8 @@ from utils.common import (
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
-    predict_closest,
+    assemble_closest,
+    fix_closest,
     get_predict_table
 )
 
@@ -60,6 +61,7 @@ def print_predict(
                        , axis=1)
     awatts['START'] = '00:00'
     print(awatts)
+    print()
 
     
 @dataclass
@@ -164,11 +166,13 @@ async def main( args: Script_Arguments) -> int:
     print(closestdays.head(n=10))
 
     if args.predict:
-        predict = await predict_closest(
+        todaydays, tomorrowdays, assembly = await assemble_closest(
             logsdf, starttime, stoptime, closestdays.head(n=4)
         )
 
-        print_predict(*get_predict_table(*predict))
+        assembly = fix_closest(assembly)
+        
+        print_predict(*get_predict_table(assembly))
             
     return 0
 

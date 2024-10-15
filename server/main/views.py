@@ -23,10 +23,11 @@ from utils.samples import (
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
-    predict_closest,
-    concat_predict_today,
-    concat_predict_tomorrow1,
-    concat_predict_tomorrow2,
+    assemble_closest,
+    fix_closest,
+    concat_today,
+    concat_tomorrow1,
+    concat_tomorrow2,
     get_predict_table
 )
 from utils.plots import (
@@ -228,13 +229,15 @@ async def plot_predict(request: web.Request) -> dict:
     logger.info(f'Using days "{",".join(predictdays)}"')
 
     """ Get the prediction slots """
-    predict = await predict_closest(
+    todaydays, tomorrowdays, assembly = await assemble_closest(
         logsdf,
         starttime,
         stoptime,
         closestdays.head(n=logpredictdays)
     )
 
+    """ Fix some watts after plausibility check """
+    assembly = fix_closest(assembly)
     
     # Adapt the relative predict table
     
@@ -246,7 +249,7 @@ async def plot_predict(request: web.Request) -> dict:
                   'SBPO': 'BANK',
                   'IVP': 'INV'}
 
-    ptable, bat_start_soc = get_predict_table(*predict)
+    ptable, bat_start_soc = get_predict_table(assembly)
     
     ptable.rename(columns= newcolumns, inplace=True)
 
@@ -254,13 +257,13 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Assemble the prediction elements """
     if what == 'Today':
-        c = concat_predict_today(*predict[1:-2])
+        c = concat_today(assembly)
         rtable = ptable[1:-2]
     elif what == 'Early':
-        c = concat_predict_tomorrow1(*predict[1:-1])
+        c = concat_tomorrow1(assembly)
         rtable = ptable[1:-1]
     elif what == 'Late':
-        c = concat_predict_tomorrow2(*predict[1:])
+        c = concat_tomorrow2(assembly)
         rtable = ptable[1:]
 
     time = np.array(list(c.index.values))

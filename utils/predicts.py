@@ -206,7 +206,7 @@ async def find_closest(
 Get the prediction dictionary. The first day in the closest days
 list is the day to be predicted. The followers are used for prediction 
 """
-async def predict_closest(
+async def assemble_closest(
         logsdf: pd.DataFrame,
         starttime: t64,
         stoptime: t64,
@@ -219,11 +219,11 @@ async def predict_closest(
     today = doi[0]
 
     # The closest days used for prediction
-    predictdays = doi[1:]
+    todaydays = doi[1:]
 
     # The days after the closest days
     tomorrowdays = [ymd_tomorrow(pd)
-                    for  pd in predictdays
+                    for  pd in todaydays
                     if pd != ymd_yesterday(today)]
 
     # Time of the first and last sample
@@ -247,59 +247,18 @@ async def predict_closest(
     postwatts = todaydf.loc[stoptime:logstoptime,:]
 
     """ The predicted data for the day until time of last sample """    
-    predictdfs = [
+    todaydfs = [
         pd.DataFrame(
             index = [ymd_over_t64(t, today) for t in ps[0]], 
             data = dict(ps[1:])
-        ) for ps in [logsdf.loc[pd] for pd in predictdays]]
+        ) for ps in [logsdf.loc[pd] for pd in todaydays]]
 
-    predictwatts = reduce(
+    todaywatts = reduce(
         lambda x,y: x+y,
-        [pdf.loc[logstoptime:,:] for pdf in predictdfs]
-    ) / len(predictdfs)
+        [pdf.loc[logstoptime:,:] for pdf in todaydfs]
+    ) / len(todaydfs)
 
-    #Plausibility
 
-    sbpi = predictwatts.SBPI
-    sbpb = predictwatts.SBPB
-    sbpo = predictwatts.SBPO
-    haveenergy = (sbpi>0) | (sbpb>0)
-    clearsbpo = ~haveenergy & (sbpo>0)
-    predictwatts.SBPO[clearsbpo] = 0
-
-    sbpo = predictwatts.SBPO
-    haveoutput = sbpo>0
-    ivp1 = predictwatts.IVP1
-    predictwatts.IVP1[~haveoutput & (ivp1>0)] = 0
-    ivp2 = predictwatts.IVP2
-    predictwatts.IVP2[~haveoutput & (ivp2>0)] = 0
-    spph = predictwatts.SPPH
-    predictwatts.SPPH[~haveoutput & (spph>0)] = 0
-    
-    smp = predictwatts.SMP
-    smp = predictwatts.SMP
-    sbpb = predictwatts.SBPB
-    adaptsmp = (sbpb>0) & (smp>0)
-    predictwatts.SBPB[adaptsmp] = sbpb+smp
-    predictwatts.SMP[adaptsmp] = 0
-
-    sbpb = predictwatts.SBPB
-    ivp = predictwatts.IVP1+predictwatts.IVP2
-    sbpo = predictwatts.SBPO
-    replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp<=0)
-    predictwatts.SMP[replacesbpb] = sbpb
-    predictwatts.SBPB[replacesbpb] = 0
-
-    sbpb = predictwatts.SBPB
-    ivp = predictwatts.IVP1+predictwatts.IVP2
-    sbpbivp_higher = (sbpb>0) & (sbpb>ivp)
-    predictwatts.SBPB[sbpbivp_higher] = ivp[sbpbivp_higher] 
-
-    sbpi = predictwatts.SBPI
-    sbpb = predictwatts.SBPB
-    clearsbpb = (sbpi>0) & (sbpb>0)
-    predictwatts.SBPB[clearsbpb] = 0
-    
     
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
@@ -316,48 +275,6 @@ async def predict_closest(
         [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
    
-    #Plausibility
-
-    sbpi = tomorrowwatts.SBPI
-    sbpb = tomorrowwatts.SBPB
-    sbpo = tomorrowwatts.SBPO
-    haveenergy = (sbpi>0) | (sbpb>0)
-    clearsbpo = ~haveenergy & (sbpo>0)
-    tomorrowwatts.SBPO[clearsbpo] = 0
-
-    sbpo = tomorrowwatts.SBPO
-    ivp1 = tomorrowwatts.IVP1
-    haveoutput = sbpo>0
-    tomorrowwatts.IVP1[~haveoutput & (ivp1>0)] = 0
-    ivp2 = tomorrowwatts.IVP2
-    tomorrowwatts.IVP2[~haveoutput & (ivp2>0)] = 0
-    spph = tomorrowwatts.SPPH
-    tomorrowwatts.SPPH[~haveoutput & (spph>0)] = 0
-    
-    smp = tomorrowwatts.SMP
-    sbpb = tomorrowwatts.SBPB
-    adaptsmp = (sbpb>0) & (smp>0)
-    tomorrowwatts.SBPB[adaptsmp] = sbpb+smp
-    tomorrowwatts.SMP[adaptsmp] = 0
-
-    smp = tomorrowwatts.SMP
-    sbpb = tomorrowwatts.SBPB
-    ivp = tomorrowwatts.IVP1+tomorrowwatts.IVP2
-    sbpo = tomorrowwatts.SBPO
-    replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp <=0)
-    tomorrowwatts.SMP[replacesbpb] = sbpb
-    tomorrowwatts.SBPB[replacesbpb] = 0
-    
-    sbpb = tomorrowwatts.SBPB
-    ivp = tomorrowwatts.IVP1+tomorrowwatts.IVP2
-    sbpbivp_higher = (sbpb>0) & (sbpb>ivp)
-    tomorrowwatts.SBPB[sbpbivp_higher] = ivp[sbpbivp_higher] 
-
-    sbpi = tomorrowwatts.SBPI
-    sbpb = tomorrowwatts.SBPB
-    clearsbpb = (sbpi>0) & (sbpb>0)
-    tomorrowwatts.SBPB[clearsbpb] = 0
-
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, ymd_tomorrow(today))
     ][:-1]
@@ -366,54 +283,89 @@ async def predict_closest(
         ymd_over_t64(starttime, ymd_tomorrow(today)):
     ]
     
-    return prewatts, findwatts, postwatts, predictwatts, tomorrowwatts1, tomorrowwatts2
+    return (todaydays,
+            tomorrowdays,
+            dict({'prewatts' : prewatts,
+                  'findwatts' : findwatts,
+                  'postwatts' : postwatts,
+                  'todaywatts' : todaywatts,
+                  'tomorrowwatts1' : tomorrowwatts1,
+                  'tomorrowwatts2' : tomorrowwatts2}))
+
+
+""" Fixes the closest assembly as per some plausibility assumptions """
+def fix_closest(assembly: dict) -> None:
+
+    fixphases = ['todaywatts', 'tomorrowwatts1', 'tomorrowwatts2']
+
+    for watts in [assembly[phase] for phase in fixphases]:
+        sbpi = watts['SBPI']
+        sbpb = watts['SBPB']
+        sbpo = watts['SBPO']
+        haveenergy = (sbpi>0) | (sbpb>0)
+        clearsbpo = ~haveenergy & (sbpo>0)
+        watts['SBPO'][clearsbpo] = 0
+
+        sbpo = watts['SBPO']
+        ivp1 = watts['IVP1']
+        haveoutput = sbpo>0
+        watts['IVP1'][~haveoutput & (ivp1>0)] = 0
+        ivp2 = watts['IVP2']
+        watts['IVP2'][~haveoutput & (ivp2>0)] = 0
+        spph = watts['SPPH']
+        watts['SPPH'][~haveoutput & (spph>0)] = 0
+    
+        smp = watts['SMP']
+        sbpb = watts['SBPB']
+        adaptsmp = (sbpb>0) & (smp>0)
+        watts['SBPB'][adaptsmp] = sbpb+smp
+        watts['SMP'][adaptsmp] = 0
+
+        smp = watts['SMP']
+        sbpb = watts['SBPB']
+        ivp = watts['IVP1']+watts['IVP2']
+        sbpo = watts['SBPO']
+        replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp <=0)
+        watts['SMP'][replacesbpb] = sbpb
+        watts['SBPB'][replacesbpb] = 0
+    
+        sbpb = watts['SBPB']
+        ivp = watts['IVP1']+watts['IVP2']
+        sbpbivp_higher = (sbpb>0) & (sbpb>ivp)
+        watts['SBPB'][sbpbivp_higher] = ivp[sbpbivp_higher] 
+
+        sbpi = watts['SBPI']
+        sbpb = watts['SBPB']
+        clearsbpb = (sbpi>0) & (sbpb>0)
+        watts['SBPB'][clearsbpb] = 0
+
+    return assembly
 
 
 """ Assemble the prediction data frames for today  """
-def concat_predict_today(
-        findwatts: pd.DataFrame,
-        postwatts: pd.DataFrame,
-        predictwatts: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([findwatts,
-                      postwatts,
-                      predictwatts])
+def concat_today(assembly: dict) -> pd.DataFrame:
+    return pd.concat([assembly['findwatts'],
+                      assembly['postwatts'],
+                      assembly['todaywatts']])
 
 """ Assemble the prediction data frames for tomorrow  """
-def concat_predict_tomorrow1(
-        findwatts: pd.DataFrame,
-        postwatts: pd.DataFrame,
-        predictwatts: pd.DataFrame,
-        tomorrowwatts1: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([findwatts,
-                      postwatts,
-                      predictwatts,
-                      tomorrowwatts1])
+def concat_tomorrow1(assembly: dict) -> pd.DataFrame:
+    return pd.concat([assembly['findwatts'],
+                      assembly['postwatts'],
+                      assembly['todaywatts'],
+                      assembly['tomorrowwatts1']])
 
 """ Assemble the prediction data frames for tomorrow  """
-def concat_predict_tomorrow2(
-        findwatts: pd.DataFrame,
-        postwatts: pd.DataFrame,
-        predictwatts: pd.DataFrame,
-        tomorrowwatts1: pd.DataFrame,
-        tomorrowwatts2: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([findwatts,
-                      postwatts,
-                      predictwatts,
-                      tomorrowwatts1,
-                      tomorrowwatts2])
+def concat_tomorrow2(assembly: dict) -> pd.DataFrame:
+    return pd.concat([assembly['findwatts'],
+                      assembly['postwatts'],
+                      assembly['todaywatts'],
+                      assembly['tomorrowwatts1'],
+                      assembly['tomorrowwatts2']])
 
-
-def get_predict_table(
-        prewatts: pd.DataFrame,
-        findwatts: pd.DataFrame,
-        postwatts: pd.DataFrame,
-        predictwatts: pd.DataFrame,
-        tomorrowwatts1: pd.DataFrame,
-        tomorrowwatts2: pd.DataFrame) -> pd.DataFrame:
+def get_predict_table(assembly: dict) -> pd.DataFrame:
     
-    input = vars()
-
-    for watts in input.values():
+    for watts in assembly.values():
         if watts.size == 0:
             continue
         watts['SBPB-'] = watts['SBPB'][(watts['SBPB']<0)]
@@ -421,13 +373,12 @@ def get_predict_table(
         watts['SMP+'] = watts['SMP'][(watts['SMP']>0)]
         watts['SMP-'] = watts['SMP'][(watts['SMP']<0)]
         watts['IVP'] = watts['IVP1'] + watts['IVP2']
-        #watts.drop(['SBPB','SMP','IVP1','IVP2'], inplace=True, axis=1)
-                
-    
-    phase = [k for (k,v) in input.items() if len(v) >0]
-    start = [t64_to_hm(v.index.values[0]) for (k,v) in input.items() if v.size >0]
-    stop = [t64_to_hm(v.index.values[-1]) for (k,v) in input.items() if v.size >0]
-    swatts = pd.concat([v.sum()/60 for (k,v) in input.items() if (v.size >0)], axis=1)
+
+        
+    phase = [k for (k,v) in assembly.items() if len(v) >0]
+    start = [t64_to_hm(v.index.values[0]) for (k,v) in assembly.items() if v.size >0]
+    stop = [t64_to_hm(v.index.values[-1]) for (k,v) in assembly.items() if v.size >0]
+    swatts = pd.concat([v.sum()/60 for (k,v) in assembly.items() if (v.size >0)], axis=1)
         
     swattphases = pd.concat(
         [pd.DataFrame(
@@ -440,9 +391,8 @@ def get_predict_table(
 
     startstop = swattphases.loc[:, ['START', 'STOP']]
     watts = swattphases.loc[:,['SBPI','SBPB-','SBPB+','SBPO','IVP','SMP-','SMP+']]
-    ##smp = swattphases.loc[:,['SMP+', 'SMP-']]
     relative_watts = pd.concat([startstop, watts], axis=1)
 
-    bat_soc_start =  prewatts.iloc[0,:]['SBPB-']
+    bat_soc_start =  assembly['prewatts'].iloc[0,:]['SBPB-']
     
     return relative_watts, bat_soc_start # percent
