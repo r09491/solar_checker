@@ -53,13 +53,14 @@ async def get_logs_as_lists(
     logdays = (await get_logdays(
         logprefix, logdir, logdayformat
     ))[-logmaxdays:]
+
+    logtasks = [asyncio.create_task(
+        get_columns_from_csv(
+            ld, logprefix, logdir
+        )) for ld in logdays]
     
     """ Get the list of associated columns """
-    logcolumns = await asyncio.gather(
-        *[get_columns_from_csv(
-            ld, logprefix, logdir
-        ) for ld in logdays]
-    )
+    logcolumns = await asyncio.gather(*logtasks)
     
     return logdays, logcolumns
 
