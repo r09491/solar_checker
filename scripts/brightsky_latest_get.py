@@ -14,7 +14,7 @@ import asyncio
 
 from datetime import datetime
 
-from poorsky import Sky
+from brightsky import Sky
 
 from aiohttp.client_exceptions import ClientConnectorError
 
