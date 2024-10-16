@@ -17,3 +17,6 @@ battery_full_wh : 1600
 battery_min_percent : 10
 battery_max_percent : 100
 
+lat: 49.04885
+lon: 11.78333
+tz: 'Europe/Berlin'

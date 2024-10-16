@@ -52,6 +52,7 @@ class Script_Arguments:
     lat: float
     lon: float
     day: str
+    tz: str
     what: str
 
 def parse_arguments() -> Script_Arguments:
@@ -73,11 +74,14 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--day', type = str, default=datetime.today().strftime('%y%m%d'),
                         help = "day for forecast 'ymd'")
 
+    parser.add_argument('--tz', type = str, default='Europe/Berlin',
+                        help = "TZ for forecast")
+
     parser.add_argument('what', nargs='?', default='sky')
 
     args = parser.parse_args()
 
-    return Script_Arguments(args.lat, args.lon, args.day, args.what)
+    return Script_Arguments(args.lat, args.lon, args.day, args.tz, args.what)
 
 
 if __name__ == '__main__':
@@ -99,15 +103,10 @@ if __name__ == '__main__':
         logger.error(f'Illegal command "{what}".')
         sys.exit(4)
     
-    try:
-        day =datetime.strptime(args.day,'%y%m%d')
-    except:
-        logger.error('day has wrong format.')
-        sys.exit(4)
-        
     sky = Sky(args.lat,
               args.lon,
-              day.strftime('%Y-%m-%d'))
+              args.day,
+              args.tz)
 
     try:
         err = asyncio.run(main(sky, args.what))

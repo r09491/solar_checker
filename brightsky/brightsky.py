@@ -10,6 +10,8 @@ from aiohttp.http_exceptions import HttpBadRequest
 
 from dataclasses import dataclass
 
+from datetime import datetime
+
 import pandas as pd
 
 import sys
@@ -24,8 +26,11 @@ class Sky:
 
     _URL, _ENDPOINT = 'api.brightsky.dev', 'weather'
     
-    def __init__(self, lat: float, lon: float, date: str, timeout: int = 10):
-        self.url = f'https://{self._URL}/{self._ENDPOINT}?lat={lat}&lon={lon}&date={date}'
+    def __init__(self, lat: float, lon: float, day: str, tz: str, timeout: int = 10):
+        self.url = f'https://{self._URL}/{self._ENDPOINT}?'
+        self.url += f'lat={lat}&lon={lon}&'
+        self.url += f'date={datetime.strptime(day, "%y%m%d").strftime("%Y-%m-%d")}&'
+        self.url += f'tz={tz}'
         self.timeout = timeout
 
         

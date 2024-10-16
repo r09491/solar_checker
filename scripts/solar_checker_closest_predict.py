@@ -14,7 +14,7 @@ import asyncio
 
 import numpy as np
 import pandas as pd
-pd.options.display.float_format = '{:,.0f}'.format
+pd.options.display.float_format = '{:,.1f}'.format
         
 from datetime import datetime, timedelta
 
@@ -25,7 +25,7 @@ from utils.types import (
 )
 from utils.common import (
     PREDICT_NAMES,
-    POWER_NAMES
+    POWER_NAMES,
 )
 from utils.common import (
     hm_to_t64
@@ -34,6 +34,8 @@ from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     assemble_closest,
+    get_sun_adaptors,
+    apply_sun_adapters,
     fix_closest,
     get_predict_table
 )
@@ -75,6 +77,10 @@ class Script_Arguments:
     stoptime: t64
     predict: bool
     columns: str
+    lat: f64
+    lon: f64
+    tz: str
+    
 
 def parse_arguments() -> Script_Arguments:
     description='Find a list of the closest log files for the given basefile'
@@ -120,6 +126,15 @@ def parse_arguments() -> Script_Arguments:
         help = "The list names of the to be used. The first determines the time slot for the evaluation an prediction"
     )
 
+    parser.add_argument('--lat', type = float, default = 49.04885,
+                        help = "latitude for forecast [-90 - +90]")
+
+    parser.add_argument('--lon', type = float, default = 11.78333,
+                        help = "longitude for forecast [-180 - +180]")
+        
+    parser.add_argument('--tz', type = str, default='Europe/Berlin',
+                        help = "TZ for forecast")
+
     args = parser.parse_args()
     
     return Script_Arguments(
@@ -132,6 +147,9 @@ def parse_arguments() -> Script_Arguments:
         args.stoptime,
         args.predict,
         args.columns,
+        args.lat,
+        args.lon,
+        args.tz
     )
 
 
@@ -166,9 +184,26 @@ async def main( args: Script_Arguments) -> int:
     print(closestdays.head(n=10))
 
     if args.predict:
-        todaydays, tomorrowdays, assembly = await assemble_closest(
+        todaydoi, tomorrowdoi, assembly = await assemble_closest(
             logsdf, starttime, stoptime, closestdays.head(n=4)
         )
+
+        todayadapters, tomorrowadapters = await asyncio.gather(
+            get_sun_adaptors(todaydoi, args.lat, args.lon, args.tz),
+            get_sun_adaptors(tomorrowdoi, args.lat, args.lon, args.tz)
+        )
+
+
+        """ Apply adapters to all phases with radiation """
+        
+        assembly['postwatts'] = apply_sun_adapters(
+            assembly['postwatts'], todayadapters)    
+        assembly['todaywatts'] = apply_sun_adapters(
+            assembly['todaywatts'], todayadapters)
+        assembly['tomorrowwatts1'] = apply_sun_adapters(
+            assembly['tomorrowwatts1'], tomorrowadapters)
+        assembly['tomorrowwatts2'] = apply_sun_adapters(
+            assembly['tomorrowwatts2'], tomorrowadapters)
 
         assembly = fix_closest(assembly)
         
@@ -194,6 +229,14 @@ if __name__ == '__main__':
     if args.columns.split(',')[0][-1] in ['-']:
             print(f'first column must not have extension')
             sys.exit(3)
+
+    if args.lat < -90 or args.lat > 90:
+        logger.error(f'latitude is out of range  "{args.lat}"')
+        sys.exit(4)
+
+    if args.lon < -180 or args.lat > 180:
+        logger.error(f'longitude is out of range  "{args.lon}"')
+        sys.exit(5)
             
     logger.info(f'solar_checker_closest_find begin')
     

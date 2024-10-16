@@ -18,12 +18,19 @@ from datetime import (
     )
 
 from .types import (
-    t64, Any, Optional, List, Dict
+    f64, t64, Any, Optional, List, Dict
     )
+from .common import (
+    FORECAST_NAMES
+)
 from .common import (
     t64_first,
     t64_last,
     t64_to_hm,
+    t64_from_iso,
+    t64_h_next,
+    t64_h_first,
+    t64_h_last,
     ymd_tomorrow,
     ymd_yesterday,
     ymd_over_t64
@@ -33,12 +40,59 @@ from .samples import (
     get_logdays
     )
 
+from brightsky import Sky
+
 import logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
     datefmt='%H:%M:%S',)
 logger = logging.getLogger(os.path.basename(__file__))
+
+
+""" Get the factors to adapt the average of the closest days to the
+current sun situation """
+async def get_sun_adaptors(
+        doi: list,
+        lat: float,
+        lon: float,
+        tz: str) -> List:
+
+    skytasks = [asyncio.create_task(
+        Sky(lat, lon, ld, tz).get_sky_info())
+        for ld in doi]
+    
+    """ Get the list of associated columns """
+    sky = await asyncio.gather(*skytasks)
+
+    """ Unify the indices. Get rid of time zone to avoid shift """
+    t64s = [t64_from_iso(t[:-6]) for t in sky[0].index]
+    for s in sky:
+        s.index = t64s
+
+    sunbase = sky[0].sunshine
+    sunclosest = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
+    sunadaptors = sunbase.astype(f64)/sunclosest.astype(f64)
+
+    sunadaptors.replace([np.inf, -np.inf], np.nan, inplace=True)
+    sunadaptors.fillna(1.0, inplace = True)
+
+    return sunadaptors
+
+
+""" Apply the sun adapters to the phase """
+def apply_sun_adapters( phasewatts: pd.DataFrame,
+                        adapter: pd.DataFrame) -> pd.DataFrame:
+
+    if phasewatts.empty:
+        return phasewatts
+            
+    t = phasewatts.index[0]
+    tt = phasewatts.index[-1]
+    while t<tt:
+        phasewatts.loc[t:t64_h_last(t),FORECAST_NAMES] *= adapter[t64_h_first(t)]
+        t = t64_h_next(t)
+    return phasewatts
 
 
 """ Get the list of logdays and the list of dictionaries with all the
@@ -213,19 +267,27 @@ async def assemble_closest(
         closestdays: List) -> Any:
 
     # The days of interest
-    doi = list(closestdays.index.values)
+    todaydoi = list(closestdays.index.values)
 
     # The day for prediction
-    today = doi[0]
+    today = todaydoi[0]
 
     # The closest days used for prediction
-    todaydays = doi[1:]
+    todaydays = todaydoi[1:]
 
+    
     # The days after the closest days
-    tomorrowdays = [ymd_tomorrow(pd)
-                    for  pd in todaydays
-                    if pd != ymd_yesterday(today)]
+    tomorrowdoi = [ymd_tomorrow(pd)
+                   for  pd in todaydoi
+                   if pd != ymd_yesterday(today)]
 
+    # The day for prediction
+    tomorrow = tomorrowdoi[0]
+
+    # The closest days used for prediction
+    tomorrowdays = tomorrowdoi[1:]
+
+    
     # Time of the first and last sample
     logstarttime = logsdf.loc[today, 'TIME'][0]
     logstoptime = logsdf.loc[today, 'TIME'][-1]
@@ -264,7 +326,7 @@ async def assemble_closest(
     tomorrowdfs = [
         pd.DataFrame(
             index = [ymd_over_t64(
-                t, ymd_tomorrow(today)
+                t, tomorrow
             ) for t in ts[0]],
             data = dict(ts[1:])
         ) for ts in [logsdf.loc[td] for td in tomorrowdays]]
@@ -276,15 +338,15 @@ async def assemble_closest(
     ) / len(tomorrowdfs)
    
     tomorrowwatts1 = tomorrowwatts.loc[
-        :ymd_over_t64(starttime, ymd_tomorrow(today))
+        :ymd_over_t64(starttime, tomorrow)
     ][:-1]
     
     tomorrowwatts2 = tomorrowwatts.loc[
-        ymd_over_t64(starttime, ymd_tomorrow(today)):
+        ymd_over_t64(starttime, tomorrow):
     ]
     
-    return (todaydays,
-            tomorrowdays,
+    return (todaydoi,
+            tomorrowdoi,
             dict({'prewatts' : prewatts,
                   'findwatts' : findwatts,
                   'postwatts' : postwatts,

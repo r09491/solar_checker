@@ -33,6 +33,8 @@ POWER_NAMES = [
     'SPP1', 'SPP2', 'SPP3', 'SPP4'
 ]
 
+""" The power names for weather forecast """
+FORECAST_NAMES = POWER_NAMES[2:8]
 
 """
 Only power samples may be used for predicts. For some sanmples it is
@@ -101,7 +103,44 @@ def t64_last(t: t64) -> t64:
                         minute=dt.minute,
                         hour=dt.hour,
                         second=59,
-                        microsecond=999))
+                        microsecond=999999))
 
+def t64_h_first(t: t64) -> t64:
+    dt = pd.to_datetime(str(t))
+    return t64(datetime(year=dt.year,
+                        month=dt.month,
+                        day=dt.day,
+                        minute=0,
+                        hour=dt.hour,
+                        second=0,
+                        microsecond=0))
+
+def t64_h_last(t: t64) -> t64:
+    dt = pd.to_datetime(str(t))
+    return t64(datetime(year=dt.year,
+                        month=dt.month,
+                        day=dt.day,
+                        minute=59,
+                        hour=dt.hour,
+                        second=59,
+                        microsecond=999999))
+
+def t64_h_next(t: t64) -> t64:
+    dt = pd.to_datetime(str(t))
+    return t64(datetime(year=dt.year,
+                        month=dt.month,
+                        day=dt.day if dt.hour<23 else dt.day+1,
+                        minute=0,
+                        hour=dt.hour+1 if dt.hour<23 else 0,
+                        second=0,
+                        microsecond=0))
+
+
+def t64_from_iso(value: str) -> t64:
+    try:
+        dt = datetime.fromisoformat(value)
+    except:
+        return None
+    return t64(dt)
 
 

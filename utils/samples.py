@@ -16,6 +16,7 @@ import asyncio
 
 from .types import f64, f64s, t64, t64s, strings
 from .common import SAMPLE_NAMES
+from .common import t64_from_iso
 
 import logging
 logging.basicConfig(
@@ -41,13 +42,6 @@ async def get_logdays(logprefix: str, logdir: str, logdayformat: str = '*') -> s
     else:
         return _get_logdays(**vars())
     
-
-def _iso_to_t64(value: str) -> t64:
-    try:
-        dt = datetime.fromisoformat(value)
-    except:
-        return None
-    return t64(dt)
 
 def _str2float(value: str) -> f64:
     try:
@@ -77,7 +71,7 @@ def _get_columns_from_csv(
     df = read_csv(logfile, names=SAMPLE_NAMES)
 
     """ The timestamps """
-    time = np.array(df.TIME.apply(_iso_to_t64))
+    time = np.array(df.TIME.apply(t64_from_iso))
 
     """ The smartmeter power samples """
     smp = np.array(df.SMP.apply(_str2float))
