@@ -24,6 +24,8 @@ from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     assemble_closest,
+    get_sun_adaptors,
+    apply_sun_adapters,
     fix_closest,
     concat_today,
     concat_tomorrow1,
@@ -190,6 +192,8 @@ async def plot_predict(request: web.Request) -> dict:
     logpredictdays = conf['logpredictdays']
     logpredictcolumns = conf['logpredictcolumns']
 
+    lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
+    
     try:
         logday = request.match_info['logday']
     except KeyError:
@@ -220,24 +224,42 @@ async def plot_predict(request: web.Request) -> dict:
         return aiohttp_jinja2.render_template('error.html', request,
             {'error' : f'No radiation detected for the log day  "{logday}"'}
         )
-    
+
     start = pd.to_datetime(str(starttime)).strftime("%H:%M")
     stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
-    logger.info(f'Using watt samples from "{start}" to "{stop}"')
     
     predictdays = closestdays.index.values[1:logpredictdays]
-    logger.info(f'Using days "{",".join(predictdays)}"')
 
     """ Get the prediction slots """
-    todaydays, tomorrowdays, assembly = await assemble_closest(
+    
+    todaydoi, tomorrowdoi, assembly = await assemble_closest(
         logsdf,
         starttime,
         stoptime,
         closestdays.head(n=logpredictdays)
     )
 
+    """ Get the sun adapters """
+    todayadapters, tomorrowadapters = await asyncio.gather(
+        get_sun_adaptors(todaydoi, lat, lon, tz),
+        get_sun_adaptors(tomorrowdoi, lat, lon, tz)
+    )
+
+
+    """ Apply adapters to all phases with radiation """
+        
+    assembly['postwatts'] = apply_sun_adapters(
+        assembly['postwatts'], todayadapters)    
+    assembly['todaywatts'] = apply_sun_adapters(
+        assembly['todaywatts'], todayadapters)
+    assembly['tomorrowwatts1'] = apply_sun_adapters(
+        assembly['tomorrowwatts1'], tomorrowadapters)
+    assembly['tomorrowwatts2'] = apply_sun_adapters(
+        assembly['tomorrowwatts2'], tomorrowadapters)
+
     """ Fix some watts after plausibility check """
     assembly = fix_closest(assembly)
+
     
     # Adapt the relative predict table
     
