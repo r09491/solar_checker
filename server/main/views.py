@@ -23,10 +23,10 @@ from utils.samples import (
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
-    assemble_closest,
+    partition_closest_watts,
     get_sun_adaptors,
     apply_sun_adapters,
-    fix_closest,
+    fix_prediction_watts,
     concat_today,
     concat_tomorrow1,
     concat_tomorrow2,
@@ -232,7 +232,7 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Get the prediction slots """
     
-    todaydoi, tomorrowdoi, assembly = await assemble_closest(
+    todaydoi, tomorrowdoi, partitions = await partition_closest_watts(
         logsdf,
         starttime,
         stoptime,
@@ -248,18 +248,22 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Apply adapters to all phases with radiation """
         
-    assembly['postwatts'] = apply_sun_adapters(
-        assembly['postwatts'], todayadapters)    
-    assembly['todaywatts'] = apply_sun_adapters(
-        assembly['todaywatts'], todayadapters)
-    assembly['tomorrowwatts1'] = apply_sun_adapters(
-        assembly['tomorrowwatts1'], tomorrowadapters)
-    assembly['tomorrowwatts2'] = apply_sun_adapters(
-        assembly['tomorrowwatts2'], tomorrowadapters)
+    partitions['postwatts'] = apply_sun_adapters(
+        partitions['postwatts'], todayadapters)    
+    partitions['todaywatts'] = apply_sun_adapters(
+        partitions['todaywatts'], todayadapters)
+    partitions['tomorrowwatts1'] = apply_sun_adapters(
+        partitions['tomorrowwatts1'], tomorrowadapters)
+    partitions['tomorrowwatts2'] = apply_sun_adapters(
+        partitions['tomorrowwatts2'], tomorrowadapters)
 
     """ Fix some watts after plausibility check """
-    assembly = fix_closest(assembly)
-
+    partitions['todaywatts'] = fix_prediction_watts(
+        partitions['todaywatts'])
+    partitions['tomorrowwatts1'] = fix_prediction_watts(
+        partitions['tomorrowwatts1'])
+    partitions['tomorrowwatts2'] = fix_prediction_watts(
+        partitions['tomorrowwatts2'])
     
     # Adapt the relative predict table
     
@@ -271,7 +275,7 @@ async def plot_predict(request: web.Request) -> dict:
                   'SBPO': 'BANK',
                   'IVP': 'INV'}
 
-    ptable, bat_start_soc = get_predict_table(assembly)
+    ptable, bat_start_soc = get_predict_table(partitions)
     
     ptable.rename(columns= newcolumns, inplace=True)
 
@@ -279,13 +283,13 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Assemble the prediction elements """
     if what == 'Today':
-        c = concat_today(assembly)
+        c = concat_today(partitions)
         rtable = ptable[1:-2]
     elif what == 'Early':
-        c = concat_tomorrow1(assembly)
+        c = concat_tomorrow1(partitions)
         rtable = ptable[1:-1]
     elif what == 'Late':
-        c = concat_tomorrow2(assembly)
+        c = concat_tomorrow2(partitions)
         rtable = ptable[1:]
 
     time = np.array(list(c.index.values))

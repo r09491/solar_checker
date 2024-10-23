@@ -33,10 +33,10 @@ from utils.common import (
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
-    assemble_closest,
+    partition_closest_watts,
     get_sun_adaptors,
     apply_sun_adapters,
-    fix_closest,
+    fix_prediction_watts,
     get_predict_table
 )
 
@@ -184,7 +184,7 @@ async def main( args: Script_Arguments) -> int:
     print(closestdays.head(n=10))
 
     if args.predict:
-        todaydoi, tomorrowdoi, assembly = await assemble_closest(
+        todaydoi, tomorrowdoi, partitions = await partition_closest_watts(
             logsdf, starttime, stoptime, closestdays.head(n=4)
         )
 
@@ -196,18 +196,26 @@ async def main( args: Script_Arguments) -> int:
 
         """ Apply adapters to all phases with radiation """
         
-        assembly['postwatts'] = apply_sun_adapters(
-            assembly['postwatts'], todayadapters)    
-        assembly['todaywatts'] = apply_sun_adapters(
-            assembly['todaywatts'], todayadapters)
-        assembly['tomorrowwatts1'] = apply_sun_adapters(
-            assembly['tomorrowwatts1'], tomorrowadapters)
-        assembly['tomorrowwatts2'] = apply_sun_adapters(
-            assembly['tomorrowwatts2'], tomorrowadapters)
+        partitions['postwatts'] = apply_sun_adapters(
+            partitions['postwatts'], todayadapters)    
+        partitions['todaywatts'] = apply_sun_adapters(
+            partitions['todaywatts'], todayadapters)
+        partitions['tomorrowwatts1'] = apply_sun_adapters(
+            partitions['tomorrowwatts1'], tomorrowadapters)
+        partitions['tomorrowwatts2'] = apply_sun_adapters(
+            partitions['tomorrowwatts2'], tomorrowadapters)
 
-        assembly = fix_closest(assembly)
         
-        print_predict(*get_predict_table(assembly))
+        """ Fix some watts after plausibility check """
+        partitions['todaywatts'] = fix_prediction_watts(
+            partitions['todaywatts'])
+        partitions['tomorrowwatts1'] = fix_prediction_watts(
+            partitions['tomorrowwatts1'])
+        partitions['tomorrowwatts2'] = fix_prediction_watts(
+            partitions['tomorrowwatts2'])
+
+        
+        print_predict(*get_predict_table(partitions))
             
     return 0
 
