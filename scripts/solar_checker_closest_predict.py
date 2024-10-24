@@ -184,8 +184,11 @@ async def main( args: Script_Arguments) -> int:
     print(closestdays.head(n=10))
 
     if args.predict:
-        todaydoi, tomorrowdoi, partitions = await partition_closest_watts(
-            logsdf, starttime, stoptime, closestdays.head(n=4)
+        todaydoi, tomorrowdoi, soc, partitions = await partition_closest_watts(
+            logsdf,
+            starttime,
+            stoptime,
+            closestdays.head(n=4),
         )
 
         todayadapters, tomorrowadapters = await asyncio.gather(
@@ -207,11 +210,12 @@ async def main( args: Script_Arguments) -> int:
 
         
         """ Fix some watts after plausibility check """
-        partitions['todaywatts'] = fix_prediction_watts(
-            partitions['todaywatts'])
-        partitions['tomorrowwatts1'] = fix_prediction_watts(
+        
+        partitions['todaywatts'], _ = fix_prediction_watts(
+            partitions['todaywatts'], -soc*1600)
+        partitions['tomorrowwatts1'], _ = fix_prediction_watts(
             partitions['tomorrowwatts1'])
-        partitions['tomorrowwatts2'] = fix_prediction_watts(
+        partitions['tomorrowwatts2'], _ = fix_prediction_watts(
             partitions['tomorrowwatts2'])
 
         

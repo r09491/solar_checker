@@ -232,7 +232,7 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Get the prediction slots """
     
-    todaydoi, tomorrowdoi, partitions = await partition_closest_watts(
+    todaydoi, tomorrowdoi, soc, partitions = await partition_closest_watts(
         logsdf,
         starttime,
         stoptime,
@@ -247,22 +247,25 @@ async def plot_predict(request: web.Request) -> dict:
 
 
     """ Apply adapters to all phases with radiation """
-        
+
     partitions['postwatts'] = apply_sun_adapters(
         partitions['postwatts'], todayadapters)    
     partitions['todaywatts'] = apply_sun_adapters(
         partitions['todaywatts'], todayadapters)
+    """
     partitions['tomorrowwatts1'] = apply_sun_adapters(
         partitions['tomorrowwatts1'], tomorrowadapters)
     partitions['tomorrowwatts2'] = apply_sun_adapters(
         partitions['tomorrowwatts2'], tomorrowadapters)
+    """
 
     """ Fix some watts after plausibility check """
-    partitions['todaywatts'] = fix_prediction_watts(
-        partitions['todaywatts'])
-    partitions['tomorrowwatts1'] = fix_prediction_watts(
+    
+    partitions['todaywatts'], _ = fix_prediction_watts(
+        partitions['todaywatts'], -soc*full_wh)
+    partitions['tomorrowwatts1'], _ = fix_prediction_watts(
         partitions['tomorrowwatts1'])
-    partitions['tomorrowwatts2'] = fix_prediction_watts(
+    partitions['tomorrowwatts2'], _ = fix_prediction_watts(
         partitions['tomorrowwatts2'])
     
     # Adapt the relative predict table

@@ -7,7 +7,7 @@ logdayformat : '%y%m%d'
 logpredictformat : '24*'
 logpredictmaxdays : 40
 logpredictdays : 4
-logpredictcolumns: 'SBPI,SBPB+'
+logpredictcolumns: 'SBPI'
 
 power_slots : ['00:00', '07:00', '20:00', '23:59']
 

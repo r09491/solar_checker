@@ -64,7 +64,6 @@ async def get_sun_adaptors(
     
     """ Get the list of associated columns """
     sky = await asyncio.gather(*skytasks)
-
     """ Unify the indices. Get rid of time zone to avoid shift """
     t64s = [t64_from_iso(t[:-6]) for t in sky[0].index]
     for s in sky:
@@ -257,8 +256,9 @@ async def find_closest(
 
 
 """ 
-Get the prediction dictionary. The first day in the closest days
-list is the day to be predicted. The followers are used for prediction 
+Get the partioned prediction dictionary. The first day in the closest
+days list is the day to be predicted. The followers are used for
+prediction
 """
 async def partition_closest_watts(
         logsdf: pd.DataFrame,
@@ -292,22 +292,24 @@ async def partition_closest_watts(
     logstarttime = logsdf.loc[today, 'TIME'][0]
     logstoptime = logsdf.loc[today, 'TIME'][-1]
 
-    """ The data already recorded """
-    todayseries = logsdf.loc[today]
-    todaydf = pd.DataFrame(index = todayseries[0],
-                           data = dict(todayseries[1:]))
+    
+    """ The data already recorded without partitioning """
+    realseries = logsdf.loc[today]
+    realdf = pd.DataFrame(index = realseries[0],
+                           data = dict(realseries[1:]))
+    realsoc = realdf.loc[:, 'SBSB'][-1]
 
-    """ The frame with the watts before teh watts use for searching  """
-    prewatts = todaydf.loc[logstarttime:starttime,:]
+    
+    """ The frame with the watts before searching. Can be empty! """
+    prewatts = realdf.loc[logstarttime:starttime,:]
 
+    """ The frame with the watts in the search slot. Never empty! """
+    findwatts = realdf.loc[starttime:stoptime,:]
 
-    """ The frame with the watts in the search slot  """
-    findwatts = todaydf.loc[starttime:stoptime,:]
+    """ The frame with the watts after the search slot. Can be empty! """
+    postwatts = realdf.loc[stoptime:logstoptime,:]
 
-
-    """ The frame with the watts after the search slot  """
-    postwatts = todaydf.loc[stoptime:logstoptime,:]
-
+    
     """ The predicted data for the day until time of last sample """    
     todaydfs = [
         pd.DataFrame(
@@ -321,7 +323,6 @@ async def partition_closest_watts(
     ) / len(todaydfs)
 
 
-    
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
@@ -347,6 +348,7 @@ async def partition_closest_watts(
     
     return (todaydoi,
             tomorrowdoi,
+            realsoc,
             dict({'prewatts' : prewatts,
                   'findwatts' : findwatts,
                   'postwatts' : postwatts,
@@ -356,7 +358,7 @@ async def partition_closest_watts(
 
 
 """ Fixes the closest assembly as per some plausibility assumptions """
-def fix_prediction_watts(watts: pd.DataFrame) -> None:
+def fix_prediction_watts(watts: pd.DataFrame, soc_wh: f64 = None) -> [pd.DataFrame, f64]:
 
     sbpi = watts['SBPI']
     sbpb = watts['SBPB']
@@ -398,21 +400,21 @@ def fix_prediction_watts(watts: pd.DataFrame) -> None:
     clearsbpb = (sbpi>0) & (sbpb>0)
     watts['SBPB'][clearsbpb] = 0
 
-    return watts
+    return watts, soc_wh
 
 
 """ Assemble the prediction data frames for today  """
 def concat_today(partitions: dict) -> pd.DataFrame:
     return pd.concat([partitions['findwatts'],
                       partitions['postwatts'],
-                      partitions['todaywatts']])
+                      partitions['todaywatts']], sort = False)
     
 """ Assemble the prediction data frames for tomorrow  """
 def concat_tomorrow1(partitions: dict) -> pd.DataFrame:
     return pd.concat([partitions['findwatts'],
                       partitions['postwatts'],
                       partitions['todaywatts'],
-                      partitions['tomorrowwatts1']])
+                      partitions['tomorrowwatts1']], sort = False)
 
 """ Assemble the prediction data frames for tomorrow  """
 def concat_tomorrow2(partitions: dict) -> pd.DataFrame:
@@ -420,13 +422,14 @@ def concat_tomorrow2(partitions: dict) -> pd.DataFrame:
                       partitions['postwatts'],
                       partitions['todaywatts'],
                       partitions['tomorrowwatts1'],
-                      partitions['tomorrowwatts2']])
+                      partitions['tomorrowwatts2']], sort = False)
 
 def get_predict_table(partitions: dict) -> pd.DataFrame:
-    
+
     for watts in partitions.values():
         if watts.size == 0:
             continue
+        
         watts['SBPB-'] = watts['SBPB'][(watts['SBPB']<0)]
         watts['SBPB+'] = watts['SBPB'][(watts['SBPB']>0)]
         watts['SMP+'] = watts['SMP'][(watts['SMP']>0)]
@@ -452,6 +455,7 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
     watts = swattphases.loc[:,['SBPI','SBPB-','SBPB+','SBPO','IVP','SMP-','SMP+']]
     relative_watts = pd.concat([startstop, watts], axis=1)
 
-    bat_soc_start =  partitions['prewatts'].iloc[0,:]['SBPB-']
-    
+
+    bat_soc_start =  0 if partitions['prewatts'].empty else partitions['prewatts'].iloc[0,:]['SBPB-']
+        
     return relative_watts, bat_soc_start # percent
