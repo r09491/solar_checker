@@ -71,10 +71,7 @@ async def get_sun_adaptors(
 
     sunbase = sky[0].sunshine
     sunclosest = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
-    sunadaptors = sunbase.astype(f64)/sunclosest.astype(f64)
-
-    sunadaptors.replace([np.inf, -np.inf], np.nan, inplace=True)
-    sunadaptors.fillna(1.0, inplace = True)
+    sunadaptors = 1 + np.log10((sunbase + 6) / (sunclosest + 6))
 
     return sunadaptors
 
@@ -89,7 +86,8 @@ def apply_sun_adapters( phasewatts: pd.DataFrame,
     t = phasewatts.index[0]
     tt = phasewatts.index[-1]
     while t<tt:
-        phasewatts.loc[t:t64_h_last(t),FORECAST_NAMES] *= adapter[t64_h_first(t)]
+        phasewatts.loc[t:t64_h_last(t),
+                       FORECAST_NAMES] *= adapter[t64_h_first(t)]
         t = t64_h_next(t)
     return phasewatts
 

@@ -248,25 +248,27 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Apply adapters to all phases with radiation """
 
+
     partitions['postwatts'] = apply_sun_adapters(
         partitions['postwatts'], todayadapters)    
     partitions['todaywatts'] = apply_sun_adapters(
         partitions['todaywatts'], todayadapters)
-    """
+
     partitions['tomorrowwatts1'] = apply_sun_adapters(
         partitions['tomorrowwatts1'], tomorrowadapters)
     partitions['tomorrowwatts2'] = apply_sun_adapters(
         partitions['tomorrowwatts2'], tomorrowadapters)
-    """
+
 
     """ Fix some watts after plausibility check """
-    
+
     partitions['todaywatts'], _ = fix_prediction_watts(
         partitions['todaywatts'], -soc*full_wh)
     partitions['tomorrowwatts1'], _ = fix_prediction_watts(
         partitions['tomorrowwatts1'])
     partitions['tomorrowwatts2'], _ = fix_prediction_watts(
         partitions['tomorrowwatts2'])
+    
     
     # Adapt the relative predict table
     
