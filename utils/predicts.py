@@ -427,11 +427,17 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
     for watts in partitions.values():
         if watts.size == 0:
             continue
-        
-        watts['SBPB-'] = watts['SBPB'][(watts['SBPB']<0)]
-        watts['SBPB+'] = watts['SBPB'][(watts['SBPB']>0)]
-        watts['SMP+'] = watts['SMP'][(watts['SMP']>0)]
-        watts['SMP-'] = watts['SMP'][(watts['SMP']<0)]
+
+        watts['SBPB-'] = watts['SBPB']
+        watts['SBPB-'][(watts['SBPB-'])>0] = 0
+        watts['SBPB+'] = watts['SBPB']
+        watts['SBPB+'][(watts['SBPB+'])<0] = 0
+
+        watts['SMP-'] = watts['SMP']
+        watts['SMP-'][(watts['SMP-'])>0] = 0
+        watts['SMP+'] = watts['SMP']
+        watts['SMP+'][(watts['SMP+'])<0] = 0
+
         watts['IVP'] = watts['IVP1'] + watts['IVP2']
 
         
