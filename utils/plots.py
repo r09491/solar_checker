@@ -419,7 +419,7 @@ async def get_kwh_line(
 
 
 def _get_kwh_bar_unified(
-        time: t64s, smeon: f64s, smeoff: f64s, balcony: f64,
+        time: t64s, smeon: f64s, smeoff: f64s, balcony: f64s,
         price: f64, bar_width: f64, time_format: str):
 
     __me__='_get_kwh_bar_unified'
@@ -435,7 +435,7 @@ def _get_kwh_bar_unified(
         logger.info(f'{__me__}: using unified samples')
 
         ax.bar(time, balcony, bottom = smeoff,
-               color='grey', label='BALCONY', width=bar_width, alpha=0.3)
+               color='cyan', label='BALCONY', width=bar_width, alpha=0.3)
         ax.bar(time, smeon, bottom=balcony+smeoff,
                color='blue',label='HOUSE <', width=bar_width, alpha=0.3)
 
@@ -443,11 +443,6 @@ def _get_kwh_bar_unified(
             if ybalcony > 0.5 and ysmeoff < 0.0:
                 ax.text(x, ysmeoff, f'{ybalcony:.1f}', ha = 'center',
                         color = 'grey', weight='bold', size=8)
-            """
-            if ysmeoff < -1.0:
-                ax.text(x, ysmeoff/2, f'{-ysmeoff:.1f}', ha = 'center',
-                        color = 'brown', weight='bold', size=8)
-            """
 
             if ysmeoff + ybalcony > 0.5:
                 ax.text(x, (ysmeoff + ybalcony)/2, f'{ysmeoff+ybalcony:.1f}', ha = 'center',
