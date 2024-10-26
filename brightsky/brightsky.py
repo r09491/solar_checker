@@ -26,7 +26,12 @@ class Sky:
 
     _URL, _ENDPOINT = 'api.brightsky.dev', 'weather'
     
-    def __init__(self, lat: float, lon: float, day: str, tz: str, timeout: int = 10):
+    def __init__(self,
+                 lat: float,
+                 lon: float,
+                 day: str,
+                 tz: str = 'UTC', timeout: int = 10):
+        
         self.url = f'https://{self._URL}/{self._ENDPOINT}?'
         self.url += f'lat={lat}&lon={lon}&'
         self.url += f'date={datetime.strptime(day, "%y%m%d").strftime("%Y-%m-%d")}&'
@@ -49,7 +54,7 @@ class Sky:
         try:
             response = await self._request()
         except:
-            respone = None
+            return None
         return response['weather']
 
 
@@ -57,7 +62,7 @@ class Sky:
         try:
             response = await self._get_weather_info()
         except:
-            respone = None
+            return None
 
         df = pd.DataFrame(response)
         df.set_index('timestamp', inplace = True)
@@ -68,7 +73,7 @@ class Sky:
         try:
             response = await self._get_weather_info()
         except:
-            respone = None            
+            return None            
 
         df = pd.DataFrame(response)
         df.set_index('timestamp', inplace = True)
@@ -79,7 +84,7 @@ class Sky:
         try:
             response = await self._request()
         except:
-            respone = None
+            return None
         return response['sources']
 
     
@@ -87,7 +92,7 @@ class Sky:
         try:
             response = await self._get_sources_info()
         except:
-            respone = None
+            return None
 
         df = pd.DataFrame(response)
         df.set_index('id', inplace = True)

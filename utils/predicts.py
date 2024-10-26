@@ -58,16 +58,19 @@ async def get_sun_adaptors(
         lon: float,
         tz: str) -> List:
 
+    """ Time in UTC """
     skytasks = [asyncio.create_task(
-        Sky(lat, lon, ld, tz).get_sky_info())
-        for ld in doi]
+        Sky(lat, lon, ld).get_sky_info()
+    ) for ld in doi]
     
     """ Get the list of associated columns """
     sky = await asyncio.gather(*skytasks)
-    """ Unify the indices. Get rid of time zone to avoid shift """
-    t64s = [t64_from_iso(t[:-6]) for t in sky[0].index]
+
+    """ Unify the indices. Takes care for switching from summertime to
+    wintertime """
+    skyindex = sky[0].index.map(t64_from_iso).tz_localize('utc').tz_convert(tz)
     for s in sky:
-        s.index = t64s
+        s.set_index(skyindex, inplace = True)
 
     sunbase = sky[0].sunshine
     sunclosest = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
