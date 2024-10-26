@@ -205,9 +205,9 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if smpon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Grid <{smp[-1] if smp[-1]>0 else 0:.0f}'
+        title += f'Grid >{smp[-1] if smp[-1]>0 else 0:.0f}'
         title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
-        title += f' >{-smp[-1] if smp[-1]<0 else 0:.0f}'
+        title += f' <{-smp[-1] if smp[-1]<0 else 0:.0f}'
         title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
         
     ax.set_title(title)
@@ -372,16 +372,16 @@ def _get_kwh_line(
     if smeon is not None:
         title += '' if title[-1] == '\n' else ' | '
         if time_format == '%H:%M': # Accumulated
-            title += f'Grid <{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
+            title += f'Grid >{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
         else:
-            title += f'Grid <{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
+            title += f'Grid >{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
             
         if smeoff is not None:
             if time_format == '%H:%M': # Accumulated
-                title += f' >{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
+                title += f' <{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
                 title += f' | Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
             else:
-                title += f' >{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€'
+                title += f' <{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€'
                 title += f' | Profit {ive.sum()-smeoff.sum():.2f}kWh~{(ive.sum()-smeoff.sum())*price:.2f}€'
     
     ax.set_title(title)
@@ -435,7 +435,7 @@ def _get_kwh_bar_unified(
         ax.bar(time, balcony, bottom = smeoff,
                color='cyan', label='BALCONY', width=bar_width, alpha=0.3)
         ax.bar(time, smeon, bottom=balcony+smeoff,
-               color='blue',label='GRID <', width=bar_width, alpha=0.3)
+               color='blue',label='GRID >', width=bar_width, alpha=0.3)
 
         for x, ysmeoff, ybalcony, ysmeon in zip(time, smeoff, balcony, smeon):
             if ybalcony > 0.5 and ysmeoff < 0.0:
@@ -479,12 +479,12 @@ def _get_kwh_bar_unified(
             title += f'~{smeoffon.sum()*price:.2f}€'
             title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
 
-            title += f'\nGrid <{smeonon.sum():.1f}'
+            title += f'\nGrid >{smeonon.sum():.1f}'
             title += f'={smeonon.mean():.1f}'
             title += f'^{smeonon.max():.1f}kWh'   
             title += f'~{(smeonon.sum()*price):.2f}€'
 
-            title += f' >{smeoffon.sum():.1f}'
+            title += f' <{smeoffon.sum():.1f}'
             title += f'={smeoffon.mean():.1f}'
             title += f'^{smeoffon.max():.1f}kWh'   
             title += f'~{(smeoffon.sum()*price):.2f}€'
