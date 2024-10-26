@@ -58,16 +58,14 @@ def _get_w_line(time: t64s, smp: f64s,
     smpon = np.zeros_like(smp)
     issmpon = smp>0 if smp is not None else None
     smpon[issmpon] = smp[issmpon] 
-    #smpon = smp[issmpon] if issmpon  is not None and issmpon.any() else None
-    smpon_mean = smpon.mean() if smpon is not None else 0
-    smpon_max = smpon.max() if smpon is not None else 0
+    smpon_mean = 0 if not issmpon.any() else smpon.mean()
+    smpon_max = 0 if not issmpon.any() else smpon.max()
 
     smpoff = np.zeros_like(smp)
-    issmpoff = ~issmpon if issmpon is not None else None
+    issmpoff = smp<0 if smp is not None else None
     smpoff[issmpoff] = smp[issmpoff] 
-    #smpoff = smp[issmpoff] if issmpoff  is not None and issmpoff.any() else None
-    smpoff_mean = smpoff.mean() if smpoff is not None else 0
-    smpoff_min = smpoff.min() if smpoff is not None else 0
+    smpoff_mean = 0 if not issmpoff.any() else smpoff.mean()
+    smpoff_min = 0 if not issmpoff.any() else smpoff.min()
 
     # ?Have data (inverter)
     ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else None 
@@ -124,7 +122,7 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, 0, spph,
                         color='grey',label='PLUG', lw=0, alpha=0.3)
         ax.fill_between(time, spph, spph + smpon,
-                        color='b', label='HOUSE', lw=0, alpha=0.3)
+                        color='b', label='GRID', lw=0, alpha=0.3)
 
         if ivpon is not None:
             ax.plot(time, ivp1,
@@ -140,7 +138,7 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, 0, ivp1 + ivp2,
                         color='c', label='INV', alpha=0.2)
         ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smpon,
-                        color='b', label='HOUSE', alpha=0.3)
+                        color='b', label='GRID', alpha=0.3)
 
     elif sbpoon is not None:
         logger.info(f'{__me__}: using solarbank samples only')
@@ -149,14 +147,14 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, 0, sbpo,
                         color='grey', label='BANK', lw=0, alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smpon,
-                        color='b', label='HOUSE', lw=0, alpha=0.3)
+                        color='b', label='GRID', lw=0, alpha=0.3)
         
     elif smpon is not None or smpoff is not None :
         logger.info(f'{__me__}: using smartmeter samples only')
         logger.warn(f'{__me__}: other power samples are not provided')
 
         ax.fill_between(time, 0, smp,
-                        color='b', label='HOUSE', alpha=0.3)
+                        color='b', label='GRID', alpha=0.3)
 
         
     """ Plot the battery power of the solarbank during charging"""
@@ -207,7 +205,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if smpon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'House <{smp[-1] if smp[-1]>0 else 0:.0f}'
+        title += f'Grid <{smp[-1] if smp[-1]>0 else 0:.0f}'
         title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
         title += f' >{-smp[-1] if smp[-1]<0 else 0:.0f}'
         title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
@@ -277,7 +275,7 @@ def _get_kwh_line(
         ax.fill_between(time, 0, speh,
                              color='grey', label='PLUG',alpha=0.3)
         ax.fill_between(time, speh, speh + smeon,
-                             color='b',label='HOUSE', alpha=0.3)
+                             color='b',label='GRID', alpha=0.3)
 
     elif iveon is not None:
         logger.info(f'{__me__}: using inverter samples only')
@@ -285,7 +283,7 @@ def _get_kwh_line(
         ax.fill_between(time, 0, ive2 + ive1,
                              color='c',label='INV', alpha=0.3)                             
         ax.fill_between(time, ive2 + ive1, ive2 + ive1 + smeon,
-                             color='b',label='HOUSE', alpha=0.3)
+                             color='b',label='GRID', alpha=0.3)
 
     elif sbeoon is not None:
         logger.info(f'{__me__}: using solarbank samples only')
@@ -294,7 +292,7 @@ def _get_kwh_line(
         ax.fill_between(time, 0, sbeo,
                         color='grey', label='BANK',alpha=0.3)
         ax.fill_between(time, sbeo, sbeo + smeon,
-                        color='b',label='HOUSE', alpha=0.3)
+                        color='b',label='GRID', alpha=0.3)
 
     elif smeon is not None:
         logger.info(f'{__me__}: using smartmeter samples only')
@@ -303,7 +301,7 @@ def _get_kwh_line(
         #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
 
         ax.fill_between(time, smeoff, smeon,
-                        color='b',label='HOUSE', alpha=0.3)
+                        color='b',label='GRID', alpha=0.3)
 
         
     if sbsb is not None:
@@ -374,9 +372,9 @@ def _get_kwh_line(
     if smeon is not None:
         title += '' if title[-1] == '\n' else ' | '
         if time_format == '%H:%M': # Accumulated
-            title += f'House <{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
+            title += f'Grid <{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
         else:
-            title += f'House <{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
+            title += f'Grid <{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
             
         if smeoff is not None:
             if time_format == '%H:%M': # Accumulated
@@ -437,7 +435,7 @@ def _get_kwh_bar_unified(
         ax.bar(time, balcony, bottom = smeoff,
                color='cyan', label='BALCONY', width=bar_width, alpha=0.3)
         ax.bar(time, smeon, bottom=balcony+smeoff,
-               color='blue',label='HOUSE <', width=bar_width, alpha=0.3)
+               color='blue',label='GRID <', width=bar_width, alpha=0.3)
 
         for x, ysmeoff, ybalcony, ysmeon in zip(time, smeoff, balcony, smeon):
             if ybalcony > 0.5 and ysmeoff < 0.0:
@@ -459,7 +457,7 @@ def _get_kwh_bar_unified(
                    color='blue', width=bar_width, alpha=0.3)
         if smeoff is not None:
             ax.bar(time, smeon, bottom=balcony,
-                   color='blue',label='HOUSE', width=bar_width, alpha=0.3)
+                   color='blue',label='GRID', width=bar_width, alpha=0.3)
             
                 
     title = '' # f'# Energy Check #\n'
@@ -481,7 +479,7 @@ def _get_kwh_bar_unified(
             title += f'~{smeoffon.sum()*price:.2f}€'
             title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
 
-            title += f'\nHouse <{smeonon.sum():.1f}'
+            title += f'\nGrid <{smeonon.sum():.1f}'
             title += f'={smeonon.mean():.1f}'
             title += f'^{smeonon.max():.1f}kWh'   
             title += f'~{(smeonon.sum()*price):.2f}€'

@@ -28,8 +28,8 @@ from utils.predicts import (
     apply_sun_adapters,
     fix_prediction_watts,
     concat_today,
-    concat_tomorrow1,
-    concat_tomorrow2,
+    concat_tomorrow,
+    concat_total,
     get_predict_table
 )
 from utils.plots import (
@@ -239,7 +239,7 @@ async def plot_predict(request: web.Request) -> dict:
         closestdays.head(n=logpredictdays)
     )
 
-    """ Get the sun adapters """
+    """ Get the sun adapters for today and tomorrow """
     todayadapters, tomorrowadapters = await asyncio.gather(
         get_sun_adaptors(todaydoi, lat, lon, tz),
         get_sun_adaptors(tomorrowdoi, lat, lon, tz)
@@ -272,8 +272,8 @@ async def plot_predict(request: web.Request) -> dict:
     
     # Adapt the relative predict table
     
-    newcolumns = {'SMP+': '>HOUSE',
-                  'SMP-': 'HOUSE>',
+    newcolumns = {'SMP+': 'GRID>',
+                  'SMP-': '>GRID',
                   'SBPI': 'SUN',
                   'SBPB+': 'BAT>',
                   'SBPB-': '>BAT',
@@ -289,13 +289,13 @@ async def plot_predict(request: web.Request) -> dict:
     """ Assemble the prediction elements """
     if what == 'Today':
         c = concat_today(partitions)
-        rtable = ptable[1:-2]
-    elif what == 'Early':
-        c = concat_tomorrow1(partitions)
-        rtable = ptable[1:-1]
-    elif what == 'Late':
-        c = concat_tomorrow2(partitions)
-        rtable = ptable[1:]
+        rtable = ptable[:-2]
+    elif what == 'Tomorrow':
+        c = concat_tomorrow(partitions)
+        rtable = ptable[-2:]
+    elif what == 'Total':
+        c = concat_total(partitions)
+        rtable = ptable
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']

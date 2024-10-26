@@ -6,29 +6,29 @@
 
 {% if what == 'Today' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict/{{ logday }}/early'>Early Predict</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ logday }}/late'>Late Predict</a>
+  <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/total'>Total Cast</a>
 </div>
 
-<h1 style='margin:4px;'>Today Predict</h1>
+<h1 style='margin:4px;'>Today Cast</h1>
 {% endif %}
 
-{% if what == 'Early' %}
+{% if what == 'Tomorrow' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict/{{ logday }}/today'>Today Predict</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ logday }}/late'>Late Predict</a>
+  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/total'>Total Cast</a>
 </div>
 
-<h1 style='margin:4px;'>Tomorrow Early Predict</h1>
+<h1 style='margin:4px;'>Tomorrow Cast</h1>
 {% endif %}
 
-{% if what == 'Late' %}
+{% if what == 'Total' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict/{{ logday }}/today'>Today Predict</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ logday }}/early'>Early Predict</a>
+  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>
 </div>
 
-<h1 style='margin:4px;'>Tomorrow Late Predict</h1>
+<h1 style='margin:4px;'>Total Cast</h1>
 {% endif %}
 
 
@@ -48,7 +48,7 @@
 </div>
 
 <div style='display:flex;justify-content:center;' >
-  <h3>Watt Hours (Wh)</h3>
+  <h3>Phase Hours (Wh)</h3>
 </div>  
 <div style='display:flex;justify-content:center;' >
   {{ predicttables[0].to_html(
@@ -60,7 +60,7 @@
 </div>
 
 <div style='display:flex;justify-content:center;' >
-  <h3>Accumulated Watt Hours (Wh)</h3>
+  <h3>Accumulated Phase Hours (Wh)</h3>
 </div>  
 <div style='display:flex;justify-content:center;' >
   {{ predicttables[1].to_html(

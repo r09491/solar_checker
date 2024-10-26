@@ -406,20 +406,20 @@ def fix_prediction_watts(watts: pd.DataFrame, soc_wh: f64 = None) -> [pd.DataFra
 
 """ Assemble the prediction data frames for today  """
 def concat_today(partitions: dict) -> pd.DataFrame:
-    return pd.concat([partitions['findwatts'],
+    return pd.concat([partitions['prewatts'],
+                      partitions['findwatts'],
                       partitions['postwatts'],
                       partitions['todaywatts']], sort = False)
     
 """ Assemble the prediction data frames for tomorrow  """
-def concat_tomorrow1(partitions: dict) -> pd.DataFrame:
-    return pd.concat([partitions['findwatts'],
-                      partitions['postwatts'],
-                      partitions['todaywatts'],
-                      partitions['tomorrowwatts1']], sort = False)
+def concat_tomorrow(partitions: dict) -> pd.DataFrame:
+    return pd.concat([partitions['tomorrowwatts1'],
+                      partitions['tomorrowwatts2']], sort = False)
 
 """ Assemble the prediction data frames for tomorrow  """
-def concat_tomorrow2(partitions: dict) -> pd.DataFrame:
-    return pd.concat([partitions['findwatts'],
+def concat_total(partitions: dict) -> pd.DataFrame:
+    return pd.concat([partitions['prewatts'],
+                      partitions['findwatts'],
                       partitions['postwatts'],
                       partitions['todaywatts'],
                       partitions['tomorrowwatts1'],
