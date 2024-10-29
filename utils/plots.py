@@ -178,37 +178,39 @@ def _get_w_line(time: t64s, smp: f64s,
 
     title = f'# Power #\n'
     if sbpi is not None:
-        title += f'Sun {sbpi[-1]:.0f}'
+        title += f'Sun>{sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
 
     if sbpoon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Bank {sbpo[-1]:.0f}'
+        title += f'Bank>{sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
   
     if sbpb is not None:
-        title += f' * Bat <{-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
-        title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W'
-        title += f' >{sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
+        title += f' * {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
+        title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W>'
+        title += f'Bat'
+        title += f'>{sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
         title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
     title += '' if title[-1] == '\n' else '\n'
         
     if ivpon is not None:
-        title += f'Inv {ivp[-1]:.0f}'
+        title += f'Inv>{ivp[-1]:.0f}'
         title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
 
     if spphon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Plug0  {spph[-1]:.0f}'
+        title += f'Plug0>{spph[-1]:.0f}'
         title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
 
     if smpon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Grid >{smp[-1] if smp[-1]>0 else 0:.0f}'
+        title += f'{-smp[-1] if smp[-1]<0 else 0:.0f}'
+        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W>'
+        title += f'Grid'
+        title += f'>{smp[-1] if smp[-1]>0 else 0:.0f}'
         title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
-        title += f' <{-smp[-1] if smp[-1]<0 else 0:.0f}'
-        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W'
         
     ax.set_title(title)
     
@@ -326,29 +328,31 @@ def _get_kwh_line(
     title = f'# Energy #\n'
     if sbeion is not None:
         if time_format == '%H:%M': # Accumulated
-            title += f'Sun {sbei[-1]:.2f}kWh'
+            title += f'Sun>{sbei[-1]:.2f}kWh'
         else:
-            title += f'Sun {sbei.sum():.2f}kWh'
+            title += f'Sun>{sbei.sum():.2f}kWh'
 
     if sbeo is not None:
         title += '' if title[-1] == '\n' else ' | '
         if time_format == '%H:%M': # Accumulated
-            title += f'Bank {sbeo[-1]:.2f}kWh'
+            title += f'Bank>{sbeo[-1]:.2f}kWh'
         else:
-            title += f'Bank {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
+            title += f'Bank>{sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
 
-    title += '' if title[-1] == '\n' else ' * BAT'
+    title += '' if title[-1] == '\n' else ' * '
     if sbebcharge is not None and (sbebcharge>0).any():
         if time_format == '%H:%M': # Accumulated
-            title += f' <{sbebcharge[sbebcharge>0][-1]:.2f}kWh'
+            title += f'{sbebcharge[sbebcharge>0][-1]:.2f}kWh>'
         else:
-            title += f' <{sbebcharge[sbebcharge>0].sum():.2f}kWh'
+            title += f'{sbebcharge[sbebcharge>0].sum():.2f}kWh>'
 
+    title += 'BAT'
+    
     if sbebdischarge is not None and (sbebdischarge>0).any():
         if time_format == '%H:%M': # Accumulated
-            title += f' >{sbebdischarge[sbebdischarge>0][-1]:.2f}kWh'
+            title += f'>{sbebdischarge[sbebdischarge>0][-1]:.2f}kWh'
         else:
-            title += f' >{sbebdischarge[sbebdischarge>0].sum():.2f}kWh'
+            title += f'>{sbebdischarge[sbebdischarge>0].sum():.2f}kWh'
 
     if sbsb is not None:
         title += f' #{sbsb[-1]:.2f}kWh~{sbsb[-1]/full_kwh*100:.0f}%'
@@ -358,32 +362,41 @@ def _get_kwh_line(
         
     if iveon is not None:
         if time_format == '%H:%M': # Accumulated
-            title += f'Inv {ive[-1]:.2f}kWh~{ive[-1]*price:.2f}€'
+            title += f'Inv>{ive[-1]:.2f}kWh~{ive[-1]*price:.2f}€'
         else:
-            title += f'Inv {ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
+            title += f'Inv>{ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
 
     if spehon is not None:
         title += '' if title[-1] == '\n' else '\n'
         if time_format == '%H:%M': # Accumulated
-            title += f'Plug0 {speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
+            title += f'Plug0>{speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
         else:
-            title += f'Plug0 {speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
-        
-    if smeon is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        if time_format == '%H:%M': # Accumulated
-            title += f'Grid >{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
-        else:
-            title += f'Grid >{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
+            title += f'Plug0>{speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
+
             
-        if smeoff is not None:
-            if time_format == '%H:%M': # Accumulated
-                title += f' <{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€'
-                title += f' | Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
-            else:
-                title += f' <{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€'
-                title += f' | Profit {ive.sum()-smeoff.sum():.2f}kWh~{(ive.sum()-smeoff.sum())*price:.2f}€'
+    title += '' if title[-1] == '\n' else ' | '            
+            
+    if smeoff is not None:
+        if time_format == '%H:%M': # Accumulated
+            title += f'{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€>'
+        else:
+            title += f'{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€>'
+
+    title += f'Grid'
     
+    if smeon is not None:
+        if time_format == '%H:%M': # Accumulated
+            title += f'>{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
+        else:
+            title += f'>{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
+
+    if smeon is not None and smeoff is not None:            
+        if time_format == '%H:%M': # Accumulated
+            title += f' # Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
+        else:
+            title += f' # Profit {ive.sum()-smeoff.sum():.2f}kWh~{(ive.sum()-smeoff.sum())*price:.2f}€'
+
+
     ax.set_title(title)
 
     ax.legend(loc="upper left")
