@@ -16,7 +16,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 
 from typing import Any
-from .types import f64, f64s, t64, t64s, timeslots
+from .types import f64, f64s, t64, t64s
 
 
 import logging
@@ -29,27 +29,11 @@ logger = logging.getLogger(__name__)
 
 XSIZE, YSIZE = 10, 5
 
-SLOTS = ["00:00", "07:00", "10:00", "14:00", "17:00", "22:00", "23:59"]
-
-
-def _hm2date(value: str) -> t64:
-    dt = datetime.strptime(value,"%H:%M")
-    return t64(datetime(year=1900, month=1, day=1, minute=dt.minute, hour=dt.hour))
-
-def _power_means(times: t64s,
-                 powers: f64s,
-                 slots: timeslots) -> f64s:
-    spowers = np.full_like(powers, 0.0)
-    for start, stop in zip(slots[:-1], slots[1:]):
-        wheres, = np.where((times >= _hm2date(start)) & (times <= _hm2date(stop)))
-        spowers[wheres] = powers[wheres].mean() if wheres.size > 0 else None
-    return spowers
-
 
 def _get_w_line(time: t64s, smp: f64s,
                 ivp1: f64s, ivp2: f64s, spph: f64s,
                 sbpi: f64s, sbpo: f64s, sbpb: f64s,
-                slots: timeslots = SLOTS):
+                tphases: t64s = None):
     __me__ ='_get_w_line'
 
     logger.info(f'{__me__}: started')
@@ -106,16 +90,16 @@ def _get_w_line(time: t64s, smp: f64s,
     
     timesbpion = time[issbpion] if issbpion is not None   else None
 
-    totals = np.maximum(smp, [0]) + \
-        spph if isspphon is not None else \
-        ivp if isspphon is not None else \
-        ivp if issbpo is not None else None
-    slot_means = _power_means(time, totals, slots)
-
+    
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
-    
+
+    if tphases is not None:
+        ax.axvspan(tphases[0], tphases[1], 
+                   color ='olive',
+                   alpha = 0.2)        
+        
     if spphon is not None:
         logger.info(f'{__me__}: using smartplug samples only')
         
@@ -176,6 +160,7 @@ def _get_w_line(time: t64s, smp: f64s,
                         np.full_like(sbpion, 800),
                         color='orange', label='LIMITS', alpha=0.4)
 
+        
     title = f'# Power #\n'
     if sbpi is not None:
         title += f'Sun>{sbpi[-1]:.0f}'
@@ -235,9 +220,9 @@ def _get_w_line(time: t64s, smp: f64s,
 
 
 async def get_w_line(time: t64s, smp: f64s,
-                    ivp1: f64s, ivp2: f64s, spph: f64s,
-                    sbpi: f64s, sbpo: f64s, sbpb: f64s, 
-                    slots: timeslots = SLOTS):
+                     ivp1: f64s, ivp2: f64s, spph: f64s,
+                     sbpi: f64s, sbpo: f64s, sbpb: f64s,
+                     tphases: t64s = None):
     if sys.version_info >= (3, 9):
         return await asyncio.to_thread(_get_w_line,**vars()) # type: ignore[unused-ignore]
     else:
@@ -248,7 +233,9 @@ def _get_kwh_line(
         time: t64s, smeon: f64s, smeoff: f64s,
         ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
         sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
-        empty_kwh, full_kwh: f64s, price: f64, time_format: str = '%H:%M'):
+        empty_kwh, full_kwh: f64s, price: f64,
+        tphases: t64s = None,
+        time_format: str = '%H:%M'):
     __me__ ='_get_kwh_line'
     logger.info(f'{__me__}: started')
 
@@ -268,6 +255,11 @@ def _get_kwh_line(
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
+
+    if tphases is not None:
+        ax.axvspan(tphases[0], tphases[1], 
+                   color ='olive',
+                   alpha = 0.2)        
 
     if spehon is not None:
         logger.info(f'{__me__}: using smartplug samples only')
@@ -422,6 +414,7 @@ async def get_kwh_line(
         ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
         sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
         empty_kwh: f64s, full_kwh: f64s, price: f64,
+        tphases: t64s = None,
         time_format: str = '%H:%M'):
     if sys.version_info >= (3, 9): 
         return await asyncio.to_thread(_get_kwh_line, **vars()) # type: ignore[unused-ignore]

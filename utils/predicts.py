@@ -75,7 +75,7 @@ async def get_sun_adaptors(
     sunbase = sky[0].sunshine
     sunclosest = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
     sunadaptors = 1 + np.log10((sunbase + 6) / (sunclosest + 6))
-
+    logger.info(sunadaptors)
     return sunadaptors
 
 

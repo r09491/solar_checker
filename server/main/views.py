@@ -54,7 +54,6 @@ async def plot_day(request: web.Request) -> dict:
     conf = request.app['conf']
 
     price = conf['energy_price']
-    slots = conf['power_slots']
     full_wh = conf['battery_full_wh']
     full_kwh = full_wh / 1000
     empty_kwh = conf['battery_min_percent'] /100 * full_kwh
@@ -102,7 +101,7 @@ async def plot_day(request: web.Request) -> dict:
                    spp3[-1] if spp3 is not None else 0,
                    spp4[-1] if spp4 is not None else 0),
         get_w_line(time, smp, ivp1, ivp2,
-                   spph, sbpi, sbpo, sbpb, slots),
+                   spph, sbpi, sbpo, sbpb),
         get_kwh_line(time,
             smpon.cumsum()/1000/60 if smpon is not None else None,
             smpoff.cumsum()/1000/60 if smpoff is not None else None,
@@ -155,7 +154,6 @@ async def plot_year(request: web.Request) -> dict:
     logprefix = conf['logprefix']
     logdayformat = conf['logdayformat']
     price = conf['energy_price']
-    slots = conf['power_slots']
     
     try:
         logyear = request.match_info['logyear']
@@ -179,7 +177,6 @@ async def plot_predict(request: web.Request) -> dict:
     conf = request.app['conf']
 
     price = conf['energy_price']
-    slots = conf['power_slots']
     full_wh = conf['battery_full_wh'] 
     full_kwh = full_wh / 1000
     empty_wh = conf['battery_min_percent'] / 100 * full_wh
@@ -290,12 +287,15 @@ async def plot_predict(request: web.Request) -> dict:
     if what == 'Today':
         c = concat_today(partitions)
         rtable = ptable[:-2]
+        tphase = [starttime, stoptime]
     elif what == 'Tomorrow':
         c = concat_tomorrow(partitions)
         rtable = ptable[-2:]
+        tphase = None
     elif what == 'Total':
         c = concat_total(partitions)
         rtable = ptable
+        tphase = [starttime, stoptime]
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
@@ -315,7 +315,7 @@ async def plot_predict(request: web.Request) -> dict:
         
     w, kwh = await asyncio.gather(
         get_w_line(time, smp, ivp1, ivp2,
-                   spph, sbpi, sbpo, sbpb, slots),
+                   spph, sbpi, sbpo, sbpb, tphase),
         get_kwh_line(time,
             smpon.cumsum()/1000/60 if smpon is not None else None,
             smpoff.cumsum()/1000/60 if smpoff is not None else None,
@@ -327,7 +327,7 @@ async def plot_predict(request: web.Request) -> dict:
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
             sbsb[0]*full_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
-            empty_kwh, full_kwh, price))
+                     empty_kwh, full_kwh, price, tphase))
 
     atable = pd.concat([rtable.iloc[:,:2],
                         rtable.iloc[:,2:].cumsum()], axis = 1)
