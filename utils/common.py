@@ -127,13 +127,7 @@ def t64_h_last(t: t64) -> t64:
 
 def t64_h_next(t: t64) -> t64:
     dt = pd.to_datetime(str(t))
-    return t64(datetime(year=dt.year,
-                        month=dt.month,
-                        day=dt.day if dt.hour<23 else dt.day+1,
-                        minute=0,
-                        hour=dt.hour+1 if dt.hour<23 else 0,
-                        second=0,
-                        microsecond=0))
+    return t64(dt + timedelta(hours=1))
 
 
 def t64_from_iso(value: str) -> t64:
