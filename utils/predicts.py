@@ -75,7 +75,7 @@ async def get_sun_adaptors(
     sunbase = sky[0].sunshine
     sunclosest = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
     sunadaptors = 1 + np.log10((sunbase + 6) / (sunclosest + 6))
-    logger.info(sunadaptors)
+
     return sunadaptors
 
 
@@ -323,6 +323,18 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs)
 
+    if not postwatts.empty:
+        # No irradiation
+        todaywatts['SBPI'] = 0
+        # No charging
+        todaywatts['SBPB'][todaywatts['SBPB']<0] = 0
+
+        if postwatts['SBPB'][-1] == 0:
+            todaywatts['SBPB'] = 0
+            todaywatts['SBPO'] = 0
+            todaywatts['IVP1'] = 0
+            todaywatts['IVP2'] = 0
+            
 
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
