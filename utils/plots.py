@@ -485,15 +485,17 @@ def _get_kwh_bar_unified(
             title += f'~{smeoffon.sum()*price:.2f}€'
             title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
 
-            title += f'\nGrid >{smeonon.sum():.1f}'
+            title += f'\n{smeoffon.sum():.1f}'
+            title += f'={smeoffon.mean():.1f}'
+            title += f'^{smeoffon.max():.1f}kWh'   
+            title += f'~{(smeoffon.sum()*price):.2f}€>'
+
+            title += f'Grid'
+            
+            title += f'>{smeonon.sum():.1f}'
             title += f'={smeonon.mean():.1f}'
             title += f'^{smeonon.max():.1f}kWh'   
             title += f'~{(smeonon.sum()*price):.2f}€'
-
-            title += f' <{smeoffon.sum():.1f}'
-            title += f'={smeoffon.mean():.1f}'
-            title += f'^{smeoffon.max():.1f}kWh'   
-            title += f'~{(smeoffon.sum()*price):.2f}€'
 
     ax.set_title(title, fontsize='x-large')
 
