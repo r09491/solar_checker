@@ -257,8 +257,8 @@ async def find_closest(
 
 
 """ 
-Get the partioned prediction dictionary. The first day in the closest
-days list is the day to be predicted. The followers are used for
+Get the partitoned prediction dictionary. The first day in the closest
+days list is the day to be predicted. The successors are used for
 prediction
 """
 async def partition_closest_watts(
@@ -267,26 +267,23 @@ async def partition_closest_watts(
         stoptime: t64,
         closestdays: List) -> Any:
 
-    # The days of interest
-    todaydoi = list(closestdays.index.values)
-
-    # The day for prediction
-    today = todaydoi[0]
-
-    # The closest days used for prediction
-    todaydays = todaydoi[1:]
-
+    # Available days with logs
+    logsdays = list(logsdf.index.values)
     
-    # The days after the closest days
-    tomorrowdoi = [ymd_tomorrow(pd)
-                   for  pd in todaydoi
-                   if pd != ymd_yesterday(today)]
+    # The days of interest
+    doi = list(closestdays.index.values)
 
     # The day for prediction
-    tomorrow = tomorrowdoi[0]
-
+    today = doi[0]
     # The closest days used for prediction
-    tomorrowdays = tomorrowdoi[1:]
+    todaydays = doi[1:]
+
+    # The day for prediction
+    tomorrow = ymd_tomorrow(today)
+    # The closest days used for prediction
+    tomorrowdays = [ymd_tomorrow(td)
+                    for td in todaydays
+                    if ymd_tomorrow(td) in logsdays]
 
     
     # Time of the first and last sample
@@ -323,18 +320,22 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs)
 
+    #findwatts_mean = findwatts['SBPO'].mean()
+    #todaywatts_mean = todaywatts['SBPO'].mean()
+    #print(findwatts_mean , todaywatts_mean)
+    #todaywatts *= (findwatts_mean / todaywatts_mean)
+    #todaywatts.loc[:, ['SBPO', 'IVP1', 'IVP2']] *= (findwatts['SBPO'][-1] / todaywatts['SBPO'][0])
+    
     if not postwatts.empty:
         # No irradiation
-        todaywatts['SBPI'] = 0
+        todaywatts.loc[:,'SBPI'] = 0
         # No charging
-        todaywatts['SBPB'][todaywatts['SBPB']<0] = 0
+        #todaywatts['SBPB'][todaywatts['SBPB']<0] = 0
+        #todaywatts.loc[:,'SBPB'][todaywatts.loc[:,'SBPB']<0] = 0
 
         if postwatts['SBPB'][-1] == 0:
-            todaywatts['SBPB'] = 0
-            todaywatts['SBPO'] = 0
-            todaywatts['IVP1'] = 0
-            todaywatts['IVP2'] = 0
-            
+            todaywatts.loc[:, ['SBPB','SBPO','IVP1','IVP2']] = 0
+
 
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
@@ -359,9 +360,8 @@ async def partition_closest_watts(
         ymd_over_t64(starttime, tomorrow):
     ]
     
-    return (todaydoi,
-            tomorrowdoi,
-            realsoc,
+    return ([today] + todaydays,
+            [tomorrow] + tomorrowdays, realsoc,
             dict({'prewatts' : prewatts,
                   'findwatts' : findwatts,
                   'postwatts' : postwatts,
