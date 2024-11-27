@@ -1,22 +1,8 @@
 #!/usr/bin/env python3
 
-__doc__="""
-Checks the solar power input of micro APsystems inverters against the
-consumption measured by a Tasmota smartmeter in a houshold. The
-APsystems inverters are to be operated in direct local mode.
-
-Checks the input of APsystems inverters to an Antella smartplug
-against the consumption measured by a Tasmota smartmeter in a
-houshold. The plug may be present or absent.  If present has priority
-over APsystems measuremnents.
-
-Plots the power output in logarithmic scale to emphasise lower values
-and the energy in linear scale.
-
-Plots the power output means for defined time slots to help in
-scheduling of battery outputs if they can.
+__doc__=""" Saves the powerplots to png images
 """
-__version__ = "0.0.3"
+__version__ = "0.1."
 __author__ = "r09491@gmail.com"
 
 import os
@@ -29,7 +15,6 @@ import base64
 import numpy as np
 
 import matplotlib
-matplotlib.use('TkAgg', force=True)
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
@@ -76,9 +61,9 @@ async def get_w_png (
 
 async def get_kwh_png (
         time: t64s, smeon: f64s, smeoff: f64s,
-        ive1: f64s, ive2: f64s, speh: f64s,
-        sbei: f64s, sbeo: f64s, sbeb: f64s, sbsb: f64s,
-        empty_kwh: f64, full_kwh: f64, price: f64) -> Any:
+        ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
+        sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
+        empty_kwh, full_kwh: f64s, price: f64) -> Any:
     logger.info('Decoding energy image')
     bytes = io.BytesIO(base64.b64decode(await get_kwh_line(**vars())))
     wh_png = mpimg.imread(bytes, format='png')
@@ -99,6 +84,11 @@ async def get_images(c: dict, empty_kwh:f64, full_kwh:f64, price: f64) -> Any:
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
     smpoff[smp<=0] = -smp[smp<=0]
+
+    sbpbcharge = np.zeros_like(sbpb)
+    sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
+    sbpbdischarge = np.zeros_like(sbpb)
+    sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
     
     blocks_png, w_png, kwh_png = await asyncio.gather(
         get_blocks_png(time[-1], smp[-1], ivp1[-1], ivp2[-1],
@@ -120,63 +110,41 @@ async def get_images(c: dict, empty_kwh:f64, full_kwh:f64, price: f64) -> Any:
             spph.cumsum()/1000/60 if spph is not None else None,
             sbpi.cumsum()/1000/60 if sbpi is not None else None,
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
-            sbpb.cumsum()/1000/60 if sbpb is not None else None,
+            sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
+            sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
             sbsb*full_kwh if sbsb is not None else None,
-            empty_kwh, full_kwh, price))
+                     empty_kwh, full_kwh, price))
     logger.info(f'get_images done')
     return blocks_png, w_png, kwh_png
 
 
-async def check_powers(empty_kwh:f64, full_kwh:f64, price: f64) -> int:
+async def save_powers(out_dir: str, empty_kwh:f64, full_kwh:f64, price: f64) -> int:
 
+    if (out_dir is None) or (not os.path.isdir(out_dir)):
+        logger.error(f'"{out_dir}" is not a directory')
+        return 1
+    
     # Read from stdin
     c = await get_columns_from_csv()
     if c is None:
         logger.error(f'No power input data available')
         return 1
 
-    plt.switch_backend('Agg')    
     blocks, w, kwh = await get_images(c, empty_kwh, full_kwh,price)
-    plt.switch_backend('TkAgg')
 
-    logger.info('Plotting started')
-
-    fig, overview = plt.subplots(
-        nrows = 1, sharex = True, figsize = (2*XSIZE,2*YSIZE))
-    fig.tight_layout(pad=2.0)
+    logger.info('Save started')
     
-    overview.clear()
-    overview.imshow(blocks)
-    overview.set_axis_off()
-    
-    fig, power = plt.subplots(
-        nrows = 1, sharex = True, figsize = (2*XSIZE,2*YSIZE))
-    fig.tight_layout(pad=2.0)
+    mpimg.imsave(os.path.join(out_dir, 'blocks.png'), blocks)
+    mpimg.imsave(os.path.join(out_dir, 'power.png'), w)
+    mpimg.imsave(os.path.join(out_dir, 'energy.png'), kwh)
 
-    ##text = f'Solar Checker'
-    ##fig.text(0.5, 0.0, text, ha='center', fontsize='x-large')
-
-    power.clear()
-    power.imshow(w)
-    power.set_axis_off()
-
-    fig, energy = plt.subplots(
-        nrows = 1, sharex = True, figsize = (2*XSIZE,2*YSIZE))
-    fig.tight_layout(pad=2.0)
-    
-    energy.clear()
-    energy.imshow(kwh)
-    energy.set_axis_off()
-
-    logger.info('Plotting done')
-
-    plt.show()
-
+    logger.info('Save done')
     return 0
 
 
 @dataclass
 class Script_Arguments:
+    out_dir: str
     empty_kwh: f64
     full_kwh: f64
     price: f64
@@ -185,12 +153,15 @@ def parse_arguments() -> Script_Arguments:
 
     parser = argparse.ArgumentParser(
         prog=os.path.basename(sys.argv[0]),
-        description='Check solar power input',
+        description='Save solar power diagrams',
         epilog=__doc__)
         
     parser.add_argument('--version',
                         action = 'version', version = __version__)
 
+    parser.add_argument('--out_dir',
+                        help = "The output directory for the images")
+    
     parser.add_argument('--empty_kwh', type = f64, default = 0.160,
                         help = "The battery empty kWh")
 
@@ -201,7 +172,7 @@ def parse_arguments() -> Script_Arguments:
                         help = "The price of energy per kWh")
 
     args = parser.parse_args()
-    return Script_Arguments(args.empty_kwh,args.full_kwh,args.price)
+    return Script_Arguments(args.out_dir,args.empty_kwh,args.full_kwh,args.price)
 
 
 def main() -> int:
@@ -210,7 +181,14 @@ def main() -> int:
     err = 0
     
     try:
-        err = asyncio.run(check_powers(args.empty_kwh, args.full_kwh, args.price))
+        err = asyncio.run(save_powers(args.out_dir, args.empty_kwh, args.full_kwh, args.price))
+
+        if err == 0:
+            logger.info(f'Output directory is "{args.out_dir}"')
+
+        if err == 1:
+            logger.error('Output directory is not valid')
+            
     except KeyboardInterrupt:
         pass
     except TypeError:
