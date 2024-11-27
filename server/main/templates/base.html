@@ -1,20 +1,21 @@
 <html>
   <head>
     <meta charset='utf-8'>
-    <meta http-eqiv='refresh' content='60'>
-    <meta http-eqiv='pragma' content='no-cache'>
+    <meta http-equiv="Cache-control" content="no-cache">
     <title>{% block title %}{{ title }}{% endblock title %}</title>
     <link rel='stylesheet' href='/static/css/style.css'>
   </head>
   
   <body>
     <div id='sidebar'>
-      <h1>P12 Kraftwerk</h1>
-      <img src='/static/images/p12_balkon_kraftwerk.jpg'
-	   width='100%' alt='P12 Balkon Kraftwerk'</>
+
+      {% include '_menu_top.html' %}	   
+      {% include '_menu_shots.html' %}
       {% include '_menu_days.html' %}
       {% include '_menu_months.html' %}
       {% include '_menu_years.html' %}
+
+      <h1> </h1>
     </div>
     
     <div id='content'>
