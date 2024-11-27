@@ -113,7 +113,7 @@ async def plot_day(request: web.Request) -> dict:
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
             sbsb*full_kwh if sbsb is not None else None,
-            empty_kwh, full_kwh, price))
+                     empty_kwh, full_kwh, price[logday[:2]]))
     return {'logday': logday, 'blocks': blocks if logday == today else None, 'w': w, 'kwh': kwh}
 
 
@@ -139,7 +139,7 @@ async def plot_month(request: web.Request) -> dict:
         logmonth, logprefix, logdir, logdayformat)
     
     umplot  = await get_kwh_bar_unified(
-        *umkwh.values(), price, 0.7, '%d%n%a')
+        *umkwh.values(), price[logmonth[:2]], 0.7, '%d%n%a')
 
     logger.info(f'{__me__}: done')
     return {'logmonth': logmonth, 'kwh': umplot}
@@ -165,7 +165,7 @@ async def plot_year(request: web.Request) -> dict:
     uykwh = await get_kwh_sum_year_unified(
         logyear, logprefix, logdir, logdayformat)        
     uyplot  = await get_kwh_bar_unified(
-        *uykwh.values(), price, 14.0, '%b')
+        *uykwh.values(), price[logyear], 14.0, '%b')
 
     logger.info(f'{__me__}: done')
     return {'logyear': logyear, 'kwh': uyplot}
@@ -327,7 +327,7 @@ async def plot_predict(request: web.Request) -> dict:
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
             sbsb[0]*full_kwh+sbpbcharge.cumsum()/1000/60-sbpbdischarge.cumsum()/1000/60,
-                     empty_kwh, full_kwh, price, tphase))
+                     empty_kwh, full_kwh, price[logday[:2]], tphase))
 
     atable = pd.concat([rtable.iloc[:,:2],
                         rtable.iloc[:,2:].cumsum()], axis = 1)
