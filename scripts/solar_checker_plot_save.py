@@ -118,14 +118,38 @@ async def get_images(c: dict, empty_kwh:f64, full_kwh:f64, price: f64) -> Any:
     return blocks_png, w_png, kwh_png
 
 
-async def save_powers(out_dir: str, empty_kwh:f64, full_kwh:f64, price: f64) -> int:
+async def save_powers(logday: str,
+                      logprefix: str,
+                      logdir: str,
+                      outdir: str,
+                      empty_kwh:f64,
+                      full_kwh:f64,
+                      price: f64) -> int:
 
-    if (out_dir is None) or (not os.path.isdir(out_dir)):
-        logger.error(f'"{out_dir}" is not a directory')
-        return 1
+    if (outdir is None) or (not os.path.isdir(outdir)):
+        logger.error(f'"{outdir}" is not a directory')
+        return 11
+
+    if (logdir is None) or (not os.path.isdir(logdir)):
+        logger.error(f'"{logdir}" is not a directory')
+        return 12
+
+    if (logday is None):
+        logger.error(f'"{logday}" is not a logday')
+        return 13
+
+    if (logprefix is None):
+        logger.error(f'"{logprefix}" is not a logprefix')
+        return 14
+        
+    logfile = os.path.join(logdir, f'{logprefix}_{logday}.log' )
+    if not os.path.isfile(logfile):
+        logger.error(f'"{logfile}" is not a file')
+        return 15
     
+
     # Read from stdin
-    c = await get_columns_from_csv()
+    c = await get_columns_from_csv(logday, logprefix, logdir)
     if c is None:
         logger.error(f'No power input data available')
         return 1
@@ -134,17 +158,20 @@ async def save_powers(out_dir: str, empty_kwh:f64, full_kwh:f64, price: f64) -> 
 
     logger.info('Save started')
     
-    mpimg.imsave(os.path.join(out_dir, 'blocks.png'), blocks)
-    mpimg.imsave(os.path.join(out_dir, 'power.png'), w)
-    mpimg.imsave(os.path.join(out_dir, 'energy.png'), kwh)
+    mpimg.imsave(os.path.join(outdir, f'blocks_{logday}.png'), blocks)
+    mpimg.imsave(os.path.join(outdir, f'power_{logday}.png'), w)
+    mpimg.imsave(os.path.join(outdir, f'energy_{logday}.png'), kwh)
 
-    logger.info('Save done')
+    logger.info(f'Save done to directory "{outdir}"')
     return 0
 
 
 @dataclass
 class Script_Arguments:
-    out_dir: str
+    logday: str
+    logprefix:str
+    logdir:str
+    outdir: str
     empty_kwh: f64
     full_kwh: f64
     price: f64
@@ -159,7 +186,16 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--version',
                         action = 'version', version = __version__)
 
-    parser.add_argument('--out_dir',
+    parser.add_argument('--logday', type = str, required = True,
+                        help = "day for forecast 'ymd'")
+
+    parser.add_argument('--logprefix', type = str, required = True,
+                        help = "Prefix of the record file'")
+
+    parser.add_argument('--logdir', type = str, required = True,
+                        help = "Directory of the record files'")
+
+    parser.add_argument('--outdir', type = str, required = True,
                         help = "The output directory for the images")
     
     parser.add_argument('--empty_kwh', type = f64, default = 0.160,
@@ -172,27 +208,40 @@ def parse_arguments() -> Script_Arguments:
                         help = "The price of energy per kWh")
 
     args = parser.parse_args()
-    return Script_Arguments(args.out_dir,args.empty_kwh,args.full_kwh,args.price)
+    return Script_Arguments(
+        args.logday,
+        args.logprefix,
+        args.logdir,
+        args.outdir,
+        args.empty_kwh,
+        args.full_kwh,
+        args.price
+    )
 
 
 def main() -> int:
     args = parse_arguments()
 
     err = 0
-    
+
+
     try:
-        err = asyncio.run(save_powers(args.out_dir, args.empty_kwh, args.full_kwh, args.price))
+        err = asyncio.run(
+            save_powers(
+                args.logday,
+                args.logprefix,
+                args.logdir,
+                args.outdir,
+                args.empty_kwh,
+                args.full_kwh,
+                args.price
+            )
+        )
 
-        if err == 0:
-            logger.info(f'Output directory is "{args.out_dir}"')
 
-        if err == 1:
-            logger.error('Output directory is not valid')
-            
     except KeyboardInterrupt:
         pass
     except TypeError:
-        """If there is no stream"""
         pass
     
     return err
