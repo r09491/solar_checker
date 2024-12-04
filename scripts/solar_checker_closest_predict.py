@@ -26,9 +26,11 @@ from utils.types import (
 from utils.common import (
     PREDICT_NAMES,
     POWER_NAMES,
+    PARTITION_NAMES
 )
 from utils.common import (
-    hm_to_t64
+    hm_to_t64,
+    t64_to_hm
 )
 from utils.predicts import (
     get_logs_as_dataframe,
@@ -37,7 +39,10 @@ from utils.predicts import (
     get_sun_adaptors,
     apply_sun_adapters,
     fix_prediction_watts,
-    get_predict_table
+    get_predict_table,
+    concat_today,
+    concat_tomorrow,
+    concat_total
 )
 
 import logging
@@ -76,6 +81,7 @@ class Script_Arguments:
     starttime: t64
     stoptime: t64
     predict: bool
+    predictdays: int
     columns: str
     lat: f64
     lon: f64
@@ -122,7 +128,11 @@ def parse_arguments() -> Script_Arguments:
         help = "Disable/Enable prediction")
 
     parser.add_argument(
-        '--columns', type=str,
+        '--predictdays', type=int, default=3,
+        help = "The number of days - 1 used for prediction")
+
+    parser.add_argument(
+        '--columns', type=str, required = True,
         help = "The list names of the to be used. The first determines the time slot for the evaluation an prediction"
     )
 
@@ -146,6 +156,7 @@ def parse_arguments() -> Script_Arguments:
         args.starttime,
         args.stoptime,
         args.predict,
+        args.predictdays,
         args.columns,
         args.lat,
         args.lon,
@@ -188,7 +199,7 @@ async def main( args: Script_Arguments) -> int:
             logsdf,
             starttime,
             stoptime,
-            closestdays.head(n=4),
+            closestdays.head(n=args.predictdays),
         )
 
         todayadapters, tomorrowadapters = await asyncio.gather(
@@ -217,10 +228,43 @@ async def main( args: Script_Arguments) -> int:
             partitions['tomorrowwatts1'])
         partitions['tomorrowwatts2'], _ = fix_prediction_watts(
             partitions['tomorrowwatts2'])
-
         
         print_predict(*get_predict_table(partitions))
-            
+
+
+        ensemble_time = args.logday + stop[:2]
+        ensembles_dir = os.path.join(args.logdir, 'ensembles')
+        if os.path.isdir(os.path.join(ensembles_dir)):
+            today_watts = concat_today(partitions)
+            today_watts_csv = os.path.join(ensembles_dir,
+                                           f'watts_today_{ensemble_time}.csv')
+            today_watts.to_csv(today_watts_csv,
+                               encoding='utf-8',
+                               index=True, index_label='TIME',
+                               header=True, columns=PARTITION_NAMES,
+                               float_format='%.0f')
+            print(f'Saved today watts to "{today_watts_csv}"')
+
+            tomorrow_watts = concat_tomorrow(partitions)
+            tomorrow_watts_csv = os.path.join(ensembles_dir,
+                                              f'watts_tomorrow_{ensemble_time}.csv')
+            tomorrow_watts.to_csv(tomorrow_watts_csv,
+                                  encoding='utf-8',
+                                  index=True, index_label='TIME',
+                                  header=True, columns=PARTITION_NAMES,
+                                  float_format='%.0f')
+            print(f'Saved tomorrow watts to "{tomorrow_watts_csv}"')
+
+            total_watts = concat_total(partitions)
+            total_watts_csv = os.path.join(ensembles_dir,
+                                           f'watts_total_{ensemble_time}.csv')
+            total_watts.to_csv(total_watts_csv,
+                               encoding='utf-8',
+                               index=True, index_label='TIME',
+                               header=True, columns=PARTITION_NAMES,
+                               float_format='%.0f')
+            print(f'Saved total watts to "{total_watts_csv}"')
+        
     return 0
 
 

@@ -13,7 +13,8 @@ from utils.types import (
 )
 from utils.common import (
     PREDICT_NAMES,
-    POWER_NAMES
+    POWER_NAMES,
+    PARTITION_2_VIEW
 )
 from utils.samples import (
     get_columns_from_csv, 
@@ -268,19 +269,9 @@ async def plot_predict(request: web.Request) -> dict:
     
     
     # Adapt the relative predict table
-    
-    newcolumns = {'SMP+': 'GRID>',
-                  'SMP-': '>GRID',
-                  'SBPI': 'SUN',
-                  'SBPB+': 'BAT>',
-                  'SBPB-': '>BAT',
-                  'SBPO': 'BANK',
-                  'IVP': 'INV'}
 
     ptable, bat_start_soc = get_predict_table(partitions)
-    
-    ptable.rename(columns= newcolumns, inplace=True)
-
+    ptable.rename(columns= PARTITION_2_VIEW, inplace=True)
     ptable.fillna(0, inplace=True)
 
     """ Assemble the prediction elements """
