@@ -21,7 +21,8 @@ from .types import (
     f64, t64, Any, Optional, List, Dict
     )
 from .common import (
-    FORECAST_NAMES
+    FORECAST_NAMES,
+    PARTITION_NAMES
 )
 from .common import (
     t64_first,
@@ -166,12 +167,12 @@ async def find_closest(
     logdays = list(logsdf.index.values.tolist())
 
     
-    """ All basic input cols without extension """
+    """ All basic input cols without extensions """
     basecols = set([c for c in [cc[:-1]
                     if cc[-1] in "+-"
                     else cc for cc in incols[1:]]])
 
-    """ All basic samples for all log days in the full time range """
+    """ Samples for all log days in full time range synced to the minute """
     basedfs = [pd.DataFrame(
         index = logsdf.loc[ld, 'TIME'],
         data = dict(logsdf.loc[ld, basecols])
@@ -195,9 +196,6 @@ async def find_closest(
         max(ymd_over_t64(starttime,logday), startontime)
     stoptime = stopontime if stoptime is None else \
         min(ymd_over_t64(stoptime,logday), stopontime)
-
-    starttime = t64_first(starttime)
-    stoptime = t64_last(stoptime)
 
     """ All basic samples for all log days for the requested time slot """
     slotdfs = [bdf.loc[ymd_over_t64(starttime,ld):
@@ -471,7 +469,7 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
 
 
     startstop = swattphases.loc[:, ['START', 'STOP']]
-    watts = swattphases.loc[:,['SBPI','SBPB-','SBPB+','SBPO','IVP','SMP-','SMP+']]
+    watts = swattphases.loc[:, PARTITION_NAMES]
     relative_watts = pd.concat([startstop, watts], axis=1)
 
 

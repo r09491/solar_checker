@@ -50,6 +50,11 @@ PREDICT_NAMES = [
 ]
 
 
+PARTITION_NAMES = ['SBPI','SBPB-','SBPB+','SBPO','IVP','SMP-','SMP+']
+VIEW_NAMES = ['SUN', '>BAT', 'BAT>', 'BANK', 'INV', '>GRID', 'GRID>']
+PARTITION_2_VIEW = dict(zip(PARTITION_NAMES, VIEW_NAMES))
+
+
 def t64_to_hm(t: t64) -> str:
     return pd.to_datetime(str(t)).strftime("%H:%M")
 
@@ -64,7 +69,8 @@ def ymd_over_t64(t: t64, day: str) -> t64:
                         month=dt_day.month,
                         day=dt_day.day,
                         minute=dt_t.minute,
-                        hour=dt_t.hour))
+                        hour=dt_t.hour,
+                        second=dt_t.second))
 
 def ymd_tomorrow(today: str) -> t64:
     dt_today = datetime.strptime(today, "%y%m%d")
@@ -135,6 +141,6 @@ def t64_from_iso(value: str) -> t64:
         dt = datetime.fromisoformat(value)
     except:
         return None
-    return t64(dt)
+    return t64_first(t64(dt))
 
 
