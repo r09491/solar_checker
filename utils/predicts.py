@@ -297,13 +297,13 @@ async def partition_closest_watts(
 
     
     """ The frame with the watts before searching. Can be empty! """
-    prewatts = realdf.loc[logstarttime:starttime,:]
+    prewatts = realdf.loc[logstarttime:starttime,:][:-1]
 
     """ The frame with the watts in the search slot. Never empty! """
     findwatts = realdf.loc[starttime:stoptime,:]
 
     """ The frame with the watts after the search slot. Can be empty! """
-    postwatts = realdf.loc[stoptime:logstoptime,:]
+    postwatts = realdf.loc[stoptime:logstoptime,:][1:]
 
     
     """ The predicted data for the day until time of last sample """    
@@ -313,17 +313,11 @@ async def partition_closest_watts(
             data = dict(ps[1:])
         ) for ps in [logsdf.loc[pd] for pd in todaydays]]
 
-    todaywatts = reduce(
+    todaywatts = (reduce(
         lambda x,y: x+y,
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
-    ) / len(todaydfs)
+    ) / len(todaydfs))[1:]
 
-    #findwatts_mean = findwatts['SBPO'].mean()
-    #todaywatts_mean = todaywatts['SBPO'].mean()
-    #print(findwatts_mean , todaywatts_mean)
-    #todaywatts *= (findwatts_mean / todaywatts_mean)
-    #todaywatts.loc[:, ['SBPO', 'IVP1', 'IVP2']] *= (findwatts['SBPO'][-1] / todaywatts['SBPO'][0])
-    
     if not postwatts.empty:
         # No irradiation
         todaywatts.loc[:,'SBPI'] = 0

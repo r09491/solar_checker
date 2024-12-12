@@ -253,7 +253,8 @@ async def get_kwh_sum_month(logmonth: str,
         md = t.astype(datetime).strftime(logdayformat)
         ms = await get_kwh_sum_from_csv(md, logprefix, logdir)
         return ms.values()
-    results = await asyncio.gather(*[doer(t) for t in mtime])
+    doertasks = [asyncio.create_task(doer(t)) for t in mtime]
+    results = await asyncio.gather(*doertasks)
     
     msmeon = np.zeros(mtime.size, dtype=f64)
     msmeoff = np.zeros(mtime.size, dtype=f64)
@@ -325,13 +326,14 @@ async def get_kwh_sum_year(
     first = t64(datetime(year=dt.year, month=1, day=1), 'M')
     last = t64(datetime(year=dt.year+1,month=1, day=1), 'M')
     ytime = np.arange(first, last, dtype=t64)
-
+    
     async def doer(t: t64) -> dict:
         yd = t.astype(datetime).strftime(logdayformat)[:-2]
         ys = await get_kwh_sum_month(yd,logprefix,logdir,logdayformat)
         yss = [v.sum() for v in list(ys.values())[1:]]
         return yss
-    results = await asyncio.gather(*[doer(t) for t in ytime])
+    doertasks = [asyncio.create_task(doer(t)) for t in ytime]
+    results = await asyncio.gather(*doertasks)
 
     ysmeon = np.zeros(ytime.size, dtype=f64)
     ysmeoff = np.zeros(ytime.size, dtype=f64)
