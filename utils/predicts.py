@@ -188,7 +188,7 @@ async def find_closest(
                             if incols[1][-1] == '+' else
                             incols[1]]] # TIME and first column
     )
-
+    
     if startontime is None or  stopontime is None:
         return None, None, None 
 
@@ -318,6 +318,10 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs))[1:]
 
+    # Forecast does not consider anker app settings
+    todaywatts['SBPB'][todaywatts['SBPB']>0] = 0
+
+    """
     if not postwatts.empty:
         # No irradiation
         todaywatts.loc[:,'SBPI'] = 0
@@ -327,7 +331,7 @@ async def partition_closest_watts(
 
         if postwatts['SBPB'][-1] == 0:
             todaywatts.loc[:, ['SBPB','SBPO','IVP1','IVP2']] = 0
-
+    """
 
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
@@ -352,6 +356,9 @@ async def partition_closest_watts(
         ymd_over_t64(starttime, tomorrow):
     ]
     
+    # Forecast does not consider anker app settings
+    tomorrowwatts2['SBPB'][tomorrowwatts2['SBPB']>0] = 0
+
     return ([today] + todaydays,
             [tomorrow] + tomorrowdays, realsoc,
             dict({'prewatts' : prewatts,

@@ -7,7 +7,7 @@ logdayformat : '%y%m%d'
 logpredictformat : '???[012]??'
 logpredictmaxdays : 28
 logpredictdays : 3
-logpredictcolumns: 'SBPI,SBPB+'
+logpredictcolumns: 'IVP1,IVP2'
 
 energy_price:
   '24': 0.369

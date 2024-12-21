@@ -88,7 +88,8 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpboff_mean = sbpboff.mean() if sbpboff is not None else 0
     sbpboff_max = sbpboff.max() if sbpboff is not None else 0
     
-    timesbpion = time[issbpion] if issbpion is not None   else None
+    timesbpion = time[issbpion] if issbpion is not None else None
+    timeivpon = time[isivpon] if issbpion is not None else None
 
     
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -153,11 +154,11 @@ def _get_w_line(time: t64s, smp: f64s,
     else:
         ax.fill_between(time, 0, smpoff,
                         color='b', lw=0, alpha=0.3)
-        
-    if sbpion is not None:
-        ax.fill_between(timesbpion ,
-                        np.full_like(sbpion, 600),
-                        np.full_like(sbpion, 800),
+    
+    if ivpon is not None:
+        ax.fill_between(timeivpon ,
+                        np.full_like(ivpon, 600),
+                        np.full_like(ivpon, 800),
                         color='orange', label='LIMITS', alpha=0.4)
 
         
