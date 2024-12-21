@@ -41,9 +41,7 @@ alias home_plug_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_
       			    gawk -F, '{printf(\"%d,%.3f\n\", NR, \$10)}' | \
 			    termgraph --suffix 'W' --title 'Home Plug Smartplug Watts'"
 
-# (PI = Power Inverter, PP = Power Plug, PH = Power Home)
-alias solar_checker_watts_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
-  gawk -F, '{printf(\"%s  PR %03.0fW  PB %04.0fW PO %03.0fW  PI %03.0f+%03.0f=%03.0fW  PP %03.0fW  PH %+05.0fW\n\", \$1, \$11, \$13, \$12, \$4,\$7,\$4+\$7, \$10, \$2)}'"
+alias solar_checker_watts_tail='tail -f $SOLAR_CHECKER_STORE_DIR/solar_checker_latest_$(date +%y%m%d).log | gawk -F, '\''{printf("%s R %03.0fW B %04.0fW O %03.0fW I %03.0f+%03.0f=%03.0fW P %03.0fW G %+05.0fW S %03.0f+%03.0f+%03.0f+%03.0fW\n", substr($1,12,5), $11, $13, $12, $4,$7,$4+$7, $10, $2, $15,$16,$17,$18); fflush(); }'\'''
 
 alias solar_checker_plot="solar_checker_plot.sh"
 alias solar_checker_plot_anyday="solar_checker_plot_anyday.sh"
