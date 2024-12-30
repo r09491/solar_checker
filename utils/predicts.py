@@ -238,7 +238,8 @@ async def find_closest(
                          else ((w<0)|(w>0))]
                        .index.values)
                   for w in watts]
-    flatdrops = [alldrops for drops in wattsdrops for alldrops in drops]
+    flatdrops = [alldrops for drops in wattsdrops
+                 for alldrops in drops]
     wattsdf.drop(flatdrops, inplace = True)
 
         
@@ -320,6 +321,9 @@ async def partition_closest_watts(
 
     # Forecast does not consider anker app settings
     todaywatts['SBPB'][todaywatts['SBPB']>0] = 0
+    todaywatts['SBPO'][todaywatts['SBPB']>0] = 0
+    todaywatts['IVP1'][todaywatts['SBPB']>0] = 0
+    todaywatts['IVP2'][todaywatts['SBPB']>0] = 0
 
     """
     if not postwatts.empty:
@@ -358,6 +362,9 @@ async def partition_closest_watts(
     
     # Forecast does not consider anker app settings
     tomorrowwatts2['SBPB'][tomorrowwatts2['SBPB']>0] = 0
+    tomorrowwatts2['SBPO'][tomorrowwatts2['SBPB']>0] = 0
+    tomorrowwatts2['IVP1'][tomorrowwatts2['SBPB']>0] = 0
+    tomorrowwatts2['IVP2'][tomorrowwatts2['SBPB']>0] = 0
 
     return ([today] + todaydays,
             [tomorrow] + tomorrowdays, realsoc,

@@ -23,8 +23,8 @@ alias apsystems_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_c
 alias home_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
     gawk -F, 'BEGIN{start=4405-4192;price=0.369}{printf(\"PH %+5.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh|%.2f€\n\",\$2, \$3+start, (\$3+start)*price, \$3, \$3*price)}'"
 
-alias home_watts="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
-      			    gawk -F, '{ printf(\"%d,%f\n\", NR, \$2)}' | \
+alias home_watts="tail -n5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
+      			    gawk -F, '{ printf(\"%d,%f\n\", NR, \$2); fflush(); }' | \
 			    termgraph --suffix 'W' \
 			    	      --title 'Home Smartmeter Watts'"
 
