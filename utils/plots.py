@@ -173,7 +173,7 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
   
     if sbpb is not None:
-        title += f' * {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
+        title += f' + {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W>'
         title += f'Bat'
         title += f'>{sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
@@ -332,7 +332,7 @@ def _get_kwh_line(
         else:
             title += f'Bank>{sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
 
-    title += '' if title[-1] == '\n' else ' * '
+    title += '' if title[-1] == '\n' else ' + '
     if sbebcharge is not None and (sbebcharge>0).any():
         if time_format == '%H:%M': # Accumulated
             title += f'{sbebcharge[sbebcharge>0][-1]:.2f}kWh>'

@@ -13,7 +13,7 @@ solar_checker_closest_predict.py \
     --logprefix $SOLAR_CHECKER_PREFIX \
     --logdir $SOLAR_CHECKER_STORE_DIR \
     --stoptime $SOLAR_CHECKER_STOPTIME \
-    --column SBPI,SBPB+ 2>/dev/null
+    --column IVP1,IVP2,SBPB- 2>/dev/null
 
 
 # Find the closest logfiles to the today'slogfile using samples of the last hours
