@@ -14,14 +14,9 @@ from datetime import datetime
 
 import pandas as pd
 
-import sys
-if sys.version_info >= (3, 9): 
-    from typing import Optional, Any
-    Return_Request = Optional[dict[str, Any]]
-else:
-    from typing import Optional, Any, Dict
-    Return_Request = Optional[Dict[str, Any]]
-
+from utils.types import Optional, Any, Dict
+Return_Request = Optional[Dict[str, Any]]
+    
 class Sky:
 
     _URL, _ENDPOINT = 'api.brightsky.dev', 'weather'
