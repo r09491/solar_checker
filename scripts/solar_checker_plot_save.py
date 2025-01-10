@@ -23,10 +23,9 @@ import matplotlib.image as mpimg
 
 from dataclasses import dataclass
 
-from typing import Any
-from utils.types import f64, f64s, t64, t64s, strings, timeslots
+from utils.types import f64, f64s, t64, t64s, strings, Any
 from utils.samples import get_columns_from_csv
-from utils.plots import get_blocks, get_w_line, get_kwh_line, XSIZE, YSIZE
+from utils.plots import get_blocks, get_w_line, get_kwh_line
 
 
 import logging

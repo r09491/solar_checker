@@ -4,8 +4,8 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='solar_checker',
-      version='1.1.1',
-      description='Solar checker with APsystems,Tasmota an Tuya API',
+      version='1.2.0',
+      description='Solar checker with APsystems,Anker,Tuya and BrightSky API',
       url='https://github.com/r09491/solar_checker',
       author='r09491',
       author_email='r09491@gmail.com',
@@ -52,6 +52,7 @@ setup(name='solar_checker',
           'pooranker',
           'brightsky',
           'utils',
+          'utils.plots',
       ],
       install_requires=[
           'aiohttp',
