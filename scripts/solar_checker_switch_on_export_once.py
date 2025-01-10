@@ -17,8 +17,7 @@ from aiohttp.client_exceptions import ClientConnectorError
 
 import numpy as np
 
-from typing import Any, Optional
-from utils.types import f64, f64s, t64, t64s, timeslots
+from utils.typing import f64, f64s, t64, t64s, timeslots
 from utils.samples import get_columns_from_csv
 
 from poortuya import Smartplug

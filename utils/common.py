@@ -10,7 +10,7 @@ from datetime import (
 
 import pandas as pd
 
-from .types import t64
+from .typing import t64
 
 """ The samples in the record logs """
 SAMPLE_NAMES = [

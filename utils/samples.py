@@ -14,7 +14,7 @@ import numpy as np
 
 import asyncio
 
-from .types import f64, f64s, t64, t64s, strings
+from .typing import f64, f64s, t64, t64s, strings
 from .common import SAMPLE_NAMES
 from .common import t64_from_iso
 

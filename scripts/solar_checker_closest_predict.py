@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 
 from dataclasses import dataclass
 
-from utils.types import (
+from utils.typing import (
     t64, f64, Any, Optional, List, Dict
 )
 from utils.common import (

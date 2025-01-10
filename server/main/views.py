@@ -7,8 +7,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from typing import Any, Optional
-from utils.types import (
+from utils.typing import (
     f64, f64s, t64, t64s, timeslots
 )
 from utils.common import (

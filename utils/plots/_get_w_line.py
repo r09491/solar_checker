@@ -1,4 +1,4 @@
-from ..types import (
+from ..typing import (
     t64, t64s,
     f64, f64s, Any
 )

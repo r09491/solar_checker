@@ -17,7 +17,7 @@ from datetime import (
     timedelta
     )
 
-from .types import (
+from .typing import (
     f64, t64, Any, Optional, List, Dict
     )
 from .common import (

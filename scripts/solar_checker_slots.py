@@ -28,7 +28,7 @@ from datetime import datetime, timedelta
 
 from dataclasses import dataclass
 
-from utils.types import t64, t64s, timeslots, Any
+from utils.typing import t64, t64s, timeslots, Any
 from utils.samples import _get_columns_from_csv
 
 

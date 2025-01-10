@@ -14,7 +14,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from utils.types import Optional, Any, Dict
+from utils.typing import Optional, Any, Dict
 Return_Request = Optional[Dict[str, Any]]
     
 class Sky:
