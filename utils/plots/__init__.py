@@ -10,12 +10,15 @@ from ._get_kwh_line import _get_kwh_line
 from ._get_kwh_bar_unified import _get_kwh_bar_unified
 from ._get_blocks import _get_blocks
 
+if sys.version_info >= (3, 9):
+    from asyncio import to_thread
+
 async def get_w_line(time: t64s, smp: f64s,
                      ivp1: f64s, ivp2: f64s, spph: f64s,
                      sbpi: f64s, sbpo: f64s, sbpb: f64s,
                      tphases: t64s = None):
     if sys.version_info >= (3, 9):
-        return await asyncio.to_thread(_get_w_line,**vars())
+        return await to_thread(_get_w_line,**vars())
     else:
         return _get_w_line(**vars())
 
@@ -28,7 +31,7 @@ async def get_kwh_line(
         tphases: t64s = None,
         time_format: str = '%H:%M'):
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(_get_kwh_line, **vars())
+        return await to_thread(_get_kwh_line, **vars())
     else:
         return _get_kwh_line(**vars())
 
@@ -37,7 +40,7 @@ async def get_kwh_bar_unified(
         time: t64s, smeon: f64s, smeoff: f64s, balcony: f64s,
         price: f64, bar_width: f64, time_format:str):
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(
+        return await to_thread(
             _get_kwh_bar_unified, **vars())
     else:
         return _get_kwh_bar_unified(**vars())
@@ -48,7 +51,7 @@ async def get_blocks(time: t64, smp: f64,
                      sbpi: f64s, sbpo: f64s, sbpb: f64,
                      spp1: f64, spp2: f64, spp3: f64, spp4: f64):
     if sys.version_info >= (3, 9):
-        return await asyncio.to_thread(_get_blocks,**vars())
+        return await to_thread(_get_blocks,**vars())
     else:
         return _get_blocks(**vars())
 
