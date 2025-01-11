@@ -259,8 +259,8 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Fix some watts after plausibility check """
 
-    partitions['todaywatts'], _ = fix_prediction_watts(
-        partitions['todaywatts'], -soc*full_wh)
+    ##partitions['todaywatts'], _ = fix_prediction_watts(
+    ##    partitions['todaywatts'], -soc*full_wh)
     partitions['tomorrowwatts1'], _ = fix_prediction_watts(
         partitions['tomorrowwatts1'])
     partitions['tomorrowwatts2'], _ = fix_prediction_watts(

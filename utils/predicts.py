@@ -321,7 +321,7 @@ async def partition_closest_watts(
     # Forecast does not consider anker app settings
     discharging = todaywatts.loc[:,'SBPB']>0
     todaywatts.loc[discharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
-
+    
     """
     if not postwatts.empty:
         # No irradiation
@@ -381,6 +381,7 @@ def fix_prediction_watts(watts: pd.DataFrame, soc_wh: f64 = None) -> [pd.DataFra
     clearsbpo = ~haveenergy & (sbpo>0)
     watts['SBPO'][clearsbpo] = 0
 
+    """
     sbpo = watts['SBPO']
     ivp1 = watts['IVP1']
     haveoutput = sbpo>0
@@ -389,6 +390,7 @@ def fix_prediction_watts(watts: pd.DataFrame, soc_wh: f64 = None) -> [pd.DataFra
     watts['IVP2'][~haveoutput & (ivp2>0)] = 0
     spph = watts['SPPH']
     watts['SPPH'][~haveoutput & (spph>0)] = 0
+    """
     
     smp = watts['SMP']
     sbpb = watts['SBPB']
