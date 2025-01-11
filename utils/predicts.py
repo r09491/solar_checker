@@ -68,7 +68,7 @@ async def get_sun_adaptors(
     sky = await asyncio.gather(*skytasks)
 
     """ Unify the indices. Takes care of summertime and wintertime """
-    skyindex = sky[0].index.map(t64_from_iso).tz_localize('utc').tz_convert(tz)
+    skyindex = sky[0].index.map(t64_from_iso).tz_localize(None)
     for s in sky:
         s.set_index(skyindex, inplace = True)
 
@@ -85,11 +85,11 @@ def apply_sun_adapters( phasewatts: pd.DataFrame,
 
     if phasewatts.empty:
         return phasewatts
-            
+    
     t = phasewatts.index[0]
     tt = phasewatts.index[-1]
     while t<tt:
-        phasewatts.loc[t:t64_h_last(t),
+        phasewatts.loc[t64_h_first(t):t64_h_last(t),
                        FORECAST_NAMES] *= adapter[t64_h_first(t)]
         t = t64_h_next(t)
     return phasewatts
@@ -137,7 +137,7 @@ async def get_logs_as_dataframe(
 
 """ Get the start and stop of the evaluation slot """
 def get_on_times(log: list) -> Optional[List[t64]]:
-    ison = log[-1]>0 # The data of the log day are at the very end
+    ison = log.iloc[-1]>0 # The data of the log day are at the very end
     if ~ison.any(): # no radiation
         return None, None
     time = log['TIME'] # Ensure time is always present!
@@ -167,9 +167,9 @@ async def find_closest(
 
     
     """ All basic input cols without extensions """
-    basecols = set([c for c in [cc[:-1]
+    basecols = list(set([c for c in [cc[:-1]
                     if cc[-1] in "+-"
-                    else cc for cc in incols[1:]]])
+                    else cc for cc in incols[1:]]]))
 
     """ Samples for all log days in full time range synced to the minute """
     basedfs = [pd.DataFrame(
@@ -232,8 +232,8 @@ async def find_closest(
     """ Remove apriori impossible list entries """
     watts = [wattsdf[d] for d in wattsdf.loc[:,incols[2:]]]
     wattsdrops = [list(w[~((w<0)|(w>0))
-                         if (w[logdays.index(logday)]<0 or
-                             w[logdays.index(logday)]>0)
+                         if (w.iloc[logdays.index(logday)]<0 or
+                             w.iloc[logdays.index(logday)]>0)
                          else ((w<0)|(w>0))]
                        .index.values)
                   for w in watts]
@@ -291,25 +291,25 @@ async def partition_closest_watts(
     
     """ The data already recorded without partitioning """
     realseries = logsdf.loc[today]
-    realdf = pd.DataFrame(index = realseries[0],
-                           data = dict(realseries[1:]))
-    realsoc = realdf.loc[:, 'SBSB'][-1]
+    realdf = pd.DataFrame(index = realseries.iloc[0],
+                           data = dict(realseries.iloc[1:]))
+    realsoc = realdf.loc[:, 'SBSB'].iloc[-1]
 
     
     """ The frame with the watts before searching. Can be empty! """
-    prewatts = realdf.loc[logstarttime:starttime,:][:-1]
+    prewatts = realdf.loc[logstarttime:starttime,:].iloc[:-1]
 
     """ The frame with the watts in the search slot. Never empty! """
     findwatts = realdf.loc[starttime:stoptime,:]
 
     """ The frame with the watts after the search slot. Can be empty! """
-    postwatts = realdf.loc[stoptime:logstoptime,:][1:]
+    postwatts = realdf.loc[stoptime:logstoptime,:].iloc[1:]
 
     
     """ The predicted data for the day until time of last sample """    
     todaydfs = [
         pd.DataFrame(
-            index = [ymd_over_t64(t, today) for t in ps[0]], 
+            index = [ymd_over_t64(t, today) for t in ps.iloc[0]], 
             data = dict(ps[1:])
         ) for ps in [logsdf.loc[pd] for pd in todaydays]]
 
@@ -319,10 +319,8 @@ async def partition_closest_watts(
     ) / len(todaydfs))[1:]
 
     # Forecast does not consider anker app settings
-    todaywatts['SBPB'][todaywatts['SBPB']>0] = 0
-    todaywatts['SBPO'][todaywatts['SBPB']>0] = 0
-    todaywatts['IVP1'][todaywatts['SBPB']>0] = 0
-    todaywatts['IVP2'][todaywatts['SBPB']>0] = 0
+    discharging = todaywatts.loc[:,'SBPB']>0
+    todaywatts.loc[discharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
 
     """
     if not postwatts.empty:
@@ -341,7 +339,7 @@ async def partition_closest_watts(
         pd.DataFrame(
             index = [ymd_over_t64(
                 t, tomorrow
-            ) for t in ts[0]],
+            ) for t in ts.iloc[0]],
             data = dict(ts[1:])
         ) for ts in [logsdf.loc[td] for td in tomorrowdays]]
 
@@ -357,13 +355,11 @@ async def partition_closest_watts(
     
     tomorrowwatts2 = tomorrowwatts.loc[
         ymd_over_t64(starttime, tomorrow):
-    ]
+    ].copy()
     
     # Forecast does not consider anker app settings
-    tomorrowwatts2['SBPB'][tomorrowwatts2['SBPB']>0] = 0
-    tomorrowwatts2['SBPO'][tomorrowwatts2['SBPB']>0] = 0
-    tomorrowwatts2['IVP1'][tomorrowwatts2['SBPB']>0] = 0
-    tomorrowwatts2['IVP2'][tomorrowwatts2['SBPB']>0] = 0
+    discharging = tomorrowwatts2.loc[:,'SBPB']>0
+    tomorrowwatts2.loc[discharging, ['SBPB','SBPO', 'IVP1', 'IVP2']] = 0
 
     return ([today] + todaydays,
             [tomorrow] + tomorrowdays, realsoc,
@@ -448,17 +444,23 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
         if watts.size == 0:
             continue
 
-        watts['SBPB-'] = watts['SBPB']
-        watts['SBPB-'][(watts['SBPB-'])>0] = 0
-        watts['SBPB+'] = watts['SBPB']
-        watts['SBPB+'][(watts['SBPB+'])<0] = 0
+        watts.loc[:, 'SBPB-'] = watts.loc[:, 'SBPB']
+        discharging = watts.loc[:, 'SBPB']>0
+        watts.loc[discharging, 'SBPB-'] = 0
 
-        watts['SMP-'] = watts['SMP']
-        watts['SMP-'][(watts['SMP-'])>0] = 0
-        watts['SMP+'] = watts['SMP']
-        watts['SMP+'][(watts['SMP+'])<0] = 0
+        watts.loc[:, 'SBPB+'] = watts.loc[:, 'SBPB']
+        charging = watts.loc[:, 'SBPB']<0
+        watts.loc[charging, 'SBPB+'] = 0
 
-        watts['IVP'] = watts['IVP1'] + watts['IVP2']
+        watts.loc[:, 'SMP-'] = watts.loc[:, 'SMP']
+        importing = watts.loc[:, 'SMP']>0
+        watts.loc[importing, 'SMP-'] = 0
+        
+        watts.loc[:, 'SMP+'] = watts.loc[:, 'SMP']
+        exporting = watts.loc[:, 'SMP']<0
+        watts.loc[exporting, 'SMP+'] = 0
+
+        watts.loc[:, 'IVP'] = watts.loc[:, 'IVP1'] + watts.loc[:, 'IVP2']
 
         
     phase = [k for (k,v) in partitions.items() if len(v) >0]

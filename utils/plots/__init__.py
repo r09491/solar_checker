@@ -11,7 +11,9 @@ from ._get_kwh_bar_unified import _get_kwh_bar_unified
 from ._get_blocks import _get_blocks
 
 if sys.version_info >= (3, 9):
-    from asyncio import to_thread
+    from asyncio import (
+        to_thread,
+    )
 
 async def get_w_line(time: t64s, smp: f64s,
                      ivp1: f64s, ivp2: f64s, spph: f64s,
