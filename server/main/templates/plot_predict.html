@@ -6,8 +6,8 @@
 
 {% if what == 'Today' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict/{{ logday }}/tomorrow' target='_blank'>Tomorrow Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ logday }}/total' target='_blank'>Total Cast</a>
+  <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/total'>Total Cast</a>
 </div>
 
 <h1 style='margin:4px;'>Today Cast</h1>
@@ -15,8 +15,8 @@
 
 {% if what == 'Tomorrow' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict/{{ logday }}/today' target='_blank'>Today Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ logday }}/total' target='_blank'>Total Cast</a>
+  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/total'>Total Cast</a>
 </div>
 
 <h1 style='margin:4px;'>Tomorrow Cast</h1>
@@ -24,8 +24,8 @@
 
 {% if what == 'Total' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict/{{ logday }}/today' target='_blank'>Today Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ logday }}/tomorrow' target='_blank'>Tomorrow Cast</a>
+  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>
 </div>
 
 <h1 style='margin:4px;'>Total Cast</h1>
