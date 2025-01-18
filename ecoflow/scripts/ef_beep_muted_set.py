@@ -4,8 +4,11 @@ __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
 import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 import os
 import sys
@@ -23,7 +26,7 @@ async def process_beep_muted(muted: int = None) -> int:
     dm = Delta_Max()
     
     m = await dm.get_beep_muted()
-    print(f"Old beep state is {'MUTED' if m else 'NORMAL'}")
+    logger.info(f"Old beep state is {'MUTED' if m else 'NORMAL'}")
 
     if muted is None:
         return 0
@@ -36,7 +39,7 @@ async def process_beep_muted(muted: int = None) -> int:
         if m == muted:
             break
 
-    print(f"New beep state is {'MUTED' if m else 'NORMAL'}")
+    logger.info(f"New beep state is {'MUTED' if m else 'NORMAL'}")
 
     return 0
 
@@ -66,7 +69,7 @@ async def main() -> int:
     args = parse_arguments()
 
     if args.muted is not None and args.muted not in [0,1]:
-        print(f"Illegal muted state '{args.muted}'")
+        logger.info(f"Illegal muted state '{args.muted}'")
         return 1
 
     err = await process_beep_muted(args.muted)

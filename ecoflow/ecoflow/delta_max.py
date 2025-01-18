@@ -101,19 +101,27 @@ class Delta_Max(Device):
         data = payload.get("data")
         return [data.get(q) for q in quotas] # ordered per quotas
 
-    async def set_ac_charge_watts_balance(self, smp: int,
+    async def set_ac_charge_watts_balance(self,
+                                          smp: int = None,
                                           minp: int = 100,
-                                          maxp :int = 2000) -> Optional[int]:
-        acpc0 = await self.get_ac_charge_watts()
-        if smp == 0:
+                                          maxp :int = 800) -> Optional[int]:
+        acpi, acpo, acpc0, _ = await self.get_ac_in_out_charge_watts_soc()
+        logger.info(f'DM balancing inputs SMP:{smp}, ACPI:{acpi}, ACPO:{acpo}, ACPC:{acpc0}')
+        if smp is None or (smp == 0) or (acpi == 0):
+            logger.warn(f'DM keeping charge rate.Abort!')
             return acpc0
-        
-        await self.set_ac_charge_watts(min(max(acpc0-smp,minp),maxp))
+
+        logger.info(f'Ready to update the charge rate by "{smp}"')        
+        await self.set_ac_charge_watts(min(max(acpc0-smp-acpo,minp),maxp))
+        logger.info(f'Charge rate update done')
         
         for i in range(3):
             await asyncio.sleep(2)
             acpc1 = await self.get_ac_charge_watts()
             if acpc1 != acpc0 or acpc1==minp:
+                logger.info(f'DM charge rate is confirmed "{acpc1}"')
                 return acpc1
-            
+
+        logger.warn(f'DM did not confirm charge rate setting"')            
+
         return None

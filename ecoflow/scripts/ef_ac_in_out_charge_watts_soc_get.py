@@ -4,8 +4,11 @@ __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
 import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 import os
 import sys
@@ -22,7 +25,7 @@ async def process_ac_in_out_charge_watts_soc() -> int:
     
     dm = Delta_Max()    
     w = await dm.get_ac_in_out_charge_watts_soc()
-    print(f"AC [in, out, charge, soc] power is {w}")
+    logger.info(f"AC [in, out, charge, soc] power is {w}")
 
     return 0
 

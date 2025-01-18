@@ -99,7 +99,7 @@ async def main(sp: Smartplug,
     
     """ The power which exported to the grid or charging the battery
     is subject to immediate consumption """
-    import_power = smp_mean + (sbpb_mean if sbpb_mean < 0 else 0)
+    import_power = smp_mean ## + (sbpb_mean if sbpb_mean < 0 else 0)
     logger.info(f'Last import_power "{import_power:.0f}W"')
     
     # Switch to be Open if above import average

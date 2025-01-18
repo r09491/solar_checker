@@ -4,8 +4,11 @@ __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
 import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 import os
 import sys
@@ -23,7 +26,7 @@ async def process_12V_out_enabled(enabled: int = None) -> int:
     dm = Delta_Max()
     
     e = await dm.get_12V_out_enabled()
-    print(f"Old 12V out state is {'ON' if e else 'OFF'}")
+    logger.info(f"Old 12V out state is {'ON' if e else 'OFF'}")
 
     if enabled is None:
         return 0
@@ -36,7 +39,7 @@ async def process_12V_out_enabled(enabled: int = None) -> int:
         if e == enabled:
             break
 
-    print(f"New 12V out state is {'ON' if e else 'OFF'}")
+    logger.info(f"New 12V out state is {'ON' if e else 'OFF'}")
 
     return 0
 
@@ -66,7 +69,7 @@ async def main() -> int:
     args = parse_arguments()
 
     if args.enabled is not None and args.enabled not in [0,1]:
-        print(f"Illegal enabled state '{args.enabled}'")
+        logger.info(f"Illegal enabled state '{args.enabled}'")
         return 1
 
     err = await process_12V_out_enabled(args.enabled)

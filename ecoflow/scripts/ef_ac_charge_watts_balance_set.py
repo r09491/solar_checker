@@ -4,8 +4,11 @@ __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
 import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 import os
 import sys
@@ -24,15 +27,17 @@ async def process_ac_charge_watts_balance(smp: int) -> int:
     
     balance = await dm.set_ac_charge_watts_balance(smp)
     if balance is not None: 
-        print(f"New balanced charging rate is {balance}w")
+        logger.info(f"Balanced charging rate is {balance}w")
     else:
-        print(f"The balance setting timed out")
+        logger.info(f"Balance setting timed out")
     return 0
 
 
 @dataclass
 class Script_Arguments:
     grid_watts: int
+    min_watts: int
+    max_watts: int
 
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
@@ -44,22 +49,27 @@ def parse_arguments() -> Script_Arguments:
 
     parser.add_argument('--version', action = 'version', version = __version__)
 
-    parser.add_argument('--grid_watts', type = int, required = True,
-                        help = "The grid watts as per the smatmeter")
+    parser.add_argument('--grid_watts', type = int, default = None,
+                        help = "The grid watts as per the smartmeter")
 
+    parser.add_argument('--min_watts', type = int, default = -800,
+                        help = "Minimum watts for balance")
+
+    parser.add_argument('--max_watts', type = int, default = 800,
+                        help = "Maximum watts for balance")
+    
     args = parser.parse_args()
-    return Script_Arguments(args.grid_watts)
+    return Script_Arguments(args.grid_watts,args.min_watts,args.max_watts)
 
 
 async def main() -> int:
     args = parse_arguments()
 
-    if args.grid_watts is not None and (args.grid_watts<-800 or
-                                        args.grid_watts>+800):
-        print(f"Illegal grid watts '{args.grid_watts}'")
-        return 1
+    gw = args.grid_watts
+    if gw is not None:
+        gw = max(min(gw, args.max_watts),args.min_watts)
 
-    err = await process_ac_charge_watts_balance(args.grid_watts)
+    err = await process_ac_charge_watts_balance(gw)
 
     return err
 

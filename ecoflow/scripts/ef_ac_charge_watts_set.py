@@ -4,8 +4,12 @@ __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
 import logging
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
+
 
 import os
 import sys
@@ -23,7 +27,7 @@ async def process_ac_charge_watts(watts: int = None) -> int:
     dm = Delta_Max()
     
     w = await dm.get_ac_charge_watts()
-    print(f"Old charging rate is {w}w")
+    logger.info(f"Old charging rate is {w}w")
 
     if watts is None:
         return 0
@@ -36,7 +40,7 @@ async def process_ac_charge_watts(watts: int = None) -> int:
         if w == watts:
             break
 
-    print(f"New charging rate is {w}w")
+    logger.info(f"New charging rate is {w}w")
     
     return 0
 
@@ -66,7 +70,7 @@ async def main() -> int:
     args = parse_arguments()
 
     if args.watts is not None and 100>args.watts>800:
-        print(f"Illegal charging rate '{args.watts}'")
+        logger.info(f"Illegal charging rate '{args.watts}'")
         return 1
 
     err = await process_ac_charge_watts(args.watts)
