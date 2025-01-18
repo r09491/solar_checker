@@ -32,8 +32,7 @@ class Delta_Max(Device):
     
     def __init__(self, timeout: int = 10):
         super().__init__()
-        # The 4th line has the serial number of the Delta Max
-        _, _, _, self.sn = get_dot_ecoflow_api() 
+        self.url, self.key, self.secret, self.sn = get_dot_ecoflow_api()
 
 
     async def get_ac_out_enabled(self) -> int:    

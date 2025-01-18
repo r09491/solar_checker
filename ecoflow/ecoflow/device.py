@@ -21,13 +21,12 @@ from aiohttp.http_exceptions import HttpBadRequest
 
 from .helpers import (
     get_headers,
-    get_dot_ecoflow_api
 )
 
 class Device():
     
     def __init__(self, timeout: int = 10):
-        self.url, self.key, self.secret, _ = get_dot_ecoflow_api()
+        self.url, self.key, self.secret, self.sn = None, None, None, None
         self.timeout = timeout
 
     
