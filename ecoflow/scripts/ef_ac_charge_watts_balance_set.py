@@ -27,10 +27,11 @@ async def process_ac_charge_watts_balance(smp: int) -> int:
     
     balance = await dm.set_ac_charge_watts_balance(smp)
     if balance is not None: 
-        logger.info(f"Balanced charging rate is {balance}w")
+        logger.info(f"Balance charging rate is {balance}w")
+        return 0
     else:
-        logger.info(f"Balance setting timed out")
-    return 0
+        logger.info(f"Balance charging rate not modified")
+        return 1
 
 
 @dataclass
@@ -75,8 +76,9 @@ async def main() -> int:
 
 if __name__ == '__main__':
     try:
-        err = err = asyncio.run(main())
+        err = asyncio.run(main())
     except KeyboardInterrupt: 
         err = 99
-       
+
+    logger.info(f'Done with (err={err}).')
     sys.exit(err)

@@ -85,6 +85,7 @@ async def main(sp: Smartplug,
     smp_mean = smp.mean()
     logger.info(f'Last smart meter mean "{smp_mean:.0f}W"')
 
+    """
     sbpb = c['SBPB'][-2:]
     sbpb_mean = sbpb.mean()
     logger.info(f'Last charge power  mean "{sbpb_mean:.0f}W"')
@@ -95,12 +96,12 @@ async def main(sp: Smartplug,
         return 12
     spps_mean = spps.mean()
     logger.info(f'Last plug sink power mean "{spps_mean:.0f}W"')
-
+    """
     
     """ The power which exported to the grid or charging the battery
     is subject to immediate consumption """
     import_power = smp_mean ## + (sbpb_mean if sbpb_mean < 0 else 0)
-    logger.info(f'Last import_power "{import_power:.0f}W"')
+    ##logger.info(f'Last import_power "{import_power:.0f}W"')
     
     # Switch to be Open if above import average
     is_to_open =  import_power > power_mean_import_open
@@ -124,6 +125,7 @@ async def main(sp: Smartplug,
         # ss_result and ss_desired to be the same 
         logger.info(f'The smartplug switch "{sp.name}" became "{ss_result}"')
 
+    """            
     elif spps.min() == spps.max():
         logger.info(f'The smartplug switch "{sp.name}" has to be opened"')
         
@@ -133,7 +135,6 @@ async def main(sp: Smartplug,
             logger.error('Cannot connect to smartplug "{sp.name}".')
             return 3
         logger.info(f'The smartplug switch "{sp.name}" is  "{ss_result}"')
-        
     else:
         logger.info(f'The smartplug switch "{sp.name}" has to be kept awake"')
         
@@ -143,7 +144,7 @@ async def main(sp: Smartplug,
             logger.error('Cannot connect to smartplug "{sp.name}".')
             return 3
         logger.info(f'The smartplug switch "{sp.name}" reswitched "{ss_result}"')        
-
+    """
     return 0
 
 

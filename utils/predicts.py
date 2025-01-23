@@ -181,13 +181,29 @@ async def find_closest(
     """ Get the start and stop of the radiation. The times are
     determined from the first input power column after TIME """
 
+    """
     startontime, stopontime = get_on_times(
         logsdf.loc[logday, [incols[0],
                             incols[1][:-1]
                             if incols[1][-1] == '+' else
                             incols[1]]] # TIME and first column
     )
+    """
     
+    startontime, stopontime = get_on_times(
+        logsdf.loc[logday, ['TIME', 'SBPI']]
+    )
+
+    if startontime is None or  stopontime is None:
+        startontime, stopontime = get_on_times(
+            logsdf.loc[logday, ['TIME', 'IVP1']]
+        )
+            
+    if startontime is None or  stopontime is None:
+        startontime, stopontime = get_on_times(
+            logsdf.loc[logday, ['TIME', 'IVP2']]
+        )
+
     if startontime is None or  stopontime is None:
         return None, None, None 
 

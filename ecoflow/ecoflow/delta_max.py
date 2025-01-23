@@ -17,11 +17,6 @@ import asyncio
 
 from typing import Optional
 
-"""
-from aiohttp import ClientSession
-from aiohttp.http_exceptions import HttpBadRequest
-"""
-
 from .helpers import (
     get_dot_ecoflow_api
 )
@@ -104,14 +99,22 @@ class Delta_Max(Device):
                                           smp: int = None,
                                           minp: int = 100,
                                           maxp :int = 800) -> Optional[int]:
-        acpi, acpo, acpc0, _ = await self.get_ac_in_out_charge_watts_soc()
-        logger.info(f'DM balancing inputs SMP:{smp}, ACPI:{acpi}, ACPO:{acpo}, ACPC:{acpc0}')
+        acpi, acpo, acpc0, soc = await self.get_ac_in_out_charge_watts_soc()
+
+        info = 'DM balancing inputs'
+        info += f' SMP:{smp},'
+        info += f' ACPI:{acpi},'
+        info += f' ACPO:{acpo},'
+        info += f' ACPC:{acpc0},'
+        info += f' SOC:{soc}'
+        logger.info(info)
+
         if smp is None or (smp == 0) or (acpi == 0):
             logger.warn(f'DM keeping charge rate.Abort!')
-            return acpc0
+            return None
 
         logger.info(f'Ready to update the charge rate by "{smp}"')        
-        await self.set_ac_charge_watts(min(max(acpc0-smp-acpo,minp),maxp))
+        await self.set_ac_charge_watts(min(max(acpc0-smp,minp),maxp))
         logger.info(f'Charge rate update done')
         
         for i in range(3):
@@ -122,5 +125,4 @@ class Delta_Max(Device):
                 return acpc1
 
         logger.warn(f'DM did not confirm charge rate setting"')            
-
         return None

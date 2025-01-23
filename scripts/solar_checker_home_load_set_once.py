@@ -178,5 +178,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt: 
         err = 99
 
-    logger.info(f'solar_checker_home_load_set_once end (err={err}).')
+    logger.info(f'done with (err={err}).')
     sys.exit(err)
