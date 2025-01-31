@@ -146,7 +146,8 @@ def _get_blocks(time: t64, smp: f64,
                         show_power = sbpi+sbpb>ivp1+ivp2)
 
     
-    if (sbpo>0) and (ivp1>0):
+    #if (sbpo>0) and (ivp1>0):
+    if (sbpo>0):
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_1, 'W',
                         ivp1 if ivp1>0 else sbpo/2,
                         'c' if ivp1>0 else 'grey',
@@ -161,7 +162,8 @@ def _get_blocks(time: t64, smp: f64,
                     'c' if ivp1>0 else 'grey',
                     show_power = False)            
 
-    if  (sbpo >0) and  (ivp2>0):
+    #if  (sbpo >0) and  (ivp2>0):
+    if (sbpo >0):
         _add_link_to_ax(ax, *solix_out, 'E', *inv_mppt_2, 'W',
                         ivp2 if ivp2>0 else sbpo/2,
                         'c' if ivp2>0 else 'grey',
