@@ -107,7 +107,7 @@ async def get_home_load_estimate(samples: int) -> int:
     """
     if (ivp[-2:] > (sbpo + 10)[-2:]).any(): # Some tolerance for roundings ...
         logger.error(f'bank in ERROR, defaulting!')
-        return 100
+        return 0 #return 100
 
         
     # Use data from the solarbank to set data in the solarbank
@@ -126,7 +126,7 @@ async def get_home_load_estimate(samples: int) -> int:
     else:
         logger.info(f'bank in BYPASS')
             
-    return min(max(estimate,100), 480) # My solix only uses one channel
+    return min(max(estimate,100), 800) # My solix only uses one channel
 
 
 async def main(sb: Solarbank, samples: int) -> int:

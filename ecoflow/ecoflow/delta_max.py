@@ -110,19 +110,29 @@ class Delta_Max(Device):
         logger.info(info)
 
         if smp is None or (smp == 0) or (acpi == 0):
-            logger.warn(f'DM keeping charge rate.Abort!')
+            logger.warn(f'DM keeping charge rate. Abort!')
             return None
 
-        logger.info(f'Ready to update the charge rate by "{smp}"')        
-        await self.set_ac_charge_watts(min(max(acpc0-smp,minp),maxp))
-        logger.info(f'Charge rate update done')
+        acpc_delta = int(smp/2)
+        if abs(acpc_delta) < 10:
+            logger.warn(f'Charge rate delta "{acpc_delta}" too low. Ignore!')
+            return None
+
+        acpc_new = min(max(acpc0-acpc_delta,minp),maxp)
+        if abs(acpc_new - acpc0)  < 10:
+            logger.warn(f'Charge rate new "{acpc_new}" too close. Ignore!')
+            return None
+        
+        logger.info(f'Trying to update the charge rate to "{acpc_new}" by "{acpc_delta}"')        
+        await self.set_ac_charge_watts(acpc_new)
+        logger.info(f'Charge rate update commanded!')
         
         for i in range(3):
             await asyncio.sleep(2)
             acpc1 = await self.get_ac_charge_watts()
             if acpc1 != acpc0 or acpc1==minp:
-                logger.info(f'DM charge rate is confirmed "{acpc1}"')
+                logger.info(f'DM charge rate update is confirmed "{acpc1}"')
                 return acpc1
 
-        logger.warn(f'DM did not confirm charge rate setting"')            
+        logger.warn(f'DM did not confirm charge rate update"')            
         return None
