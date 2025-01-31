@@ -32,7 +32,6 @@ def _get_w_line(time: t64s, smp: f64s,
                 sbpi: f64s, sbpo: f64s, sbpb: f64s,
                 tphases: t64s = None):
     __me__ ='_get_w_line'
-
     logger.info(f'started')
 
     # ?Have data (smartmeter)
@@ -105,14 +104,6 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, spph, spph + smpon,
                         color='b', label='GRID', lw=0, alpha=0.3)
 
-        if ivpon is not None:
-            ax.plot(time, ivp1,
-                    color='c', lw=2, label='INV 1', alpha=0.6)
-            ax.plot(time, ivp1 + ivp2,
-                    color='g', lw=2, label='INV 2', alpha=0.6)
-
-        #ax.plot(time, spph, color='black', label='<|>', lw=1, alpha=0.7)
-
     elif ivpon is not None:
         logger.info(f'using inverter samples only')
         
@@ -152,18 +143,20 @@ def _get_w_line(time: t64s, smp: f64s,
                         color='b', lw=0, alpha=0.3)
 
 
-    if ivpon is not None:
-        isfill = isivpon & ~issbpboff & ~issbpion
-        ax.fill_between(time[isfill] ,
-                        np.full_like(ivp[isfill], 600),
-                        np.full_like(ivp[isfill], 800),
-                        color='black', alpha=0.2)
+    if time.size<=24*60: #only plot within 24h
+        if ivpon is not None:
+            isfill = isivpon & ~issbpboff & ~issbpion
+            ax.fill_between(time[isfill] ,
+                            np.full_like(ivp[isfill], 600),
+                            np.full_like(ivp[isfill], 800),
+                            color='black', alpha=0.2)
         
-    if sbpion is not None:
-        ax.fill_between(timesbpion ,
-                        np.full_like(sbpion, 600),
-                        np.full_like(sbpion, 800),
-                        color='orange', label='LIMITS', alpha=0.4)
+        if sbpion is not None:
+            isfill = issbpion & isivpon 
+            ax.fill_between(time[isfill],
+                            np.full_like(sbpi[isfill], 600),
+                            np.full_like(sbpi[isfill], 800),
+                            color='orange', label='LIMITS', alpha=0.4)
         
         
     title = f'# Power #\n'
@@ -220,5 +213,4 @@ def _get_w_line(time: t64s, smp: f64s,
     plt.close(fig)
 
     logger.info(f'done')
-
     return base64.b64encode(buf.getbuffer()).decode('ascii')
