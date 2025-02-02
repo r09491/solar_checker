@@ -7,6 +7,13 @@ Sets the new home load for the anker solar bank
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import argparse
@@ -19,11 +26,6 @@ from aiohttp.client_exceptions import ClientConnectorError
 
 from dataclasses import dataclass
 
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(os.path.basename(__file__))
-
-
 async def anker_home_load_set(sb: Solarbank, home_load: int) -> bool:
     logger.info(f'anker_home_load_set begin"')
 
@@ -32,9 +34,9 @@ async def anker_home_load_set(sb: Solarbank, home_load: int) -> bool:
     except:
         is_done = False
     if is_done:
-        logger.info("solarbank home load set.")
+        logger.info("home load is set.")
     else:
-        logger.warning("anker solarbank home load not set.")
+        logger.warning("home load is not set.")
         
     logger.info(f"anker_home_load_set end")        
     return is_done
@@ -45,34 +47,34 @@ async def get_home_load_estimate(samples: int) -> int:
     c = await get_columns_from_csv()
     if c is None:
         logger.info(f'samples from stdin are not valid')
-        return 0
+        return -10
 
     """ The normalised smart meter power """
     smp = c['SMP']
     if smp.size != samples:
         logger.error(f'wrong number of smart meter records "{smp.size}"')
-        return 0
+        return -11
     smp_mean = int(smp.mean())
 
     """ The normalised solarbank power input """
     sbpi = c['SBPI']
     if sbpi.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpi.size}"')
-        return 0
+        return -12
     sbpi_mean = int(sbpi.mean())
     
     """ The normalised solarbank power output """
     sbpb = c['SBPB']
     if sbpb.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpb.size}"')
-        return 0
+        return -13
     sbpb_mean = int(sbpb.mean())
 
     """ The normalised solarbank power output """
     sbpo = c['SBPO']
     if sbpo.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
-        return 0
+        return -14
 
     """ The normalised inverter power samples channel 1 """
     ivp1 = c['IVP1']
@@ -82,21 +84,25 @@ async def get_home_load_estimate(samples: int) -> int:
     ivp = ivp1 + ivp2
     if ivp.size != samples:
         logger.error(f'wrong number of smartmeter records "{ivp.size}"')
-        return 0
+        return -15
 
     logger.info(f'{sbpi} sbpi')
     logger.info(f'{sbpb} sbpb')
     logger.info(f'{sbpo} sbpo')
     logger.info(f'{ivp} ivp')
-    
+
     if not sbpo.any() and not sbpb.any():
-        logger.info(f'bank in STANDBY, skipping!')
-        return 0
+        logger.info(f'bank in STANDBY, defaulting!')
+        return 100
 
     if not sbpo.all():
         logger.info(f'bank in TRANSITION, defaulting!')
         return 100
-    
+
+    if sbpb[sbpb>0].any():
+        logger.info(f'bank in DISCHARGE, defaulting!')
+        return 100
+
     """
     Data in local mode are faster acquired than those from the
     cloud. Here the cloud solar bank data are at least one minute
@@ -106,8 +112,8 @@ async def get_home_load_estimate(samples: int) -> int:
     shall only be set in stable situation.
     """
     if (ivp[-2:] > (sbpo + 10)[-2:]).any(): # Some tolerance for roundings ...
-        logger.error(f'bank in ERROR, defaulting!')
-        return 0 #return 100
+        logger.error(f'bank in ERROR')
+        return -16
 
         
     # Use data from the solarbank to set data in the solarbank
@@ -132,14 +138,14 @@ async def get_home_load_estimate(samples: int) -> int:
 async def main(sb: Solarbank, samples: int) -> int:
 
     estimate = await get_home_load_estimate(samples)
-    if estimate == 0:
-        return 10
+    if estimate < 0:
+        return estimate
     
-    logger.info(f'home load goal is "{estimate:.0f}W"')
+    logger.info(f'home load goal is "{estimate:.0f}"')
     is_done = await anker_home_load_set(sb, estimate)
-    logger.info(f"home load goal is {'ok' if is_done else 'failed'}")
+    logger.info(f"home load goal is {'set' if is_done else 'kept'}")
 
-    return 0 if is_done else 15
+    return 0 if is_done else 1
 
 
 @dataclass
@@ -174,7 +180,7 @@ if __name__ == '__main__':
         err = asyncio.run(main(sb, args.power_samples))
     except ClientConnectorError:
         logger.error('cannot connect to solarbank.')
-        err = 9
+        err = -9
     except KeyboardInterrupt: 
         err = 99
 

@@ -7,6 +7,12 @@ __doc__="""Tries to make most of the available solar energies in my house.
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 import os
 import sys
@@ -21,13 +27,6 @@ from utils.typing import f64, f64s, t64, t64s, timeslots
 from utils.samples import get_columns_from_csv
 
 from poortuya import Smartplug
-
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
-    datefmt='%H:%M:%S',)
-logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 from dataclasses import dataclass
 from typing import Any, Optional

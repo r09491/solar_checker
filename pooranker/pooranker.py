@@ -161,7 +161,7 @@ class Solarbank():
             tolerance = 10 if charging_status ==SolarbankStatus.discharge else 10
             if home_load-tolerance < set_output_power < home_load+tolerance:
                 logger.info(f'home load is kept "{set_output_power}"')
-                return True
+                return False
             
             is_done= await sapi.set_device_parm(
                 siteId = site_id,                                   
@@ -172,5 +172,5 @@ class Solarbank():
             if is_done:
                 logger.info(f'home load is set "{home_load}"')
             else:
-                logger.error(f'home load setting failed"')
+                logger.error(f'home load setting kept or failed')
             return is_done
