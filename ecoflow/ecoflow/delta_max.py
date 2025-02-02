@@ -113,7 +113,8 @@ class Delta_Max(Device):
             logger.warn(f'DM keeping charge rate. Abort!')
             return None
 
-        acpc_delta = int(smp/2)
+        #acpc_delta = int(smp/2)
+        acpc_delta = int(smp)
         if abs(acpc_delta) < 10:
             logger.warn(f'Charge rate delta "{acpc_delta}" too low. Ignore!')
             return None
