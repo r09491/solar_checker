@@ -195,16 +195,6 @@ async def find_closest(
     )
 
     if startontime is None or  stopontime is None:
-        startontime, stopontime = get_on_times(
-            logsdf.loc[logday, ['TIME', 'IVP1']]
-        )
-            
-    if startontime is None or  stopontime is None:
-        startontime, stopontime = get_on_times(
-            logsdf.loc[logday, ['TIME', 'IVP2']]
-        )
-
-    if startontime is None or  stopontime is None:
         return None, None, None 
 
     starttime = startontime if starttime is None else \
@@ -297,7 +287,8 @@ async def partition_closest_watts(
     # The closest days used for prediction
     tomorrowdays = [ymd_tomorrow(td)
                     for td in todaydays
-                    if ymd_tomorrow(td) in logsdays]
+                    if ((ymd_tomorrow(td) in logsdays)
+                        and (ymd_tomorrow(td) != today))]
 
     
     # Time of the first and last sample
@@ -334,11 +325,16 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs))[1:]
 
+    """
+
     # Forecast does not consider anker app settings
     discharging = todaywatts.loc[:,'SBPB']>0
     todaywatts.loc[discharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+
+    """
     
     """
+
     if not postwatts.empty:
         # No irradiation
         todaywatts.loc[:,'SBPI'] = 0
@@ -348,6 +344,7 @@ async def partition_closest_watts(
 
         if postwatts['SBPB'][-1] == 0:
             todaywatts.loc[:, ['SBPB','SBPO','IVP1','IVP2']] = 0
+
     """
 
     """ The tomorrow data for the day from midnight """    
@@ -364,7 +361,8 @@ async def partition_closest_watts(
         lambda x,y: x+y,
         [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
-   
+
+
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, tomorrow)
     ][:-1]
@@ -372,11 +370,16 @@ async def partition_closest_watts(
     tomorrowwatts2 = tomorrowwatts.loc[
         ymd_over_t64(starttime, tomorrow):
     ].copy()
+
     
+    """
+
     # Forecast does not consider anker app settings
     discharging = tomorrowwatts2.loc[:,'SBPB']>0
     tomorrowwatts2.loc[discharging, ['SBPB','SBPO', 'IVP1', 'IVP2']] = 0
 
+    """
+    
     return ([today] + todaydays,
             [tomorrow] + tomorrowdays, realsoc,
             dict({'prewatts' : prewatts,

@@ -261,10 +261,10 @@ async def plot_predict(request: web.Request) -> dict:
 
     ##partitions['todaywatts'], _ = fix_prediction_watts(
     ##    partitions['todaywatts'], -soc*full_wh)
-    partitions['tomorrowwatts1'], _ = fix_prediction_watts(
-        partitions['tomorrowwatts1'])
-    partitions['tomorrowwatts2'], _ = fix_prediction_watts(
-        partitions['tomorrowwatts2'])
+    ##partitions['tomorrowwatts1'], _ = fix_prediction_watts(
+    ##    partitions['tomorrowwatts1'])
+    ##partitions['tomorrowwatts2'], _ = fix_prediction_watts(
+    ##    partitions['tomorrowwatts2'])
     
     
     # Adapt the relative predict table
