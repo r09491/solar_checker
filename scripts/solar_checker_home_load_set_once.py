@@ -91,6 +91,7 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f'{sbpo} sbpo')
     logger.info(f'{ivp} ivp')
 
+    """
     if not sbpo.any() and not sbpb.any():
         logger.info(f'bank in STANDBY, defaulting!')
         return 100
@@ -102,6 +103,20 @@ async def get_home_load_estimate(samples: int) -> int:
     if sbpb[sbpb>0].any():
         logger.info(f'bank in DISCHARGE, defaulting!')
         return 100
+    """
+
+    if (sbpb > 0).all(): 
+        logger.info(f'bank in DISCHARGE.')
+    elif (sbpb < 0).all(): 
+        logger.info(f'bank in CHARGE.')
+    elif (sbpi>0).all():
+        logger.info(f'bank in BYPASS')
+    else:
+        logger.info(f'bank in STANDBY')
+            
+    if not (sbpi>0).all():
+        logger.info(f'No radiation, defaulting!')
+        return 100
 
     """
     Data in local mode are faster acquired than those from the
@@ -112,7 +127,7 @@ async def get_home_load_estimate(samples: int) -> int:
     shall only be set in stable situation.
     """
     if (ivp[-2:] > (sbpo + 10)[-2:]).any(): # Some tolerance for roundings ...
-        logger.error(f'bank in ERROR')
+        logger.error(f'Signals inconsistent. Abort!')
         return -16
 
         
@@ -125,13 +140,6 @@ async def get_home_load_estimate(samples: int) -> int:
                    sum(2**w for w, v in enumerate(voted)))
     logger.info(f"home load proposal is '{estimate}W'")
     
-    if (sbpb > 0).all(): 
-        logger.info(f'bank in DISCHARGE.')
-    elif (sbpb < 0).all(): 
-        logger.info(f'bank in CHARGE.')
-    else:
-        logger.info(f'bank in BYPASS')
-            
     return min(max(estimate,100), 800) # My solix only uses one channel
 
 
@@ -156,7 +164,7 @@ def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
-        prog=os.path.basename(__file__),
+        prog=__name__, ##os.path.basename(__file__),
         description='Set the home load of the solarbank',
         epilog=__doc__)
 

@@ -14,7 +14,7 @@ logging.basicConfig(
     datefmt='%H:%M:%S',)
 logger = logging.getLogger(__name__)
 
-import os
+##import os
 import sys
 import argparse
 import asyncio
@@ -49,19 +49,19 @@ def str2f64(value: str) -> f64:
 async def tuya_smartplug_switch_set(sp: Smartplug,
                                     ss_desired: Switch_Status) -> Switch_Status:
 
-    logger.info(f'tuya_smartplug_switch_set "{sp.name}" started for "{ss_desired}"')
+    logger.info(f'set "{sp.name}" started for "{ss_desired}"')
     is_closed = await (sp.turn_on() if ss_desired.value == "Closed" else sp.turn_off())
     ss_result = Switch_Status('Closed' if is_closed else 'Open')
-    logger.info(f'tuya_smartplug_switch_set "{sp.name}" done with "{ss_result}')        
+    logger.info(f'set "{sp.name}" done with "{ss_result}')        
     return ss_result
 
 
 async def tuya_smartplug_switch_get(sp: Smartplug) -> Switch_Status:
 
-    logger.info(f'tuya_smartplug_switch_get "{sp.name}" started')
+    logger.info(f'get "{sp.name}" started')
     is_closed = await sp.is_switch_closed()
     ss_result = Switch_Status('Closed' if is_closed else 'Open')
-    logger.info(f'tuya_smartplug_switch_get "{sp.name}" done: "{ss_result}"')        
+    logger.info(f'get "{sp.name}" done: "{ss_result}"')        
     return ss_result
 
 
@@ -82,7 +82,7 @@ async def main(sp: Smartplug,
 
     smp = c['SMP'][-2:]
     smp_mean = smp.mean()
-    logger.info(f'Last smart meter mean "{smp_mean:.0f}W"')
+    logger.info(f'Last SMP mean "{smp_mean:.0f}W"')
 
     
     """ The power which exported to the grid or charging the battery
@@ -95,25 +95,25 @@ async def main(sp: Smartplug,
     is_to_closed =  import_power < -power_mean_export_closed
 
     ss_actual = await tuya_smartplug_switch_get(sp)
-    logger.info(f'The smartplug switch currently is "{ss_actual}"')
+    logger.info(f'"{sp.name}" currently is "{ss_actual}"')
 
     # What has to be done now?
     ss_desired = Switch_Status('Open' if is_to_open else
                                'Closed' if is_to_closed else 'Null')
     
     if ss_actual == ss_desired or Switch_Status('Null') == ss_desired:
-        logger.info(f'No action required for "{sp.name}"')
+        logger.info(f'No action for "{sp.name}"')
         return 1
 
     
     try:
         ss_result = await tuya_smartplug_switch_set(sp, ss_desired) 
     except ClientConnectorError:
-        logger.error('Cannot connect to smartplug "{sp.name}".')
+        logger.error('Cannot connect to "{sp.name}".')
         return -11
 
     # ss_result and ss_desired to be the same 
-    logger.info(f'The smartplug switch "{sp.name}" became "{ss_result}"')
+    logger.info(f'"{sp.name}" became "{ss_result}"')
     return 0
 
 
@@ -128,7 +128,7 @@ def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
     parser = argparse.ArgumentParser(
-        prog=os.path.basename(sys.argv[0]),
+        prog=__name__,
         description='Get the latest power switch parameters',
         epilog=__doc__)
 
