@@ -21,11 +21,11 @@ from dataclasses import dataclass
 
 from ecoflow import Delta_Max
 
-async def process_ac_charge_watts_balance(smp: int) -> int:
+async def process_ac_charge_watts_balance(smp: int, minp: int, maxp:int) -> int:
 
     dm = Delta_Max()
     
-    balance = await dm.set_ac_charge_watts_balance(smp)
+    balance = await dm.set_ac_charge_watts_balance(smp, minp, maxp)
     if balance is not None: 
         logger.info(f"Balance charging rate is {balance}w")
         return 0
@@ -37,9 +37,16 @@ async def process_ac_charge_watts_balance(smp: int) -> int:
 @dataclass
 class Script_Arguments:
     grid_watts: int
-    min_watts: int
-    max_watts: int
+    min_grid_watts: int
+    max_grid_watts: int
+    min_charge_watts: int
+    max_charge_watts: int
 
+MIN_GRID_WATTS = -200
+MAX_GRID_WATTS = 200
+MIN_CHARGE_WATTS = 100
+MAX_CHARGE_WATTS = 400
+    
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 
@@ -53,14 +60,25 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--grid_watts', type = int, default = None,
                         help = "The grid watts as per the smartmeter")
 
-    parser.add_argument('--min_watts', type = int, default = -800,
-                        help = "Minimum watts for balance")
+    parser.add_argument('--min_grid_watts', type = int, default = MIN_GRID_WATTS,
+                        help = "Minimum grid watts for balance")
 
-    parser.add_argument('--max_watts', type = int, default = 800,
-                        help = "Maximum watts for balance")
+    parser.add_argument('--max_grid_watts', type = int, default = MAX_GRID_WATTS,
+                        help = "Maximum grid_watts for balance")
     
+    parser.add_argument('--min_charge_watts', type = int, default = MIN_CHARGE_WATTS,
+                        help = "Minimum charge watts for balance")
+
+    parser.add_argument('--max_charge_watts', type = int, default = MAX_CHARGE_WATTS,
+                        help = "Maximum charge_watts for balance")
+
     args = parser.parse_args()
-    return Script_Arguments(args.grid_watts,args.min_watts,args.max_watts)
+    return Script_Arguments(args.grid_watts,
+                            args.min_grid_watts,
+                            args.max_grid_watts,
+                            args.min_charge_watts,
+                            args.max_charge_watts)
+
 
 
 async def main() -> int:
@@ -68,9 +86,17 @@ async def main() -> int:
 
     gw = args.grid_watts
     if gw is not None:
-        gw = max(min(gw, args.max_watts),args.min_watts)
+        gw = max(min(gw, args.max_grid_watts),args.min_grid_watts)
 
-    err = await process_ac_charge_watts_balance(gw)
+    if not (MIN_CHARGE_WATTS <= args.min_charge_watts < args.max_charge_watts):
+        logger.error(f'Min charge watts out of range')
+        return -1
+
+    if not (MAX_CHARGE_WATTS >= args.max_charge_watts > args.min_charge_watts):
+        logger.error(f'Max charge watts out of range')
+        return -2
+        
+    err = await process_ac_charge_watts_balance(gw,args.min_charge_watts,args.max_charge_watts)
 
     return err
 

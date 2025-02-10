@@ -19,8 +19,8 @@ SAMPLES=2
 ssh r09491@wanderer "tail -n storage/solar_checker/solar_checker_latest_$(date +\%y\%m\%d).log" | \
     solar_checker_switch_on_export_once.py \
      --plug_name plug3 \
-     --power_mean_import_open 10 \
-     --power_mean_export_closed 75 \
+     --power_mean_import_open 40 \
+     --power_mean_export_closed 80 \
      --power_samples $SAMPLES \
      2> >(ssh r09491@wanderer "cat >> storage/solar_checker/solar_checker_error_$(date +\%y\%m\%d).log")
 

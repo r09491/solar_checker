@@ -91,19 +91,6 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f'{sbpo} sbpo')
     logger.info(f'{ivp} ivp')
 
-    """
-    if not sbpo.any() and not sbpb.any():
-        logger.info(f'bank in STANDBY, defaulting!')
-        return 100
-
-    if not sbpo.all():
-        logger.info(f'bank in TRANSITION, defaulting!')
-        return 100
-
-    if sbpb[sbpb>0].any():
-        logger.info(f'bank in DISCHARGE, defaulting!')
-        return 100
-    """
 
     if (sbpb > 0).all(): 
         logger.info(f'bank in DISCHARGE.')
@@ -113,11 +100,12 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.info(f'bank in BYPASS')
     else:
         logger.info(f'bank in STANDBY')
-            
+
+    """
     if not (sbpi>0).all():
         logger.info(f'No radiation, defaulting!')
         return 100
-
+    """
     """
     Data in local mode are faster acquired than those from the
     cloud. Here the cloud solar bank data are at least one minute

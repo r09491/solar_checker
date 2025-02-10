@@ -21,18 +21,18 @@ from dataclasses import dataclass
 
 from ecoflow import Delta_Max
 
-async def process_ac_in_out_charge_watts_soc() -> int:
+async def process_watts() -> int:
     
     dm = Delta_Max()    
-    w = await dm.get_ac_in_out_charge_watts_soc()
-    logger.info(f"Delta Max AC [in, out, charge, soc] is {w} watts")
+    w = await dm.get_watts()
+    logger.info(f"Delta Max [sumin, sumout, usb1, usb2, qc1, qc2, pd1, pd2, acin, acout, xt60] is {w} watts")
 
     return 0
 
 
 async def main() -> int:        
 
-    err = await process_ac_in_out_charge_watts_soc()    
+    err = await process_watts()    
     return err
 
 

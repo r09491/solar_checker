@@ -88,7 +88,55 @@ class Delta_Max(Device):
         payload = await self.put({"moduleType":0, "sn": self.sn, "operateType": "TCP", "params": params})
 
 
-    async def get_ac_in_out_charge_watts_soc(self) -> int:
+    async def get_sum_watts(self) -> list:
+        quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
+        params = {"quotas": quotas}
+        payload = await self.post({"sn": self.sn, "params": params})
+        data = payload.get("data")
+        return [data.get(q) for q in quotas] # ordered per quotas
+
+    
+    async def get_12V_watts(self) -> list:
+        quotas = ["pd.carWatts"]
+        params = {"quotas": quotas}
+        payload = await self.post({"sn": self.sn, "params": params})
+        data = payload.get("data")
+        return [data.get(q) for q in quotas] # ordered per quotas
+    
+    
+    async def get_usb_watts(self) -> list:
+        quotas = ["pd.usb1Watts", "pd.usb2Watts"]
+        quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
+        quotas += ["pd.typec1Watts", "pd.typec2Watts"]
+        params = {"quotas": quotas}
+        payload = await self.post({"sn": self.sn, "params": params})
+        data = payload.get("data")
+        return [data.get(q) for q in quotas] # ordered per quotas
+    
+    
+    async def get_ac_watts(self) -> list:
+        quotas = ["inv.inputWatts", "inv.outputWatts"]
+        params = {"quotas": quotas}
+        payload = await self.post({"sn": self.sn, "params": params})
+        data = payload.get("data")
+        return [data.get(q) for q in quotas] # ordered per quotas
+
+    
+    async def get_watts(self) -> list:
+        quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
+        quotas += ["pd.carWatts"]
+        quotas += ["pd.usb1Watts", "pd.usb2Watts"]
+        quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
+        quotas += ["pd.typec1Watts", "pd.typec2Watts"]
+        quotas += ["inv.inputWatts", "inv.outputWatts"]
+        params = {"quotas": quotas}
+        payload = await self.post({"sn": self.sn, "params": params})
+        data = payload.get("data")
+        xt60watts = data.get("pd.wattsInSum") - data.get("inv.inputWatts")
+        return [data.get(q) for q in quotas] + [xt60watts] # ordered per quotas
+
+    
+    async def get_ac_in_out_charge_watts_soc(self) -> list:
         quotas = ["inv.inputWatts", "inv.outputWatts", "inv.cfgSlowChgWatts", "pd.soc"]
         params = {"quotas": quotas}
         payload = await self.post({"sn": self.sn, "params": params})
@@ -113,7 +161,7 @@ class Delta_Max(Device):
             (acpi is None) or
             (acpo is None) or
             (acpc0 is None)):
-            logger.warn(f'DM is probably off. Abort!')
+            logger.warn(f'Missing inputs. Abort!')
             return None
             
         if (acpi == 0):
@@ -123,18 +171,17 @@ class Delta_Max(Device):
         if (smp == 0):
             logger.info(f'No change request. Abort!')
             return None
-
         
         acpc_delta = int(smp)
         if (abs(acpc_delta) < 10):
             logger.info(f'New charge rate delta "{acpc_delta}" too small. Ignore!')
             return None
 
-        acpc1 = min(max(acpc0-acpc_delta,minp),maxp)
+        acpc1 = min(max((acpc0-acpc_delta),minp),maxp)
         if (abs(acpc1 - acpc0)  < 10):
             logger.info(f'New charge rate "{acpc1}" too close. Ignore!')
             return None
-        
+            
         logger.info(f'Trying to update the charge rate to "{acpc1}" by "{acpc_delta}"')        
         await self.set_ac_charge_watts(acpc1)
         logger.info(f'Charge rate update commanded!')
