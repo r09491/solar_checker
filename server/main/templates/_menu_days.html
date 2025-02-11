@@ -2,7 +2,7 @@
 <h1>Log Days</h1>
 
 <div id='menu'>
-  {% for ld in get_logdays_jinja2() | sort | reverse | batch(100) | first %}
+  {% for ld in get_logdays_jinja2() | sort | reverse | batch(36) | first %}
      {% if ld == logday %}
         <a href='/plot_day/{{ld}}' style='background:#c0c0c0;'>{{ld[2:]}}</a>
      {% else %}

@@ -8,4 +8,15 @@
 <div style='display:flex;justify-content:center;' >
   <img src='data:image/png;base64,{{kwh}}'/>
 </div>
+
+<div style='display:flex;justify-content:center;' >
+  <div style='width:210px; text-align:center;' >
+  {% for lm in get_logmonths_jinja2() | sort %}
+    {% if lm[:-2] == logyear %}
+       <a href='/plot_month/{{lm}}'>{{lm[2:]}}</a>&nbsp;&nbsp
+    {% endif %}
+  {% endfor %}
+  </div>
+</div>
+
 {% endblock content %}
