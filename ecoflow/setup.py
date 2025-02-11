@@ -4,7 +4,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='ecoflow',
-      version='0.0.1',
+      version='0.0.2',
       description='API for Ecoflow Delta Max',
       url='https://github.com/r09491/solar_checker/ecoflow',
       author='r09491',
@@ -24,6 +24,8 @@ setup(name='ecoflow',
           './scripts/ef_usb_watts_get.py',
           './scripts/ef_ac_watts_get.py',
           './scripts/ef_watts_get.py',
+          './scripts/ef_checker_latest_once.py',
+          './scripts/ef_checker_latest_once.sh',
       ],
       packages=[
           'ecoflow',

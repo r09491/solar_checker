@@ -84,3 +84,10 @@ class Device():
     async def put(self, params: dict = None) -> dict:
         headers = self._get_headers(params)
         return await self._put(headers=headers, json=params)
+
+    
+    async def get_quotas(self, quotas: list) -> list:
+        params = {"quotas": quotas}
+        data = (await self.post({"sn": self.sn, "params": params})).get("data")
+        return [data.get(q) for q in quotas] # ordered per quotas
+    

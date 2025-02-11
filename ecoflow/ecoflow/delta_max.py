@@ -22,7 +22,20 @@ from .helpers import (
 )
 
 from .device import Device
-    
+
+WATTS_SUM = ['sumin', 'sumout']
+
+WATTS_12V = ['12V']
+
+WATTS_USB = ['usb1', 'usb2', 'qc1', 'qc2', 'pd1', 'pd2']
+
+WATTS_AC = ['acin', 'acout']
+
+WATTS_XT60 = ['xt60']
+
+WATTS = WATTS_SUM + WATTS_12V + WATTS_USB + WATTS_AC
+
+
 class Delta_Max(Device):
     
     def __init__(self, timeout: int = 10):
@@ -32,9 +45,7 @@ class Delta_Max(Device):
 
     async def get_ac_out_enabled(self) -> int:    
         quotas = ["inv.cfgAcEnabled"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        return payload.get("data").get("inv.cfgAcEnabled")
+        return await self.get_quotas(quotas)
 
     async def set_ac_out_enabled(self, enabled: int) -> None:
         params  = {"cmdSet":32, "enabled": enabled, "id":66}
@@ -43,10 +54,7 @@ class Delta_Max(Device):
 
     async def get_usb_out_enabled(self) -> int:
         quotas = ["pd.dcOutState"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        data = payload.get("data")
-        return data.get("pd.dcOutState")
+        return await self.get_quotas(quotas)
 
     async def set_usb_out_enabled(self, enabled: int) -> None:
         params  = {"cmdSet":32, "enabled":enabled, "id":34}
@@ -55,9 +63,7 @@ class Delta_Max(Device):
         
     async def get_12V_out_enabled(self) -> int:
         quotas = ["mppt.carState"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        return payload.get("data").get("mppt.carState")
+        return await self.get_quotas(quotas)
 
     async def set_12V_out_enabled(self, enabled: int) -> None:
         params  = {"cmdSet":32, "enabled": enabled, "id":81}
@@ -66,9 +72,7 @@ class Delta_Max(Device):
 
     async def get_beep_muted(self) -> int:
         quotas = ["pd.beepState"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        return payload.get("data").get("pd.beepState")
+        return await self.get_quotas(quotas)
 
     async def set_beep_muted(self, muted: int) -> None:
         params  = {"cmdSet":32, "id":38, "enabled":muted}
@@ -79,9 +83,7 @@ class Delta_Max(Device):
 
     async def get_ac_charge_watts(self) -> int:
         quotas = ["inv.cfgSlowChgWatts"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        return int(payload.get("data").get("inv.cfgSlowChgWatts"))
+        return await self.get_quotas(quotas)
 
     async def set_ac_charge_watts(self, watts: int) -> None:
         params  = {"cmdSet":32, "slowChgPower":watts, "id":69}
@@ -90,58 +92,41 @@ class Delta_Max(Device):
 
     async def get_sum_watts(self) -> list:
         quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        data = payload.get("data")
-        return [data.get(q) for q in quotas] # ordered per quotas
+        return await self.get_quotas(quotas)
 
     
     async def get_12V_watts(self) -> list:
         quotas = ["pd.carWatts"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        data = payload.get("data")
-        return [data.get(q) for q in quotas] # ordered per quotas
-    
+        return await self.get_quotas(quotas)
+
     
     async def get_usb_watts(self) -> list:
         quotas = ["pd.usb1Watts", "pd.usb2Watts"]
         quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
         quotas += ["pd.typec1Watts", "pd.typec2Watts"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        data = payload.get("data")
-        return [data.get(q) for q in quotas] # ordered per quotas
-    
+        return await self.get_quotas(quotas)
+
     
     async def get_ac_watts(self) -> list:
         quotas = ["inv.inputWatts", "inv.outputWatts"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        data = payload.get("data")
-        return [data.get(q) for q in quotas] # ordered per quotas
+        return await self.get_quotas(quotas)
 
     
-    async def get_watts(self) -> list:
+    async def get_watts(self) -> dict:
         quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
         quotas += ["pd.carWatts"]
         quotas += ["pd.usb1Watts", "pd.usb2Watts"]
         quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
         quotas += ["pd.typec1Watts", "pd.typec2Watts"]
         quotas += ["inv.inputWatts", "inv.outputWatts"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        data = payload.get("data")
-        xt60watts = data.get("pd.wattsInSum") - data.get("inv.inputWatts")
-        return [data.get(q) for q in quotas] + [xt60watts] # ordered per quotas
+        watts = await self.get_quotas(quotas)
+        xt60_watts = [watts[0] - watts[-2]] # To be checked: values if no solar
+        return dict(zip(WATTS+WATTS_XT60, watts + xt60_watts)) # ordered per quotas
 
     
     async def get_ac_in_out_charge_watts_soc(self) -> list:
         quotas = ["inv.inputWatts", "inv.outputWatts", "inv.cfgSlowChgWatts", "pd.soc"]
-        params = {"quotas": quotas}
-        payload = await self.post({"sn": self.sn, "params": params})
-        data = payload.get("data")
-        return [data.get(q) for q in quotas] # ordered per quotas
+        return await self.get_quotas(quotas)
 
     async def set_ac_charge_watts_balance(self,
                                           smp: int = None,
