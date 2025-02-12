@@ -17,7 +17,11 @@ from utils.common import (
     ymd_yesterday,
     ymd_tomorrow,
     ymd_365_days_ago,
-    ymd_365_days_ahead
+    ymd_365_days_ahead,
+    ym_1_month_ago,
+    ym_1_month_ahead,
+    ym_12_month_ago,
+    ym_12_month_ahead
 )
 from utils.samples import (
     get_columns_from_csv, 
@@ -150,12 +154,20 @@ async def plot_month(request: web.Request) -> dict:
 
     umkwh = await get_kwh_sum_month_unified(
         logmonth, logprefix, logdir, logdayformat)
-    
+    if umkwh is None:
+        return aiohttp_jinja2.render_template('error.html', request,
+            {'error' : f"No valid logfile found for month '{logmonth}'"})
+
     umplot  = await get_kwh_bar_unified(
         *umkwh.values(), price[logmonth[:2]], 0.7, '%d%n%a')
 
     logger.info(f'{__me__}: done')
-    return {'logmonth': logmonth, 'kwh': umplot}
+    return {'logmonth': logmonth,
+            'log1monthago': ym_1_month_ago(logmonth),
+            'log1monthahead': ym_1_month_ahead(logmonth),
+            'log12monthago': ym_12_month_ago(logmonth),
+            'log12monthahead': ym_12_month_ahead(logmonth),
+            'kwh': umplot}
 
 
 @aiohttp_jinja2.template('plot_year.html')

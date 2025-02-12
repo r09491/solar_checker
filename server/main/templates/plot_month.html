@@ -3,7 +3,19 @@
 {% extends 'base.html' %}
 
 {% block content %} 
-<h1 style='margin:4px;'>Log Month {{ logmonth }}</h1>
+<div style='display:flex;justify-content:center;'>
+  <div style='margin:30px;width:90px;text-align:center;'>
+    <a href='/plot_month/{{ log12monthago }}'>&lt;12</a>&nbsp;&nbsp
+    <a href='/plot_month/{{ log1monthago }}'>&lt;1</a>&nbsp;&nbsp;&nbsp;&nbsp
+  </div>
+  
+  <h1 style='margin:4px;'>Log Month {{ logmonth }}</h1>
+
+  <div style='margin:30px;width:90px;text-align:center;'> 
+    <a href='/plot_month/{{ log1monthahead }}'>1&gt</a>&nbsp;&nbsp
+    <a href='/plot_month/{{ log12monthahead }}'>12&gt</a>
+  </div>
+</div>
 
 <div style='display:flex;justify-content:center;' >
   <img src='data:image/png;base64,{{kwh}}'/>

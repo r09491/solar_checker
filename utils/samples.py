@@ -69,7 +69,7 @@ def _get_columns_from_csv(
             return None
         
     df = read_csv(logfile, names=SAMPLE_NAMES)
-
+    
     """ The timestamps """
     time = np.array(df.TIME.apply(t64_from_iso))
 
@@ -205,8 +205,11 @@ async def get_kwh_sum_from_csv(
     __me__='get_kwh_sum_month'
     logger.info(f'{__me__}: started "{logday}"')
     c = await get_columns_from_csv(logday,logprefix, logdir)
+    if c is None:
+        logger.info(f'{__me__}: aborted')
+        return None
     logger.info(f'{__me__}: done')
- 
+    
     smp = c['SMP'] if c and 'SMP' in c else None
 
     smpon = np.zeros_like(smp) if smp is not None else None
@@ -252,9 +255,11 @@ async def get_kwh_sum_month(logmonth: str,
     async def doer(t: t64) -> dict:
         md = t.astype(datetime).strftime(logdayformat)
         ms = await get_kwh_sum_from_csv(md, logprefix, logdir)
-        return ms.values()
+        return ms.values() if ms is not None else None
     doertasks = [asyncio.create_task(doer(t)) for t in mtime]
     results = await asyncio.gather(*doertasks)
+
+    """ Initialise the samples for the month """
     
     msmeon = np.zeros(mtime.size, dtype=f64)
     msmeoff = np.zeros(mtime.size, dtype=f64)
@@ -262,8 +267,18 @@ async def get_kwh_sum_month(logmonth: str,
     mive2 = np.zeros(mtime.size, dtype=f64)
     mspeh  = np.zeros(mtime.size, dtype=f64)
     msbeo  = np.zeros(mtime.size, dtype=f64)
+
+    """ Overwrite the presets with existing sample data """
+
+    have_result = False
     for i, r in enumerate(results):
+        if r is None: continue
+        have_result = True
         msmeon[i], msmeoff[i], mive1[i], mive2[i], mspeh[i], msbeo[i] = r
+
+    if not have_result:
+        logger.info(f'{__me__}: aborted')       
+        return None
 
     logger.info(f'{__me__}: done')       
     return {'TIME':mtime, 'SMEON':msmeon, 'SMEOFF':msmeoff,
@@ -287,6 +302,10 @@ async def get_kwh_sum_month_unified(
 
     mkwhs = await get_kwh_sum_month(
         logmonth, logprefix, logdir, logdayformat)
+    if mkwhs is None:
+        logger.info(f'{__me__}: aborted')
+        return None
+    
     mtime, msmeon, msmeoff, mive1, mive2, mspeh, msbeo = mkwhs.values()
 
     # 3.Prio

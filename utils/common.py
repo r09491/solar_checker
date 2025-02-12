@@ -88,6 +88,22 @@ def ymd_365_days_ago(today: str) -> str:
     dt_today = datetime.strptime(today, "%y%m%d")
     return (dt_today - timedelta(days=365)).strftime("%y%m%d")
 
+def ym_1_month_ahead(today: str) -> str:
+    dt_today = datetime.strptime(today, "%y%m")
+    return (dt_today + timedelta(days=31)).strftime("%y%m")
+
+def ym_1_month_ago(today: str) -> str:
+    dt_today = datetime.strptime(today, "%y%m")
+    return (dt_today - timedelta(days=30)).strftime("%y%m")
+
+def ym_12_month_ahead(today: str) -> str:
+    dt_today = datetime.strptime(today, "%y%m")
+    return (dt_today + timedelta(days=366)).strftime("%y%m")
+
+def ym_12_month_ago(today: str) -> str:
+    dt_today = datetime.strptime(today, "%y%m")
+    return (dt_today - timedelta(days=365)).strftime("%y%m")
+
 
 def t64_clear(t: t64) -> t64:
     dt_ymd = pd.to_datetime(str(t))
