@@ -72,13 +72,21 @@ def ymd_over_t64(t: t64, day: str) -> t64:
                         hour=dt_t.hour,
                         second=dt_t.second))
 
-def ymd_tomorrow(today: str) -> t64:
+def ymd_tomorrow(today: str) -> str:
     dt_today = datetime.strptime(today, "%y%m%d")
     return (dt_today + timedelta(days=1)).strftime("%y%m%d")
 
-def ymd_yesterday(today: str) -> t64:
+def ymd_yesterday(today: str) -> str:
     dt_today = datetime.strptime(today, "%y%m%d")
     return (dt_today - timedelta(days=1)).strftime("%y%m%d")
+
+def ymd_365_days_ahead(today: str) -> str:
+    dt_today = datetime.strptime(today, "%y%m%d")
+    return (dt_today + timedelta(days=365)).strftime("%y%m%d")
+
+def ymd_365_days_ago(today: str) -> str:
+    dt_today = datetime.strptime(today, "%y%m%d")
+    return (dt_today - timedelta(days=365)).strftime("%y%m%d")
 
 
 def t64_clear(t: t64) -> t64:
@@ -142,5 +150,3 @@ def t64_from_iso(value: str) -> t64:
     except:
         return None
     return t64_first(t64(dt))
-
-

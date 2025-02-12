@@ -184,16 +184,21 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if spphon is not None:
         title += '' if title[-1] == '\n' else ' | '
-        title += f'Plug0>{spph[-1]:.0f}'
+        title += f'Plug>{spph[-1]:.0f}'
         title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
 
-    if smpon is not None:
+    if (smpoff is not None) or (smpon is not None):
         title += '' if title[-1] == '\n' else ' | '
-        title += f'{-smp[-1] if smp[-1]<0 else 0:.0f}'
-        title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W>'
+        
+        if (smpoff is not None) and (smpoff_min<0):
+            title += f'{-smp[-1] if smp[-1]<0 else 0:.0f}'
+            title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W>'
+
         title += f'Grid'
-        title += f'>{smp[-1] if smp[-1]>0 else 0:.0f}'
-        title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
+
+        if (smpon is not None) and (smpon_max>0):
+            title += f'>{smp[-1] if smp[-1]>0 else 0:.0f}'
+            title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
         
     ax.set_title(title)
     

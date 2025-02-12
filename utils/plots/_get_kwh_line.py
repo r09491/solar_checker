@@ -125,20 +125,23 @@ def _get_kwh_line(
     if sbeo is not None:
         title += '' if title[-1] == '\n' else ' | '
         if time_format == '%H:%M': # Accumulated
-            title += f'Bank>{sbeo[-1]:.2f}kWh'
+            if sbeo[-1] > 0:
+                title += f'Bank>{sbeo[-1]:.2f}kWh'
         else:
-            title += f'Bank>{sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
+            if sbeo.sum() > 0:
+                title += f'Bank>{sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
 
     title += '' if title[-1] == '\n' else ' + '
-    if sbebcharge is not None and (sbebcharge>0).any():
+    if (sbebcharge is not None) and (sbebcharge>0).any():
         if time_format == '%H:%M': # Accumulated
             title += f'{sbebcharge[sbebcharge>0][-1]:.2f}kWh>'
         else:
             title += f'{sbebcharge[sbebcharge>0].sum():.2f}kWh>'
 
-    title += 'BAT'
+    if (sbebcharge is not None) or (sbebdischarge is not None):
+        title += 'BAT'
     
-    if sbebdischarge is not None and (sbebdischarge>0).any():
+    if (sbebdischarge is not None) and (sbebdischarge>0).any():
         if time_format == '%H:%M': # Accumulated
             title += f'>{sbebdischarge[sbebdischarge>0][-1]:.2f}kWh'
         else:
@@ -159,18 +162,20 @@ def _get_kwh_line(
     if spehon is not None:
         title += '' if title[-1] == '\n' else '\n'
         if time_format == '%H:%M': # Accumulated
-            title += f'Plug0>{speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
+            title += f'Plug>{speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
         else:
-            title += f'Plug0>{speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
+            title += f'Plug>{speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
 
             
     title += '' if title[-1] == '\n' else ' | '            
             
     if smeoff is not None:
         if time_format == '%H:%M': # Accumulated
-            title += f'{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€>'
+            if smeoff[-1] > 0:
+                title += f'{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€>'
         else:
-            title += f'{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€>'
+            if smeoff.sum() > 0:
+                title += f'{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€>'
 
     title += f'Grid'
     
@@ -180,7 +185,7 @@ def _get_kwh_line(
         else:
             title += f'>{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
 
-    if smeon is not None and smeoff is not None:            
+    if (iveon is not None) and (smeoff is not None):            
         if time_format == '%H:%M': # Accumulated
             title += f' # Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
         else:

@@ -13,7 +13,11 @@ from utils.typing import (
 from utils.common import (
     PREDICT_NAMES,
     POWER_NAMES,
-    PARTITION_2_VIEW
+    PARTITION_2_VIEW,
+    ymd_yesterday,
+    ymd_tomorrow,
+    ymd_365_days_ago,
+    ymd_365_days_ahead
 )
 from utils.samples import (
     get_columns_from_csv, 
@@ -80,15 +84,17 @@ async def plot_day(request: web.Request) -> dict:
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB'] 
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
-    smpon = np.zeros_like(smp)
-    smpon[smp>0] = smp[smp>0]
-    smpoff = np.zeros_like(smp)
-    smpoff[smp<=0] = -smp[smp<=0]
+    if smp is not None:    
+        smpon = np.zeros_like(smp)
+        smpoff = np.zeros_like(smp)
+        smpon[smp>0] = smp[smp>0]
+        smpoff[smp<=0] = -smp[smp<=0]
 
-    sbpbcharge = np.zeros_like(sbpb)
-    sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
-    sbpbdischarge = np.zeros_like(sbpb)
-    sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
+    if sbpb is not None:        
+        sbpbcharge = np.zeros_like(sbpb)
+        sbpbdischarge = np.zeros_like(sbpb)
+        sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
+        sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
 
     blocks, w, kwh = await asyncio.gather(
         get_blocks(time[-1], smp[-1], ivp1[-1], ivp2[-1],
@@ -114,7 +120,14 @@ async def plot_day(request: web.Request) -> dict:
             sbpbdischarge.cumsum()/1000/60 if sbpb is not None else None,
             sbsb*full_kwh if sbsb is not None else None,
                      empty_kwh, full_kwh, price[logday[:2]]))
-    return {'logday': logday, 'blocks': blocks if logday == today else None, 'w': w, 'kwh': kwh}
+
+    return {'logday': logday,
+            'logyesterday': ymd_yesterday(logday),
+            'logtomorrow': ymd_tomorrow(logday),
+            'log365daysago': ymd_365_days_ago(logday),
+            'log365daysahead': ymd_365_days_ahead(logday),
+            'blocks': blocks if logday == today else None,
+            'w': w, 'kwh': kwh}
 
 
 @aiohttp_jinja2.template('plot_month.html')

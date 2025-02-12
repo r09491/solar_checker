@@ -96,9 +96,10 @@ class Delta_Max(Device):
 
     
     async def get_12V_watts(self) -> list:
-        quotas = ["pd.carWatts"]
-        return await self.get_quotas(quotas)
-
+        quotas = ["mppt.carOutWatts"]
+        watts = await self.get_quotas(quotas)
+        watts[0] = int(watts[0]/10)
+        return watts
     
     async def get_usb_watts(self) -> list:
         quotas = ["pd.usb1Watts", "pd.usb2Watts"]
@@ -114,12 +115,13 @@ class Delta_Max(Device):
     
     async def get_watts(self) -> dict:
         quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
-        quotas += ["pd.carWatts"]
+        quotas += ["mppt.carOutWatts"]
         quotas += ["pd.usb1Watts", "pd.usb2Watts"]
         quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
         quotas += ["pd.typec1Watts", "pd.typec2Watts"]
         quotas += ["inv.inputWatts", "inv.outputWatts"]
         watts = await self.get_quotas(quotas)
+        watts[2] = int(watts[2]/10)
         xt60_watts = [watts[0] - watts[-2]] # To be checked: values if no solar
         return dict(zip(WATTS+WATTS_XT60, watts + xt60_watts)) # ordered per quotas
 

@@ -12,7 +12,19 @@
 </div>
 {% endif %}
 
-<h1 style='margin:4px;'>Log Day {{ logday }}</h1>
+<div style='display:flex;justify-content:center;'>
+  <div style='margin:30px;width:90px;text-align:center;'>
+    <a href='/plot_day/{{ log365daysago }}'>&lt;365</a>&nbsp;&nbsp
+    <a href='/plot_day/{{ logyesterday }}'>&lt;1</a>&nbsp;&nbsp;&nbsp;&nbsp
+  </div>
+  
+  <h1 style='margin:4px;'>Log Day {{ logday }}</h1>
+
+  <div style='margin:30px;width:90px;text-align:center;'> 
+    <a href='/plot_day/{{ logtomorrow }}'>1&gt</a>&nbsp;&nbsp
+    <a href='/plot_day/{{ log365daysahead }}'>365&gt</a>
+  </div>
+</div>
 
 {% if blocks is not none %}
   <div style='display:flex;justify-content:center;' >
