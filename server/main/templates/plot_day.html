@@ -20,9 +20,12 @@
   
   <h1 style='margin:4px;'>Log Day {{ logday }}</h1>
 
+
   <div style='margin:30px;width:90px;text-align:center;'> 
-    <a href='/plot_day/{{ logtomorrow }}'>1&gt</a>&nbsp;&nbsp
-    <a href='/plot_day/{{ log365daysahead }}'>365&gt</a>
+    {% if blocks is none %}
+      <a href='/plot_day/{{ logtomorrow }}'>1&gt</a>&nbsp;&nbsp
+      <a href='/plot_day/{{ log365daysahead }}'>365&gt</a>
+    {% endif %}
   </div>
 </div>
 
