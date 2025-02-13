@@ -90,8 +90,6 @@ def _get_kwh_line(
         logger.info(f'using smartmeter samples only')
         logger.warn(f'other energy samples are notprovided')
 
-        #ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
-
         ax.fill_between(time, smeoff, smeon,
                         color='b',label='GRID', alpha=0.3)
 
@@ -122,21 +120,25 @@ def _get_kwh_line(
         else:
             title += f'Sun>{sbei.sum():.2f}kWh'
 
+    if (sbeo is not None) or (sbpb is not None):
+        title += '' if title[-1] == '\n' else ' | Bank '
+            
     if sbeo is not None:
-        title += '' if title[-1] == '\n' else ' | '
+        ##title += '' if title[-1] == '\n' else ' | '
         if time_format == '%H:%M': # Accumulated
             if sbeo[-1] > 0:
-                title += f'Bank>{sbeo[-1]:.2f}kWh'
+                title += f'>{sbeo[-1]:.2f}kWh'
         else:
             if sbeo.sum() > 0:
-                title += f'Bank>{sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
-
-    title += '' if title[-1] == '\n' else ' + '
+                title += f'>{sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
+        if (sbebcharge is not None):
+            title += '' if title[-1] == '\n' else ' + '
+        
     if (sbebcharge is not None) and (sbebcharge>0).any():
         if time_format == '%H:%M': # Accumulated
-            title += f'{sbebcharge[sbebcharge>0][-1]:.2f}kWh>'
+            title += f'>{sbebcharge[sbebcharge>0][-1]:.2f}kWh>'
         else:
-            title += f'{sbebcharge[sbebcharge>0].sum():.2f}kWh>'
+            title += f'>{sbebcharge[sbebcharge>0].sum():.2f}kWh>'
 
     if (sbebcharge is not None) or (sbebdischarge is not None):
         title += 'BAT'

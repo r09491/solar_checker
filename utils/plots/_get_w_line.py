@@ -160,19 +160,24 @@ def _get_w_line(time: t64s, smp: f64s,
         
         
     title = f'# Power #\n'
-    if sbpi is not None:
+    if (sbpi is not None) and (sbpion_max>0):
+        # There is irradation
         title += f'Sun>{sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
 
-    if sbpoon is not None:
-        title += '' if title[-1] == '\n' else ' | '
-        title += f'Bank>{sbpo[-1]:.0f}'
+    if (sbpo is not None) or (sbpb is not None):
+        title += '' if title[-1] == '\n' else ' | Bank '
+    if (sbpoon is not None) and (sbpoon_max>0):
+        title += f'>{sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
-  
-    if sbpb is not None:
-        title += f' + {-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
+        if sbpb is not None:
+            title += f' + '
+    if (sbpbon is not None) and (sbpbon_min<0):
+        title += f'>{-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W>'
+    if (sbpbon is not None) or (sbpboff is not None):
         title += f'Bat'
+    if (sbpboff is not None) and (sbpboff_max>0):
         title += f'>{sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
         title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
 
