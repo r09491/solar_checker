@@ -71,36 +71,39 @@ def _get_kwh_bar_unified(
                    color='blue',label='GRID', width=bar_width, alpha=0.3)
             
                 
-    title = '' # f'# Energy Check #\n'
+    title = f'# Energy Check #\n'
     if balconyon.any():
-        title += f'Balcony {balconyon.sum():.1f}'
+        title += f'Balcony>{balconyon.sum():.1f}'
         title += f'={balconyon.mean():.1f}'
         title += f'^{balconyon.max():.1f}kWh'
         title += f'~{balconyon.sum()*price:.2f}€'
 
     smeonon = smeon[smeon>0]
     if smeonon.any():
+        
         smeoffon = abs(smeoff)[abs(smeoff)>0]
         if smeoffon.any():
-            title += f'\nProfit {(balconyon.sum()-smeoffon.sum()):.1f}kWh'
+            title += f' | Profit {(balconyon.sum()-smeoffon.sum()):.1f}kWh'
             title += f'~{((balconyon.sum()-smeoffon.sum())*price):.2f}€'
             title += f' ({(balconyon.sum()-smeoffon.sum())/balconyon.sum()*100:.0f}%)'
                 
-            title += f' | Gift {smeoffon.sum():.1f}kWh'
-            title += f'~{smeoffon.sum()*price:.2f}€'
-            title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
+            #title += f' | Gift {smeoffon.sum():.1f}kWh'
+            #title += f'~{smeoffon.sum()*price:.2f}€'
+            #title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
 
             title += f'\n{smeoffon.sum():.1f}'
             title += f'={smeoffon.mean():.1f}'
             title += f'^{smeoffon.max():.1f}kWh'   
             title += f'~{(smeoffon.sum()*price):.2f}€>'
+        else:
+            title += '\n'
 
-            title += f'Grid'
+        title += f'Grid'
             
-            title += f'>{smeonon.sum():.1f}'
-            title += f'={smeonon.mean():.1f}'
-            title += f'^{smeonon.max():.1f}kWh'   
-            title += f'~{(smeonon.sum()*price):.2f}€'
+        title += f'>{smeonon.sum():.1f}'
+        title += f'={smeonon.mean():.1f}'
+        title += f'^{smeonon.max():.1f}kWh'   
+        title += f'~{(smeonon.sum()*price):.2f}€'
 
     ax.set_title(title, fontsize='x-large')
 
