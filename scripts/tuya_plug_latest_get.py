@@ -49,7 +49,7 @@ async def main(sp: Smartplug) -> int:
         err = 0
     except ClientConnectorError:
         logger.error('Cannot connect to smartplug.')
-        err = 10
+        err = -10
 
     # To keep synchronous output is always required            
     sys.stdout.write(text + '\n')

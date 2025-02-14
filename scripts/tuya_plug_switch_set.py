@@ -102,13 +102,13 @@ if __name__ == '__main__':
 
     if args.plug_name is None:
         logger.error('Name of smartplug is  missing.')
-        sys.exit(1)
+        sys.exit(-1)
 
     try:
         sp = Smartplug(args.plug_name)
     except KeyError:
         logger.error('Plug name is not in the config file ".poortuya"')
-        sys.exit(2)
+        sys.exit(-2)
 
     try:
         switch_status = asyncio.run(main(sp, args.switch_status))

@@ -56,7 +56,7 @@ class Smartplug:
         return Return_Config(**cjson[name]) if cjson else None 
 
     
-    def __init__(self, name: str, timeout: int = 10, persist: bool = False):
+    def __init__(self, name: str, timeout: int = 5, persist: bool = False):
         self.config = self._get_config(name)
         self.name = name
         self.timeout = timeout
@@ -77,6 +77,7 @@ class Smartplug:
             connection_timeout = self.timeout,
             persist = self.persist,
         ) if self.config else None
+
         await asyncio.sleep(1) # Switch context. Allow others!
 
         status = device.status() if device else None    
