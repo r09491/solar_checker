@@ -255,7 +255,8 @@ async def get_kwh_sum_month(logmonth: str,
     async def doer(t: t64) -> dict:
         md = t.astype(datetime).strftime(logdayformat)
         ms = await get_kwh_sum_from_csv(md, logprefix, logdir)
-        return ms.values() if ms is not None else None
+        if ms is None: return None
+        return ms.values()
     doertasks = [asyncio.create_task(doer(t)) for t in mtime]
     results = await asyncio.gather(*doertasks)
 
@@ -349,6 +350,7 @@ async def get_kwh_sum_year(
     async def doer(t: t64) -> dict:
         yd = t.astype(datetime).strftime(logdayformat)[:-2]
         ys = await get_kwh_sum_month(yd,logprefix,logdir,logdayformat)
+        if ys is None: return None
         yss = [v.sum() for v in list(ys.values())[1:]]
         return yss
     doertasks = [asyncio.create_task(doer(t)) for t in ytime]
@@ -362,6 +364,7 @@ async def get_kwh_sum_year(
     ysbeo  = np.zeros(ytime.size, dtype=f64)
 
     for i, r in enumerate(results):
+        if r is None: continue
         ysmeon[i], ysmeoff[i], yive1[i], yive2[i], yspeh[i], ysbeo[i] = r
 
     logger.info(f'{__me__}: done')        
@@ -391,6 +394,7 @@ async def get_kwh_sum_year_unified(
         yd = t.astype(datetime).strftime(logdayformat)[:-2]
         ys = await get_kwh_sum_month_unified(
             yd, logprefix,logdir,logdayformat)
+        if ys is None: return None
         yss = [v.sum() for v in list(ys.values())[1:]]
         return yss
     results = await asyncio.gather(*[doer(t) for t in ytime])
@@ -400,6 +404,7 @@ async def get_kwh_sum_year_unified(
     ypanel = np.zeros(ytime.size, dtype=f64)
 
     for i, r in enumerate(results):
+        if r is None: continue
         ysmeon[i], ysmeoff[i], ypanel[i] = r
 
     logger.info(f'{__me__}: done')        
