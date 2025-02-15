@@ -36,10 +36,12 @@ from .common import (
     ymd_yesterday,
     ymd_over_t64
     )
-from .samples import (
+from .samples import(
     get_columns_from_csv,
+)
+from .csvlog import(
     get_logdays
-    )
+)
 
 from brightsky import Sky
 
