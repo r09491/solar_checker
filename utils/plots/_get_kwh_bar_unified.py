@@ -82,15 +82,17 @@ def _get_kwh_bar_unified(
         
         smeoffon = abs(smeoff)[abs(smeoff)>0]
         if smeoffon.any():
-            title += f' | Profit {(balconyon.sum()-smeoffon.sum()):.1f}kWh'
-            title += f'~{((balconyon.sum()-smeoffon.sum())*price):.2f}€'
-            title += f' ({(balconyon.sum()-smeoffon.sum())/balconyon.sum()*100:.0f}%)'
+            profit = balconyon.sum()-smeoffon.sum()
+            title += f' | Profit {profit:.1f}kWh'
+            title += f'~{(profit*price):.2f}€'
+            title += f' ({profit/balconyon.sum()*100:.0f}%)'
 
             title += f'\n{smeoffon.sum():.1f}'
             title += f'={smeoffon.mean():.1f}'
             title += f'^{smeoffon.max():.1f}kWh'   
             title += f'~{(smeoffon.sum()*price):.2f}€>'
         else:
+            profit = 0
             title += '\n'
 
         title += f'Grid'
@@ -99,7 +101,7 @@ def _get_kwh_bar_unified(
         title += f'={smeonon.mean():.1f}'
         title += f'^{smeonon.max():.1f}kWh'   
         title += f'~{(smeonon.sum()*price):.2f}€'
-        title += f' ({smeonon.sum()/(smeonon.sum()+smeoffon.sum())*100:.0f}%)'
+        title += f' ({smeonon.sum()/(smeonon.sum()+profit)*100:.0f}%)'
 
     ax.set_title(title, fontsize='x-large')
 
