@@ -1,7 +1,9 @@
-from ..typing import (
-    t64, t64s,
-    f64, f64s, Any
-)
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 import matplotlib
 matplotlib.use('Agg')
@@ -16,13 +18,10 @@ from io import BytesIO
 
 from datetime import datetime
 
-
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
-    datefmt='%H:%M:%S',)
-logger = logging.getLogger(__name__)
+from ..typing import (
+    t64, t64s,
+    f64, f64s, Any
+)
 
 
 XSIZE, YSIZE = 10, 5
@@ -86,10 +85,6 @@ def _get_kwh_bar_unified(
             title += f' | Profit {(balconyon.sum()-smeoffon.sum()):.1f}kWh'
             title += f'~{((balconyon.sum()-smeoffon.sum())*price):.2f}€'
             title += f' ({(balconyon.sum()-smeoffon.sum())/balconyon.sum()*100:.0f}%)'
-                
-            #title += f' | Gift {smeoffon.sum():.1f}kWh'
-            #title += f'~{smeoffon.sum()*price:.2f}€'
-            #title += f' ({smeoffon.sum()/balconyon.sum()*100:.0f}%)'
 
             title += f'\n{smeoffon.sum():.1f}'
             title += f'={smeoffon.mean():.1f}'
@@ -104,6 +99,7 @@ def _get_kwh_bar_unified(
         title += f'={smeonon.mean():.1f}'
         title += f'^{smeonon.max():.1f}kWh'   
         title += f'~{(smeonon.sum()*price):.2f}€'
+        title += f' ({smeonon.sum()/(smeonon.sum()+smeoffon.sum())*100:.0f}%)'
 
     ax.set_title(title, fontsize='x-large')
 

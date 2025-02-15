@@ -2,7 +2,7 @@ from aiohttp import web
 import aiohttp_jinja2, jinja2
 
 from settings import conf, BASE_DIR
-from utils.samples import _get_logdays
+from utils.csvlog import _get_logdays
 
 def get_logdays_jinja2():
     """ !!!  Coroutines can not be used in templates !!! """

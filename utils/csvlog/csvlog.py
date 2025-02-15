@@ -51,13 +51,13 @@ def _get_log(
         logdir: str = None) -> Dict:
 
     if logday is None and logprefix is None and logdir is None:
-        logger.info(f'{__me__}:Reading CSV data from "stdin"')
+        logger.info(f'Reading CSV data from "stdin"')
         logfile = sys.stdin 
     else:
         logfile = os.path.join(logdir, f'{logprefix}_{logday}.log')
         logger.info(f'Reading CSV data from file "{logfile}"')
         if not os.path.isfile(logfile):
-            logger.warning(f'{__me__}:CSV data file not found "{logfile}"')
+            logger.warning(f'CSV data file not found "{logfile}"')
             return None
     return read_csv(logfile, names = logcols)
     

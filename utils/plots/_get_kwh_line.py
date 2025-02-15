@@ -1,7 +1,9 @@
-from ..typing import (
-    t64, t64s,
-    f64, f64s, Any
-)
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
 
 import matplotlib
 matplotlib.use('Agg')
@@ -16,14 +18,10 @@ from io import BytesIO
 
 from datetime import datetime
 
-
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
-    datefmt='%H:%M:%S',)
-logger = logging.getLogger(__name__)
-
+from ..typing import (
+    t64, t64s,
+    f64, f64s, Any
+)
 
 XSIZE, YSIZE = 10, 5
 
