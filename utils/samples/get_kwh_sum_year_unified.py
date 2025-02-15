@@ -12,7 +12,13 @@ logger = logging.getLogger(__name__)
 
 import asyncio
 
+from datetime import datetime
+
 import numpy as np
+
+from ..typing import(
+    f64, t64
+)
 
 from .get_kwh_sum_month_unified import get_kwh_sum_month_unified
 
