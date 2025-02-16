@@ -313,7 +313,6 @@ async def partition_closest_watts(
 
     """ The frame with the watts after the search slot. Can be empty! """
     postwatts = realdf.loc[stoptime:logstoptime,:].iloc[1:]
-
     
     """ The predicted data for the day until time of last sample """    
     todaydfs = [
@@ -327,28 +326,17 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs))[1:]
 
-    """
 
-    # Forecast does not consider anker app settings
-    discharging = todaywatts.loc[:,'SBPB']>0
-    todaywatts.loc[discharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+    if realsoc <= 0.1: # Battery is empty
+        # Clear discharging data completely
+        discharging = todaywatts.loc[:,'SBPB']>0
+        todaywatts.loc[discharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+    else: # Battery may be discharged
+        # Simulate discharging
+        realw = realsoc*1600
+        #TBD Check empty and full
 
-    """
     
-    """
-
-    if not postwatts.empty:
-        # No irradiation
-        todaywatts.loc[:,'SBPI'] = 0
-        # No charging
-        #todaywatts['SBPB'][todaywatts['SBPB']<0] = 0
-        #todaywatts.loc[:,'SBPB'][todaywatts.loc[:,'SBPB']<0] = 0
-
-        if postwatts['SBPB'][-1] == 0:
-            todaywatts.loc[:, ['SBPB','SBPO','IVP1','IVP2']] = 0
-
-    """
-
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
