@@ -1,7 +1,4 @@
-__doc__=""" A python library for the APsystems API in local mode
-
-Heavily influenced by the the github APsystems EZ1 repository
-"""
+__doc__=""" A python library for Bright Sky weather data """
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
@@ -61,7 +58,8 @@ class Sky:
 
         df = pd.DataFrame(response)
         df.set_index('timestamp', inplace = True)
-        return df.loc[:,['sunshine', 'cloud_cover']]
+        skydf = df.loc[:,['sunshine', 'cloud_cover']]
+        return skydf
 
 
     async def get_solar_info(self) -> Optional[pd.DataFrame]:
@@ -72,7 +70,8 @@ class Sky:
 
         df = pd.DataFrame(response)
         df.set_index('timestamp', inplace = True)
-        return df.loc[:,['solar']]
+        solardf  = df.loc[:,['solar']]
+        return solardf
     
 
     async def _get_sources_info(self) -> Optional[Dict[str, Any]]:
@@ -91,4 +90,5 @@ class Sky:
 
         df = pd.DataFrame(response)
         df.set_index('id', inplace = True)
-        return df.loc[:,['distance','station_name']]
+        sourcesdf = df.loc[:,['distance','station_name']]
+        return sourcesdf
