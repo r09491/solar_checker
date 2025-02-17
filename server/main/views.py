@@ -34,7 +34,6 @@ from utils.predicts import (
     partition_closest_watts,
     get_sun_adaptors,
     apply_sun_adapters,
-    fix_prediction_watts,
     concat_today,
     concat_tomorrow,
     concat_total,
@@ -281,16 +280,6 @@ async def plot_predict(request: web.Request) -> dict:
     partitions['tomorrowwatts2'] = apply_sun_adapters(
         partitions['tomorrowwatts2'], tomorrowadapters)
 
-
-    """ Fix some watts after plausibility check """
-
-    ##partitions['todaywatts'], _ = fix_prediction_watts(
-    ##    partitions['todaywatts'], -soc*full_wh)
-    ##partitions['tomorrowwatts1'], _ = fix_prediction_watts(
-    ##    partitions['tomorrowwatts1'])
-    ##partitions['tomorrowwatts2'], _ = fix_prediction_watts(
-    ##    partitions['tomorrowwatts2'])
-    
     
     # Adapt the relative predict table
 

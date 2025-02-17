@@ -45,7 +45,7 @@ class Script_Arguments:
 MIN_GRID_WATTS = -200
 MAX_GRID_WATTS = 200
 MIN_CHARGE_WATTS = 100
-MAX_CHARGE_WATTS = 400
+MAX_CHARGE_WATTS = 600
     
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""

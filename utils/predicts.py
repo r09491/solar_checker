@@ -3,6 +3,13 @@ __doc__="""
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import asyncio
@@ -15,7 +22,7 @@ from functools import reduce
 from datetime import (
     datetime,
     timedelta
-    )
+)
 
 from .typing import (
     f64, t64, Any, Optional, List, Dict
@@ -45,12 +52,6 @@ from .csvlog import(
 
 from brightsky import Sky
 
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
-    datefmt='%H:%M:%S',)
-logger = logging.getLogger(os.path.basename(__file__))
 
 
 """ Get the factors to adapt the average of the closest days to the
@@ -68,12 +69,14 @@ async def get_sun_adaptors(
     
     """ Get the list of associated columns """
     sky = await asyncio.gather(*skytasks)
+    for s in sky:
+        if s is None: return None
 
     """ Unify the indices. Takes care of summertime and wintertime """
     skyindex = sky[0].index.map(t64_from_iso).tz_localize(None)
     for s in sky:
         s.set_index(skyindex, inplace = True)
-
+    
     H = 60        
     k0 = sky[0].sunshine
     k1 = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
@@ -85,7 +88,8 @@ async def get_sun_adaptors(
 def apply_sun_adapters( phasewatts: pd.DataFrame,
                         adapter: pd.DataFrame) -> pd.DataFrame:
 
-    if phasewatts.empty:
+    if adapter is None or phasewatts.empty:
+        logger.warning(f'Watts for phase is not modified')
         return phasewatts
     
     t = phasewatts.index[0]
@@ -262,6 +266,10 @@ async def find_closest(
     return starttime, stoptime, wattsdf
 
 
+MIN_SOC = 0.1
+MAX_SOC = 1.0
+MAX_BAT = 1600
+
 """ 
 Get the partitoned prediction dictionary. The first day in the closest
 days list is the day to be predicted. The successors are used for
@@ -271,7 +279,10 @@ async def partition_closest_watts(
         logsdf: pd.DataFrame,
         starttime: t64,
         stoptime: t64,
-        closestdays: List) -> Any:
+        closestdays: List,
+        min_soc: f64 = MIN_SOC,
+        max_soc: f64 = MAX_SOC,
+        max_bat: f64 = MAX_BAT) -> Any:
 
     # Available days with logs
     logsdays = list(logsdf.index.values)
@@ -326,17 +337,12 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs))[1:]
 
+    # Clear undercharging data completely
+    undercharging = todaywatts.loc[:,'SBSB']<min_soc
+    todaywatts.loc[undercharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+    # Make the SOC Current
+    todaywatts.loc[:, 'SBSB'] = todaywatts.loc[:, 'SBPB'].cumsum()/60/-max_bat
 
-    if realsoc <= 0.1: # Battery is empty
-        # Clear discharging data completely
-        discharging = todaywatts.loc[:,'SBPB']>0
-        todaywatts.loc[discharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
-    else: # Battery may be discharged
-        # Simulate discharging
-        realw = realsoc*1600
-        #TBD Check empty and full
-
-    
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
@@ -352,7 +358,21 @@ async def partition_closest_watts(
         [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
 
+    # Adapt SOC
+    tomorrowwatts0 = tomorrowwatts.loc[:, 'SBSB'].iloc[0]*max_bat
+    tomorrowwattscs = (tomorrowwatts.loc[:, 'SBPB'].cumsum())/60
+    tomorrowwatts.loc[:, 'SBSB'] = (tomorrowwatts0 - tomorrowwattscs) / max_bat
 
+    # Clear overcharging data completely
+    overcharging = tomorrowwatts.loc[:,'SBSB']>max_soc
+    tomorrowwatts.loc[overcharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+    tomorrowwatts.loc[overcharging,'SBSB']  = max_soc
+
+    # Clear undercharging data completely
+    undercharging = tomorrowwatts.loc[:,'SBSB']<min_soc
+    tomorrowwatts.loc[undercharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+    tomorrowwatts.loc[undercharging,'SBSB'] = min_soc
+    
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, tomorrow)
     ][:-1]
@@ -361,13 +381,18 @@ async def partition_closest_watts(
         ymd_over_t64(starttime, tomorrow):
     ].copy()
 
-    
     """
+    # Clear overcharging data completely
+    overcharging = tomorrowwatts2.loc[:,'SBSB']>max_soc
+    tomorrowwatts2.loc[overcharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+    # Mkae the SOC Current
+    tomorrowwatts2.loc[:, 'SBSB'] = tomorrowwatts2.loc[:, 'SBPB'].cumsum()/60/-max_bat
 
-    # Forecast does not consider anker app settings
-    discharging = tomorrowwatts2.loc[:,'SBPB']>0
-    tomorrowwatts2.loc[discharging, ['SBPB','SBPO', 'IVP1', 'IVP2']] = 0
-
+    # Clear undercharging data completely
+    undercharging = tomorrowwatts2.loc[:,'SBSB']<min_soc
+    tomorrowwatts2.loc[undercharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
+    # Make the SOC Current
+    tomorrowwatts2.loc[:, 'SBSB'] = tomorrowwatts2.loc[:, 'SBPB'].cumsum()/60/-max_bat
     """
     
     return ([today] + todaydays,
@@ -378,54 +403,6 @@ async def partition_closest_watts(
                   'todaywatts' : todaywatts,
                   'tomorrowwatts1' : tomorrowwatts1,
                   'tomorrowwatts2' : tomorrowwatts2}))
-
-
-""" Fixes the closest assembly as per some plausibility assumptions """
-def fix_prediction_watts(watts: pd.DataFrame, soc_wh: f64 = None) -> [pd.DataFrame, f64]:
-
-    sbpi = watts['SBPI']
-    sbpb = watts['SBPB']
-    sbpo = watts['SBPO']
-    haveenergy = (sbpi>0) | (sbpb>0)
-    clearsbpo = ~haveenergy & (sbpo>0)
-    watts['SBPO'][clearsbpo] = 0
-
-    """
-    sbpo = watts['SBPO']
-    ivp1 = watts['IVP1']
-    haveoutput = sbpo>0
-    watts['IVP1'][~haveoutput & (ivp1>0)] = 0
-    ivp2 = watts['IVP2']
-    watts['IVP2'][~haveoutput & (ivp2>0)] = 0
-    spph = watts['SPPH']
-    watts['SPPH'][~haveoutput & (spph>0)] = 0
-    """
-    
-    smp = watts['SMP']
-    sbpb = watts['SBPB']
-    adaptsmp = (sbpb>0) & (smp>0)
-    watts['SBPB'][adaptsmp] = sbpb+smp
-    watts['SMP'][adaptsmp] = 0
-
-    smp = watts['SMP']
-    sbpb = watts['SBPB']
-    ivp = watts['IVP1']+watts['IVP2']
-    sbpo = watts['SBPO']
-    replacesbpb = (sbpb>0) & ((sbpo<=0)|(ivp<=0)) & (smp <=0)
-    watts['SMP'][replacesbpb] = sbpb
-    watts['SBPB'][replacesbpb] = 0
-    
-    sbpb = watts['SBPB']
-    ivp = watts['IVP1']+watts['IVP2']
-    sbpbivp_higher = (sbpb>0) & (sbpb>ivp)
-    watts['SBPB'][sbpbivp_higher] = ivp[sbpbivp_higher] 
-
-    sbpi = watts['SBPI']
-    sbpb = watts['SBPB']
-    clearsbpb = (sbpi>0) & (sbpb>0)
-    watts['SBPB'][clearsbpb] = 0
-
-    return watts, soc_wh
 
 
 """ Assemble the prediction data frames for today  """
