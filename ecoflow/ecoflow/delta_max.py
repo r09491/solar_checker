@@ -23,6 +23,10 @@ from .helpers import (
 
 from .device import Device
 
+WATTS_SOC = ["soc", "minsoc", "maxsoc"] # 0 - 100
+
+WATTS_RTIME = ["rtime"] # Minutes
+
 WATTS_SUM = ['sumin', 'sumout']
 
 WATTS_12V = ['12V']
@@ -33,7 +37,7 @@ WATTS_AC = ['acin', 'acout']
 
 WATTS_XT60 = ['xt60']
 
-WATTS = WATTS_SUM + WATTS_12V + WATTS_USB + WATTS_AC
+WATTS = WATTS_SOC + WATTS_RTIME + WATTS_SUM + WATTS_12V + WATTS_USB + WATTS_AC
 
 
 class Delta_Max(Device):
@@ -114,34 +118,35 @@ class Delta_Max(Device):
 
     
     async def get_watts(self) -> dict:
-        quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
+        quotas = ["pd.soc"]
+        quotas += ["ems.minDsgSoc", "ems.maxChargeSoc", "ems.chRemainTime"]
+        quotas += ["pd.wattsInSum", "pd.wattsOutSum"]
         quotas += ["mppt.carOutWatts"]
         quotas += ["pd.usb1Watts", "pd.usb2Watts"]
         quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
         quotas += ["pd.typec1Watts", "pd.typec2Watts"]
         quotas += ["inv.inputWatts", "inv.outputWatts"]
         watts = await self.get_quotas(quotas)
-        watts[2] = int(watts[2]/10)
-        xt60_watts = [watts[0] - watts[-2]] # To be checked: values if no solar
+        watts[3] = int(watts[6]/10)
+        xt60_watts = [watts[4] - watts[-2]] # To be checked: values if no solar
         return dict(zip(WATTS+WATTS_XT60, watts + xt60_watts)) # ordered per quotas
 
     
-    async def get_ac_in_out_charge_watts_soc(self) -> list:
-        quotas = ["inv.inputWatts", "inv.outputWatts", "inv.cfgSlowChgWatts", "pd.soc"]
+    async def get_ac_in_out_charge_watts(self) -> list:
+        quotas = ["inv.inputWatts", "inv.outputWatts", "inv.cfgSlowChgWatts"]
         return await self.get_quotas(quotas)
 
     async def set_ac_charge_watts_balance(self,
                                           smp: int = None,
                                           minp: int = 100,
                                           maxp :int = 800) -> Optional[int]:
-        acpi, acpo, acpc0, soc = await self.get_ac_in_out_charge_watts_soc()
+        acpi, acpo, acpc0 = await self.get_ac_in_out_charge_watts()
 
         info = 'DM balancing inputs'
         info += f' SMP:{smp},'
         info += f' ACPI:{acpi},'
         info += f' ACPO:{acpo},'
-        info += f' ACPC:{acpc0},'
-        info += f' SOC:{soc}'
+        info += f' ACPC:{acpc0}'
         logger.info(info)
 
         if ((smp is None) or
