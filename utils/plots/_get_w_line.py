@@ -163,16 +163,13 @@ def _get_w_line(time: t64s, smp: f64s,
         # There is irradation
         title += f'Sun>{sbpi[-1]:.0f}'
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
-
-    if (sbpo is not None) or (sbpb is not None):
         title += '' if title[-1] == '\n' else ' | Bank '
-    if (sbpoon is not None) and (sbpoon_max>0):
-        title += f'>{sbpo[-1]:.0f}'
+        title += f' {sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
         if sbpb is not None:
-            title += f' + '
+           title += f' + '
     if (sbpbon is not None) and (sbpbon_min<0):
-        title += f'>{-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
+        title += f'{-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
         title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W>'
     if (sbpbon is not None) or (sbpboff is not None):
         title += f'Bat'
