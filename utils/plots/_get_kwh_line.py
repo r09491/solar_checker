@@ -117,14 +117,14 @@ def _get_kwh_line(
             title += f'Sun>{sbei[-1]:.2f}kWh'
         else:
             title += f'Sun>{sbei.sum():.2f}kWh'
-        title += '' if title[-1] == '\n' else ' | Bank '
+        title += '' if title[-1] == '\n' else ' | Bank> '
         if time_format == '%H:%M': # Accumulated
             if sbeo[-1] > 0:
                 title += f' {sbeo[-1]:.2f}kWh'
         else:
             if sbeo.sum() > 0:
                 title += f' {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
-        if (sbebcharge is not None):
+        if (sbebcharge is not None) and ((sbebcharge>0).any()):
             title += '' if title[-1] == '\n' else ' + '
         
     if (sbebcharge is not None) and (sbebcharge>0).any():
@@ -132,7 +132,9 @@ def _get_kwh_line(
             title += f'{sbebcharge[sbebcharge>0][-1]:.2f}kWh>'
         else:
             title += f'{sbebcharge[sbebcharge>0].sum():.2f}kWh>'
-
+    else:
+        title += ' | '
+        
     if (sbebcharge is not None) or (sbebdischarge is not None):
         title += 'BAT'
     
