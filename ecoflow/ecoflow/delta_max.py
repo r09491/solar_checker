@@ -23,21 +23,19 @@ from .helpers import (
 
 from .device import Device
 
-WATTS_SOC = ["soc", "minsoc", "maxsoc"] # 0 - 100
-
-WATTS_RTIME = ["rtime"] # Minutes
+WATTS_SOC = ["soc", "socmin", "socmax", "soctime"] # 0 - 100, minutes
 
 WATTS_SUM = ['sumin', 'sumout']
 
-WATTS_12V = ['12V']
-
 WATTS_USB = ['usb1', 'usb2', 'qc1', 'qc2', 'pd1', 'pd2']
 
-WATTS_AC = ['acin', 'acout']
+WATTS_AC = ['acin', 'acout', 'accharge']
 
 WATTS_XT60 = ['xt60']
 
-WATTS = WATTS_SOC + WATTS_RTIME + WATTS_SUM + WATTS_12V + WATTS_USB + WATTS_AC
+WATTS_12V = ['12V']
+
+WATTS = WATTS_SOC + WATTS_SUM + WATTS_USB + WATTS_AC + WATTS_XT60 + WATTS_12V 
 
 
 class Delta_Max(Device):
@@ -119,17 +117,19 @@ class Delta_Max(Device):
     
     async def get_watts(self) -> dict:
         quotas = ["pd.soc"]
-        quotas += ["ems.minDsgSoc", "ems.maxChargeSoc", "ems.chRemainTime"]
+        quotas += ["ems.minDsgSoc", "ems.maxChargeSoc"]
+        quotas += ["pd.remainTime"]
         quotas += ["pd.wattsInSum", "pd.wattsOutSum"]
-        quotas += ["mppt.carOutWatts"]
         quotas += ["pd.usb1Watts", "pd.usb2Watts"]
         quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
         quotas += ["pd.typec1Watts", "pd.typec2Watts"]
-        quotas += ["inv.inputWatts", "inv.outputWatts"]
+        quotas += ["inv.inputWatts", "inv.outputWatts", "inv.cfgSlowChgWatts"]
+        quotas += ["mppt.inWatts"]
+        quotas += ["mppt.carOutWatts"]
         watts = await self.get_quotas(quotas)
-        watts[3] = int(watts[6]/10)
-        xt60_watts = [watts[4] - watts[-2]] # To be checked: values if no solar
-        return dict(zip(WATTS+WATTS_XT60, watts + xt60_watts)) # ordered per quotas
+        watts[-2] = int(watts[-2]/10)
+        watts[-1] = int(watts[-1]/10)
+        return dict(zip(WATTS, watts)) # ordered per quotas
 
     
     async def get_ac_in_out_charge_watts(self) -> list:
