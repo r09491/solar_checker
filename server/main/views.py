@@ -269,6 +269,10 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Apply adapters to all phases with radiation """
 
+    """
+
+    !!! Adapts also battery limits! 
+    >>> Results in overcharge/undercharge display
 
     partitions['postwatts'] = apply_sun_adapters(
         partitions['postwatts'], todayadapters)    
@@ -279,7 +283,7 @@ async def plot_predict(request: web.Request) -> dict:
         partitions['tomorrowwatts1'], tomorrowadapters)
     partitions['tomorrowwatts2'] = apply_sun_adapters(
         partitions['tomorrowwatts2'], tomorrowadapters)
-
+    """
     
     # Adapt the relative predict table
 

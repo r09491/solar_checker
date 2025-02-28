@@ -65,7 +65,12 @@ class Solarbank():
                 return None
             
             sapi = AnkerSolixApi(*self._credentials, cs, None)
-            await sapi.update_sites()
+            try:
+                await sapi.update_sites()
+            except:
+                logger.error(f'anker_solix_api raised exception')
+                return None
+            
             device_sn = list(sapi.devices)[0]
             
             logger.debug(f'updated data for serial number "{device_sn}"')
@@ -125,7 +130,12 @@ class Solarbank():
 
             sapi = AnkerSolixApi(*self._credentials, cs, None)
 
-            await sapi.update_sites()
+            try:
+                await sapi.update_sites()
+            except:
+                logger.error(f'anker_solix_api raised exception')
+                return False
+            
             device_sn = list(sapi.devices)[0]
             logger.debug(f'updated data for serial number "{device_sn}"')
 
@@ -162,12 +172,15 @@ class Solarbank():
             if home_load-tolerance < set_output_power < home_load+tolerance:
                 logger.info(f'home load is kept "{set_output_power}"')
                 return False
-            
-            is_done= await sapi.set_device_parm(
-                siteId = site_id,                                   
-                deviceSn = device_sn,
-                paramData = schedule_sb1, 
-                paramType = SolixParmType.SOLARBANK_SCHEDULE.value)
+            try:
+                is_done= await sapi.set_device_parm(
+                    siteId = site_id,                                   
+                    deviceSn = device_sn,
+                    paramData = schedule_sb1, 
+                    paramType = SolixParmType.SOLARBANK_SCHEDULE.value)
+            except:
+                logger.error(f'anker_solix_api raised exception')
+                is_done = False
 
             if is_done:
                 logger.info(f'home load is set "{home_load}"')

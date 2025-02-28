@@ -19,7 +19,13 @@ import json
 
 from dataclasses import dataclass
 
-from ecoflow import Delta_Max
+from ecoflow import (
+    Delta_Max,
+    MIN_GRID_WATTS,
+    MAX_GRID_WATTS,
+    MIN_CHARGE_WATTS,
+    MAX_CHARGE_WATTS,
+)
 
 async def process_ac_charge_watts_balance(smp: int, minp: int, maxp:int) -> int:
 
@@ -42,11 +48,6 @@ class Script_Arguments:
     min_charge_watts: int
     max_charge_watts: int
 
-MIN_GRID_WATTS = -200
-MAX_GRID_WATTS = 200
-MIN_CHARGE_WATTS = 100
-MAX_CHARGE_WATTS = 600
-    
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
 

@@ -24,18 +24,18 @@ from .helpers import (
 from .device import Device
 
 WATTS_SOC = ["soc", "socmin", "socmax", "soctime"] # 0 - 100, minutes
-
 WATTS_SUM = ['sumin', 'sumout']
-
 WATTS_USB = ['usb1', 'usb2', 'qc1', 'qc2', 'pd1', 'pd2']
-
 WATTS_AC = ['acin', 'acout', 'accharge']
-
 WATTS_XT60 = ['xt60']
-
 WATTS_12V = ['12V']
-
 WATTS = WATTS_SOC + WATTS_SUM + WATTS_USB + WATTS_AC + WATTS_XT60 + WATTS_12V 
+
+
+MIN_GRID_WATTS = -200
+MAX_GRID_WATTS = 200
+MIN_CHARGE_WATTS = 100
+MAX_CHARGE_WATTS = 600
 
 
 class Delta_Max(Device):
@@ -137,9 +137,10 @@ class Delta_Max(Device):
         return await self.get_quotas(quotas)
 
     async def set_ac_charge_watts_balance(self,
-                                          smp: int = None,
-                                          minp: int = 100,
-                                          maxp :int = 800) -> Optional[int]:
+            smp: int = None,
+            minp: int = MIN_CHARGE_WATTS,
+            maxp :int = MAX_CHARGE_WATTS) -> Optional[int]:
+        
         acpi, acpo, acpc0 = await self.get_ac_in_out_charge_watts()
 
         info = 'DM balancing inputs'
@@ -165,24 +166,23 @@ class Delta_Max(Device):
             return None
         
         acpc_delta = int(smp)
-        if (abs(acpc_delta) < 10):
-            logger.info(f'New charge rate delta "{acpc_delta}" too small. Ignore!')
+        if (abs(acpc_delta) < 50):
+            logger.info(f'Charge rate delta "{acpc_delta}" too small. Ignore!')
             return None
 
-        acpc1 = min(max((acpc0-acpc_delta),minp),maxp)
-        if (abs(acpc1 - acpc0)  < 10):
+        acpc1 = 50*int(min(max((acpc0-acpc_delta),minp),maxp)/50)
+        if (abs(acpc1 - acpc0)  < 50):
             logger.info(f'New charge rate "{acpc1}" too close. Ignore!')
             return None
             
         logger.info(f'Trying to update the charge rate to "{acpc1}" by "{acpc_delta}"')        
         await self.set_ac_charge_watts(acpc1)
-        logger.info(f'Charge rate update commanded!')
         
         for i in range(3):
-            await asyncio.sleep(2)
+            await asyncio.sleep(5)
             acpc1 = await self.get_ac_charge_watts()
             if acpc1 != acpc0 or acpc1==minp:
-                logger.info(f'New charge rate update confirmed "{acpc1}"')
+                logger.info(f'Charge rate update confirmed "{acpc1}"')
                 return acpc1
 
         logger.warn(f'DM did not confirm charge rate update"')            

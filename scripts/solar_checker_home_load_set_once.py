@@ -127,8 +127,14 @@ async def get_home_load_estimate(samples: int) -> int:
     estimate = int(sum((2**w)*v for w, v in enumerate(voted)) /
                    sum(2**w for w, v in enumerate(voted)))
     logger.info(f"home load proposal is '{estimate}W'")
-    
-    return min(max(estimate,100), 800) # My solix only uses one channel
+
+    estimate = 10*int(min(max(estimate,100), 800)/10)
+    logger.info(f"constraint proposal is '{estimate}W'")
+
+    if (estimate>sbpi_mean):
+        logger.info(f"'{int(sbpi_mean)}'W < '{estimate}W, do best!'")
+        
+    return  estimate # My solix only uses one channel
 
 
 async def main(sb: Solarbank, samples: int) -> int:
