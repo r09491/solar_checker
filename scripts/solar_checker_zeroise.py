@@ -62,7 +62,7 @@ async def get_grid_power(
                 await q.get()
             if q.empty():
                 await q.put(smp_new)
-            logger.info(f'queued grid delta "{smp_new}W"')
+            logger.info(f'queued grid SMP "{smp_new}W"')
             smp_old = smp_new
         await asyncio.sleep(sm_delay)
 
@@ -79,9 +79,9 @@ async def set_home_load_load(
 
     sb_delay = sb_delay_sun # sb_delay_bat
     while True:
-        logger.info('waiting for grid delta')
+        logger.info('waiting for grid SMP')
         smp_mean = await q.get()
-        logger.info(f'dequeued grid delta "{smp_mean}W"')
+        logger.info(f'dequeued grid SMP "{smp_mean}W"')
 
         # Get the data from the solarbank
         sbdata = await sb.get_power_data()
@@ -130,8 +130,8 @@ async def zeroise(
     smp_queue = asyncio.Queue(maxsize = 1)
     
     await asyncio.gather(
-        set_home_load_load(smp_queue, sb_delay_sun, sb_delay_bat, sm_delay),
-        get_grid_power(smp_queue, sm_ip, sm_port, sm_delay)
+        get_grid_power(smp_queue, sm_ip, sm_port, sm_delay),
+        set_home_load_load(smp_queue, sb_delay_sun, sb_delay_bat, sm_delay)
     )
 
 
