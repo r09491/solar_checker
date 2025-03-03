@@ -32,11 +32,12 @@ WATTS_12V = ['12V']
 WATTS = WATTS_SOC + WATTS_SUM + WATTS_USB + WATTS_AC + WATTS_XT60 + WATTS_12V 
 
 
-MIN_GRID_WATTS = -200
-MAX_GRID_WATTS = 200
+MIN_GRID_WATTS = -400
+MAX_GRID_WATTS = 400
 MIN_CHARGE_WATTS = 100
 MAX_CHARGE_WATTS = 600
 
+CHARGE_STEP = 10
 
 class Delta_Max(Device):
     
@@ -157,21 +158,21 @@ class Delta_Max(Device):
             logger.warn(f'Missing inputs. Abort!')
             return None
             
-        if (acpi == 0):
+        if (acpi <= acpo):
             logger.info(f'No AC charging. Abort!')
             return None
 
-        if (smp == 0):
-            logger.info(f'No change request. Abort!')
+        if (smp == 0): #Ok, since int
+            logger.info(f'No charge request. Abort!')
             return None
         
         acpc_delta = int(smp)
-        if (abs(acpc_delta) < 50):
+        if (abs(acpc_delta) < CHARGE_STEP):
             logger.info(f'Charge rate delta "{acpc_delta}" too small. Ignore!')
             return None
 
-        acpc1 = 50*int(min(max((acpc0-acpc_delta),minp),maxp)/50)
-        if (abs(acpc1 - acpc0)  < 50):
+        acpc1 = CHARGE_STEP*int(min(max((acpc0-acpc_delta),minp),maxp)/CHARGE_STEP)
+        if (abs(acpc1 - acpc0)  < CHARGE_STEP):
             logger.info(f'New charge rate "{acpc1}" too close. Ignore!')
             return None
             
