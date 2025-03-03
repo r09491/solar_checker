@@ -322,6 +322,13 @@ async def partition_closest_watts(
     """ The frame with the watts in the search slot. Never empty! """
     findwatts = realdf.loc[starttime:stoptime,:]
 
+    """ Are smartplug samples present ?"""
+    findhasspph = (findwatts.loc[:,'SPPH']>0).any()
+    """ Are inverter samples present ?"""
+    findhasivp1 = (findwatts.loc[:,'IVP1']>0).any()
+    findhasivp2 = (findwatts.loc[:,'IVP2']>0).any()
+    findhasivp = findhasivp1 and findhasivp2
+
     """ The frame with the watts after the search slot. Can be empty! """
     postwatts = realdf.loc[stoptime:logstoptime,:].iloc[1:]
     
@@ -337,12 +344,19 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs))[1:]
 
+    """ Make consistent """
+    if not findhasspph:
+        todaywatts.loc[:, ['SPPH']] = 0
+    if not findhasivp:
+        todaywatts.loc[:, ['IVP1', 'IVP2']] = 0
+
     # Clear undercharging data completely
     undercharging = todaywatts.loc[:,'SBSB']<min_soc
     todaywatts.loc[undercharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
     # Make the SOC Current
     todaywatts.loc[:, 'SBSB'] = todaywatts.loc[:, 'SBPB'].cumsum()/60/-max_bat
 
+    
     """ The tomorrow data for the day from midnight """    
     tomorrowdfs = [
         pd.DataFrame(
@@ -357,6 +371,12 @@ async def partition_closest_watts(
         lambda x,y: x+y,
         [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
+
+    """ Make consistent """
+    if not findhasspph:
+        tomorrowwatts.loc[:, ['SPPH']] = 0
+    if not findhasivp:
+        tomorrowwatts.loc[:, ['IVP1', 'IVP2']] = 0
 
     # Adapt SOC
     tomorrowwatts0 = tomorrowwatts.loc[:, 'SBSB'].iloc[0]*max_bat
