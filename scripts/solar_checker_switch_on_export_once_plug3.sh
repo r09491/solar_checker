@@ -14,10 +14,11 @@
 SAMPLES=15
 SOLAR_CHECKER_ERROR=$SOLAR_CHECKER_STORE_DIR/solar_checker_error_$(date +\%y\%m\%d).log
 SOLAR_CHECKER_LATEST=$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_$(date +\%y\%m\%d).log
+SBPI=$(tail -n 1 $SOLAR_CHECKER_LATEST|gawk -F, '{print $11}')
 tail -n $SAMPLES $SOLAR_CHECKER_LATEST|solar_checker_switch_on_export_once.py \
      --plug_name plug3 \
-     --power_mean_import_open 5 \
+     --power_mean_import_open $SBPI \
      --power_mean_export_closed 50 \
      --power_samples $SAMPLES 2>> $SOLAR_CHECKER_ERROR
 
-# This script shall start/stop the charging of devices with high power, eg ebikes, ecoflow delta
+# This script shall start/stop the charging of devices with an ecoflow connected

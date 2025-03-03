@@ -121,7 +121,6 @@ async def get_home_load_estimate(samples: int) -> int:
         
     # Use data from the solarbank to set data in the solarbank
     voted = smp + sbpo 
-    logger.info(f'using solarbank power')
     
     # Weighted average (last samples have more influence)
     estimate = int(sum((2**w)*v for w, v in enumerate(voted)) /
@@ -132,7 +131,7 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f"constraint proposal is '{estimate}W'")
 
     if (estimate>sbpi_mean):
-        logger.info(f"'{int(sbpi_mean)}'W < '{estimate}W, do best!'")
+        logger.info(f"'do best!'")
         
     return  estimate # My solix only uses one channel
 

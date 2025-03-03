@@ -19,9 +19,11 @@ import sys
 import argparse
 import asyncio
 
+
 from aiohttp.client_exceptions import (
     ClientConnectorError
 )
+
 
 from ecoflow import (
     Delta_Max,
