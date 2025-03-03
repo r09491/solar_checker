@@ -344,20 +344,37 @@ async def partition_closest_watts(
         [pdf.loc[logstoptime:,:] for pdf in todaydfs]
     ) / len(todaydfs))[1:]
 
+    
     """ Make consistent """
+    
+    hassbpo = todaywatts.loc[:,'SBPO']>0
+    
     if not findhasspph:
+        todaywatts.loc[~hassbpo,'SBPO'] = todaywatts.loc[~hassbpo,'SPPH']
         todaywatts.loc[:, ['SPPH']] = 0
     if not findhasivp:
+        todaywatts.loc[~hassbpo,'SBPO'] = todaywatts.loc[~hassbpo,'IVP1']
+        todaywatts.loc[~hassbpo,'SBPO'] += todaywatts.loc[~hassbpo,'IVP2']
         todaywatts.loc[:, ['IVP1', 'IVP2']] = 0
 
-    # Clear undercharging data completely
-    undercharging = todaywatts.loc[:,'SBSB']<min_soc
-    todaywatts.loc[undercharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
-    # Make the SOC Current
-    todaywatts.loc[:, 'SBSB'] = todaywatts.loc[:, 'SBPB'].cumsum()/60/-max_bat
+        
+    cs = todaywatts.loc[:,'SBPB'].cumsum()
+    
+    # Clear undercharging data 
+    undercharging = (cs<0) & (cs>-max_bat*min_soc)
+    todaywatts.loc[undercharging, 'SBPO'] += todaywatts.loc[undercharging, 'SBPB']
+    todaywatts.loc[undercharging, 'SBPB'] = 0
+    todaywatts.loc[undercharging, 'SBSB'] = min_soc
+    
+    # Clear overcharging data
+    overcharging = cs<-max_bat
+    todaywatts.loc[overcharging, 'SBPO'] -= todaywatts.loc[overcharging, 'SBPB']
+    todaywatts.loc[overcharging, 'SBPB'] = 0
+    todaywatts.loc[overcharging, 'SBSB'] = max_soc
 
     
     """ The tomorrow data for the day from midnight """    
+
     tomorrowdfs = [
         pd.DataFrame(
             index = [ymd_over_t64(
@@ -372,48 +389,44 @@ async def partition_closest_watts(
         [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
 
+
     """ Make consistent """
+    
+    hassbpo = tomorrowwatts.loc[:,'SBPO']>0
+    
     if not findhasspph:
+        tomorrowwatts.loc[~hassbpo,'SBPO'] = tomorrowwatts.loc[~hassbpo,'SPPH']
         tomorrowwatts.loc[:, ['SPPH']] = 0
     if not findhasivp:
+        tomorrowwatts.loc[~hassbpo,'SBPO'] = tomorrowwatts.loc[~hassbpo,'IVP1']
+        tomorrowwatts.loc[~hassbpo,'SBPO'] += tomorrowwatts.loc[~hassbpo,'IVP2']
         tomorrowwatts.loc[:, ['IVP1', 'IVP2']] = 0
 
-    # Adapt SOC
-    tomorrowwatts0 = tomorrowwatts.loc[:, 'SBSB'].iloc[0]*max_bat
-    tomorrowwattscs = (tomorrowwatts.loc[:, 'SBPB'].cumsum())/60
-    tomorrowwatts.loc[:, 'SBSB'] = (tomorrowwatts0 - tomorrowwattscs) / max_bat
+        
+    cs = tomorrowwatts.loc[:,'SBPB'].cumsum()
 
-    # Clear overcharging data completely
-    overcharging = tomorrowwatts.loc[:,'SBSB']>max_soc
-    tomorrowwatts.loc[overcharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
-    tomorrowwatts.loc[overcharging,'SBSB']  = max_soc
+    # Clear undercharging data 
+    undercharging = ((cs<0) &(cs>-max_bat*min_soc))
+    tomorrowwatts.loc[undercharging, 'SBPO'] += tomorrowwatts.loc[undercharging, 'SBPB']
+    tomorrowwatts.loc[undercharging, 'SBPB'] = 0
+    tomorrowwatts.loc[undercharging, 'SBSB'] = min_soc
+    
+    # Clear overcharging data
+    overcharging = cs<-max_bat
+    tomorrowwatts.loc[overcharging, 'SBPO'] -= tomorrowwatts.loc[overcharging, 'SBPB']
+    tomorrowwatts.loc[overcharging, 'SBPB'] = 0
+    tomorrowwatts.loc[overcharging, 'SBSB'] = max_soc
 
-    # Clear undercharging data completely
-    undercharging = tomorrowwatts.loc[:,'SBSB']<min_soc
-    tomorrowwatts.loc[undercharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
-    tomorrowwatts.loc[undercharging,'SBSB'] = min_soc
     
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, tomorrow)
     ][:-1]
+
     
     tomorrowwatts2 = tomorrowwatts.loc[
         ymd_over_t64(starttime, tomorrow):
     ].copy()
 
-    """
-    # Clear overcharging data completely
-    overcharging = tomorrowwatts2.loc[:,'SBSB']>max_soc
-    tomorrowwatts2.loc[overcharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
-    # Mkae the SOC Current
-    tomorrowwatts2.loc[:, 'SBSB'] = tomorrowwatts2.loc[:, 'SBPB'].cumsum()/60/-max_bat
-
-    # Clear undercharging data completely
-    undercharging = tomorrowwatts2.loc[:,'SBSB']<min_soc
-    tomorrowwatts2.loc[undercharging, ['SBPB','SBPO','IVP1', 'IVP2']] = 0
-    # Make the SOC Current
-    tomorrowwatts2.loc[:, 'SBSB'] = tomorrowwatts2.loc[:, 'SBPB'].cumsum()/60/-max_bat
-    """
     
     return ([today] + todaydays,
             [tomorrow] + tomorrowdays, realsoc,
