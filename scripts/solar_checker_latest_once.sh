@@ -7,8 +7,8 @@
 ## Record the latest power of the smartmeter and inverter
 #*/5 * * * * solar_checker_latest.sh
 
-solar_checker_latest_once.py --iv_ip "192.168.101.44" \
-			     --sm_ip "192.168.101.30" \
+solar_checker_latest_once.py --iv_ip apsystems \
+			     --sm_ip tasmota \
 			     --sp_switch_4 "plug0" \
 			     --sp_switch_3 "plug3" \
 			     --sp_switch_2 "plug2" \
