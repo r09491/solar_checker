@@ -94,31 +94,17 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.axvspan(tphases[0], tphases[1], 
                    color ='olive',
                    alpha = 0.2)        
-        
-    if spphon is not None:
-        logger.info(f'using smartplug samples only')
-        
-        ax.fill_between(time, 0, spph,
-                        color='grey',label='PLUG', lw=0, alpha=0.3)
-        ax.fill_between(time, spph, spph + smpon,
-                        color='b', label='GRID', lw=0, alpha=0.3)
 
-    elif ivpon is not None:
-        logger.info(f'using inverter samples only')
-        
-        ax.fill_between(time, 0, ivp1 + ivp2,
-                        color='c', label='INV', alpha=0.2)
-        ax.fill_between(time, ivp1 + ivp2, ivp1 + ivp2  + smpon,
-                        color='b', label='GRID', alpha=0.3)
-
-    elif sbpoon is not None:
+    """ Plot solarbank and smartmeter filled """
+    
+    if sbpoon is not None:
         logger.info(f'using solarbank samples only')
         logger.warn(f'other power samples are ignored')
 
         ax.fill_between(time, 0, sbpo,
-                        color='grey', label='BANK', lw=0, alpha=0.3)
+                        color='grey', label='BANK', lw=1, alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smpon,
-                        color='b', label='GRID', lw=0, alpha=0.3)
+                        color='b', label='GRID', lw=1, alpha=0.3)
         
     elif smpon is not None or smpoff is not None :
         logger.info(f'using smartmeter samples only')
@@ -129,6 +115,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
         
     """ Plot the battery power of the solarbank during charging"""
+
     if sbpb is not None:
         """ The solarbank output is used directly inspite of inverter """
         ax.fill_between(time, 0, sbpb,
@@ -141,23 +128,27 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, 0, smpoff,
                         color='b', lw=0, alpha=0.3)
 
-
-    if time.size<=24*60: #only plot within 24h
-        if ivpon is not None:
-            isfill = isivpon & ~issbpboff & ~issbpion
-            ax.fill_between(time[isfill] ,
-                            np.full_like(ivp[isfill], 600),
-                            np.full_like(ivp[isfill], 800),
-                            color='black', alpha=0.2)
+    """ Plot amplifying data as lines """
+                
+    if spphon is not None:
+        ax.plot(time, spph,
+                color='brown',label='PLUG', lw=1, ls='-', alpha=0.3)
+    if ivpon is not None:
+        ax.plot(time, ivp1 + ivp2,
+                color='c', label='INV', lw=1, ls='-', alpha=0.3)
+    if sbpion is not None:
+        isfill = issbpion
+        ax.plot(time[isfill], sbpi[isfill],
+                color='orange', label='SUN', lw=2, ls='-', alpha=1.0)
         
-        if sbpion is not None:
-            isfill = issbpion & isivpon 
+        if time.size<=24*60: #only plot within 24h
             ax.fill_between(time[isfill],
                             np.full_like(sbpi[isfill], 600),
                             np.full_like(sbpi[isfill], 800),
-                            color='orange', label='LIMITS', alpha=0.4)
-        
-        
+                            color='black', label='LIMITS', alpha=0.1)
+
+    """ Generate title """
+            
     title = f'# Power #\n'
     if (sbpi is not None) and (sbpion_max>0):
         # There is irradation

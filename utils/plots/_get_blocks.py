@@ -95,8 +95,8 @@ def _get_blocks(time: t64, smp: f64,
     plug3 = (5.5 ,-0.33)
     plug4 = (5.25 ,-1)
         
-    _add_box_to_ax(ax, *panel_1, 'PANEL1', 'green')
-    _add_box_to_ax(ax, *panel_2, 'PANEL2', 'green')
+    _add_box_to_ax(ax, *panel_1, 'PANEL1', 'orange')
+    _add_box_to_ax(ax, *panel_2, 'PANEL2', 'orange')
     _add_box_to_ax(ax, *solix_mppt, 'MPPT\nSOLIX', 'grey')
     _add_box_to_ax(ax, *solix_split, 'SPLIT\nSOLIX', 'grey')
     _add_box_to_ax(ax, *solix_out, 'OUT\nSOLIX', 'grey')
@@ -121,10 +121,10 @@ def _get_blocks(time: t64, smp: f64,
     if sbpi>0 :
         _add_link_to_ax(
             ax, *panel_1, 'S', *solix_mppt, 'N',
-            sbpi/2, 'green', show_power = False) # Measured only
+            sbpi/2, 'orange', show_power = False) # Measured only
         _add_link_to_ax(
             ax, *panel_2, 'N', *solix_mppt, 'S',
-            sbpi/2, 'green', show_power = False) # Measured only
+            sbpi/2, 'orange', show_power = False) # Measured only
         _add_link_to_ax(
             ax, *solix_mppt, 'E', *solix_split, 'W',
             sbpi, 'grey')

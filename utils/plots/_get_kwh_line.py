@@ -56,38 +56,14 @@ def _get_kwh_line(
         ax.axvspan(tphases[0], tphases[1], 
                    color ='olive',
                    alpha = 0.2)        
-
-    if spehon is not None:
-        logger.info(f'using smartplug samples only')
-
-        ax.plot(time, smeoff, color='black', label='<|>', lw=1, alpha=0.7)
-        
-        ax.fill_between(time, 0, speh,
-                             color='grey', label='PLUG',alpha=0.3)
-        ax.fill_between(time, speh, speh + smeon,
-                             color='b',label='GRID', alpha=0.3)
-
-    elif iveon is not None:
-        logger.info(f'using inverter samples only')
-
-        ax.fill_between(time, 0, ive2 + ive1,
-                             color='c',label='INV', alpha=0.3)                             
-        ax.fill_between(time, ive2 + ive1, ive2 + ive1 + smeon,
-                             color='b',label='GRID', alpha=0.3)
-
-    elif sbeoon is not None:
-        logger.info(f'using solarbank samples only')
-        logger.warn(f'other energy samples are ignored')
-
+    
+    if sbeoon is not None:
         ax.fill_between(time, 0, sbeo,
                         color='grey', label='BANK',alpha=0.3)
         ax.fill_between(time, sbeo, sbeo + smeon,
                         color='b',label='GRID', alpha=0.3)
 
     elif smeon is not None:
-        logger.info(f'using smartmeter samples only')
-        logger.warn(f'other energy samples are notprovided')
-
         ax.fill_between(time, smeoff, smeon,
                         color='b',label='GRID', alpha=0.3)
 
@@ -110,6 +86,19 @@ def _get_kwh_line(
     else:
         ax.fill_between(time, 0, -smeoff,
                         color='b', alpha=0.3)
+
+        
+    if spehon is not None:
+        ax.plot(time, speh,
+                color='brown', label='PLUG', lw=2, ls='-', alpha=0.6)
+    if iveon is not None:
+        ax.plot(time, ive2 + ive1,
+                color='c',label='INV', lw=2, ls='-', alpha=0.6)                             
+    if sbeion is not None:
+        isfill = issbeion
+        ax.plot(time[isfill], sbei[isfill],
+                color='orange', label='SUN', lw=2, ls='-', alpha=1.0)
+
         
     title = f'# Energy #\n'
     if sbeion is not None:
