@@ -43,7 +43,7 @@ def _get_kwh_bar_unified(
         logger.info(f'using unified samples')
 
         ax.bar(time, balcony, bottom = smeoff,
-               color='cyan', label='BALCONY', width=bar_width, alpha=0.3)
+               color='orange', label='BALCONY', width=bar_width, alpha=0.3)
         ax.bar(time, smeon, bottom=balcony+smeoff,
                color='blue',label='GRID >', width=bar_width, alpha=0.3)
 

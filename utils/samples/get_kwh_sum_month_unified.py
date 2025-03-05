@@ -39,14 +39,16 @@ async def get_kwh_sum_month_unified(
     # 3.Prio
     umkwhs = msbeo.copy()
 
+    #!!! Should be done with unified power
+    
     # 2.Prio 
-    mive = mive1 + mive2
-    isive = mive>0 
-    umkwhs[isive] = mive[isive]
+    #mive = mive1 + mive2
+    #isive = mive>0 
+    #umkwhs[isive] = mive[isive]
 
     # 1.Prio
-    isspeh = mspeh>0
-    umkwhs[isspeh] = mspeh[isspeh]
+    #isspeh = mspeh>0
+    #umkwhs[isspeh] = mspeh[isspeh]
 
     logger.info(f'{__me__}: started')
     return {'TIME':mtime, 'SMEON':msmeon, 'SMEOFF':msmeoff,'PANEL':umkwhs}

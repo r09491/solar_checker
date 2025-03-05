@@ -133,7 +133,8 @@ def _get_kwh_line(
         else:
             title += f'{sbebcharge[sbebcharge>0].sum():.2f}kWh>'
     else:
-        title += ' | '
+        title += '' if title[-1] == '\n' else ' | '        
+
         
     if (sbebcharge is not None) or (sbebdischarge is not None):
         title += 'BAT'
