@@ -91,25 +91,25 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.clear()
 
     if tphases is not None:
+        # Selection area
         ax.axvspan(tphases[0], tphases[1], 
                    color ='olive',
-                   alpha = 0.2)        
+                   alpha = 0.2)
+        # Cast area
+        if len(tphases)>2:
+            ax.axvspan(tphases[2], tphases[3], 
+                       color ='olive',
+                       alpha = 0.05)        
 
     """ Plot solarbank and smartmeter filled """
     
     if sbpoon is not None:
-        logger.info(f'using solarbank samples only')
-        logger.warn(f'other power samples are ignored')
-
         ax.fill_between(time, 0, sbpo,
                         color='grey', label='BANK', lw=1, alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smpon,
                         color='b', label='GRID', lw=1, alpha=0.3)
         
     elif smpon is not None or smpoff is not None :
-        logger.info(f'using smartmeter samples only')
-        logger.warn(f'other power samples are not provided')
-
         ax.fill_between(time, 0, smp,
                         color='b', label='GRID', alpha=0.3)
 
@@ -132,16 +132,15 @@ def _get_w_line(time: t64s, smp: f64s,
                 
     if spphon is not None:
         ax.plot(time, spph,
-                color='brown',label='PLUG', lw=1, ls='-', alpha=0.3)
+                color='brown',label='PLUG', lw=2, ls='-', alpha=0.3)
     if ivpon is not None:
         ax.plot(time, ivp1 + ivp2,
-                color='c', label='INV', lw=1, ls='-', alpha=0.3)
+                color='c', label='INV', lw=2, ls='-', alpha=0.3)
     if sbpion is not None:
-        isfill = issbpion
-        ax.plot(time[isfill], sbpi[isfill],
-                color='orange', label='SUN', lw=2, ls='-', alpha=1.0)
-        
         if time.size<=24*60: #only plot within 24h
+            isfill = issbpion
+            ax.plot(time[isfill], sbpi[isfill],
+                    color='orange', label='SUN', lw=2, ls='-', alpha=1.0)
             ax.fill_between(time[isfill],
                             np.full_like(sbpi[isfill], 600),
                             np.full_like(sbpi[isfill], 800),

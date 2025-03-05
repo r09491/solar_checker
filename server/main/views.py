@@ -295,7 +295,10 @@ async def plot_predict(request: web.Request) -> dict:
     if what == 'Today':
         c = concat_today(partitions)
         rtable = ptable[:-2]
-        tphase = [starttime, stoptime]
+        tphase = [partitions['findwatts'].index[0],
+                  partitions['findwatts'].index[-1],
+                  partitions['todaywatts'].index[0],
+                  partitions['todaywatts'].index[-1]]
     elif what == 'Tomorrow':
         c = concat_tomorrow(partitions)
         rtable = ptable[-2:]
@@ -303,7 +306,8 @@ async def plot_predict(request: web.Request) -> dict:
     elif what == 'Total':
         c = concat_total(partitions)
         rtable = ptable
-        tphase = [starttime, stoptime]
+        tphase = [partitions['findwatts'].index[0],
+                  partitions['findwatts'].index[-1]]
 
     time = np.array(list(c.index.values))
     spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
