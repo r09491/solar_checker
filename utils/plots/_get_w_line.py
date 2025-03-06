@@ -98,8 +98,8 @@ def _get_w_line(time: t64s, smp: f64s,
         # Cast area
         if len(tphases)>2:
             ax.axvspan(tphases[2], tphases[3], 
-                       color ='olive',
-                       alpha = 0.05)        
+                       color ='white',
+                       alpha = 0.5)        
 
     """ Plot solarbank and smartmeter filled """
     
