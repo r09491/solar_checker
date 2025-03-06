@@ -367,10 +367,10 @@ async def partition_closest_watts(
     todaywatts.loc[undercharging, 'SBSB'] = min_soc
     
     # Clear overcharging data
-    overcharging = cs<-max_bat
-    todaywatts.loc[overcharging, 'SBPO'] -= todaywatts.loc[overcharging, 'SBPB']
-    todaywatts.loc[overcharging, 'SBPB'] = 0
-    todaywatts.loc[overcharging, 'SBSB'] = max_soc
+    ##overcharging = cs<-max_bat
+    ##todaywatts.loc[overcharging, 'SBPO'] -= todaywatts.loc[overcharging, 'SBPB']
+    ##todaywatts.loc[overcharging, 'SBPB'] = 0
+    ##todaywatts.loc[overcharging, 'SBSB'] = max_soc
 
     
     """ The tomorrow data for the day from midnight """    
@@ -412,10 +412,10 @@ async def partition_closest_watts(
     tomorrowwatts.loc[undercharging, 'SBSB'] = min_soc
     
     # Clear overcharging data
-    overcharging = cs<-max_bat
-    tomorrowwatts.loc[overcharging, 'SBPO'] -= tomorrowwatts.loc[overcharging, 'SBPB']
-    tomorrowwatts.loc[overcharging, 'SBPB'] = 0
-    tomorrowwatts.loc[overcharging, 'SBSB'] = max_soc
+    ##overcharging = cs<-max_bat
+    ##tomorrowwatts.loc[overcharging, 'SBPO'] -= tomorrowwatts.loc[overcharging, 'SBPB']
+    ##tomorrowwatts.loc[overcharging, 'SBPB'] = 0
+    ##tomorrowwatts.loc[overcharging, 'SBSB'] = max_soc
 
     
     tomorrowwatts1 = tomorrowwatts.loc[
