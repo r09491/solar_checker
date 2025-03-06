@@ -40,18 +40,20 @@ FORECAST_NAMES = POWER_NAMES[2:8]
 Only power samples may be used for predicts. For some sanmples it is
 possible to split between positive and negative values.
 """
+PREDICT_POWER_NAMES = [
+    'TIME',
+    'SMP', 
+    'SBPI', 'SBPO', 'SBPB', 'SBSB'
+]
+
 PREDICT_NAMES = [
     'SMP', 'SMP+', 'SMP-', 
-    'IVP1',
-    'IVP2',
-    'SPPH',
-    'SBPI', 'SBPO', 'SBPB', 'SBPB+','SBPB-',
-    'SPP1', 'SPP2', 'SPP3', 'SPP4'
+    'SBPI', 'SBPO', 'SBPB', 'SBPB+','SBPB-'
 ]
 
 
-PARTITION_NAMES = ['SBPI','SBPB-','SBPB+','SBPO','IVP','SMP-','SMP+']
-VIEW_NAMES = ['SUN', '>BAT', 'BAT>', 'BANK', 'INV', '>GRID', 'GRID>']
+PARTITION_NAMES = ['SBPI','SBPB-','SBPB+','SBPO','SMP-','SMP+']
+VIEW_NAMES = ['SUN', '>BAT', 'BAT>', 'BANK', '>GRID', 'GRID>']
 PARTITION_2_VIEW = dict(zip(PARTITION_NAMES, VIEW_NAMES))
 
 

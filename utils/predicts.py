@@ -322,13 +322,6 @@ async def partition_closest_watts(
     """ The frame with the watts in the search slot. Never empty! """
     findwatts = realdf.loc[starttime:stoptime,:]
 
-    """ Are smartplug samples present ?"""
-    findhasspph = (findwatts.loc[:,'SPPH']>0).any()
-    """ Are inverter samples present ?"""
-    findhasivp1 = (findwatts.loc[:,'IVP1']>0).any()
-    findhasivp2 = (findwatts.loc[:,'IVP2']>0).any()
-    findhasivp = findhasivp1 and findhasivp2
-
     """ The frame with the watts after the search slot. Can be empty! """
     postwatts = realdf.loc[stoptime:logstoptime,:].iloc[1:]
     
@@ -347,17 +340,6 @@ async def partition_closest_watts(
     
     """ Make consistent """
     
-    hassbpo = todaywatts.loc[:,'SBPO']>0
-    
-    if not findhasspph:
-        todaywatts.loc[~hassbpo,'SBPO'] = todaywatts.loc[~hassbpo,'SPPH']
-        todaywatts.loc[:, ['SPPH']] = 0
-    if not findhasivp:
-        todaywatts.loc[~hassbpo,'SBPO'] = todaywatts.loc[~hassbpo,'IVP1']
-        todaywatts.loc[~hassbpo,'SBPO'] += todaywatts.loc[~hassbpo,'IVP2']
-        todaywatts.loc[:, ['IVP1', 'IVP2']] = 0
-
-        
     cs = todaywatts.loc[:,'SBPB'].cumsum()
     
     # Clear undercharging data 
@@ -391,18 +373,7 @@ async def partition_closest_watts(
 
 
     """ Make consistent """
-    
-    hassbpo = tomorrowwatts.loc[:,'SBPO']>0
-    
-    if not findhasspph:
-        tomorrowwatts.loc[~hassbpo,'SBPO'] = tomorrowwatts.loc[~hassbpo,'SPPH']
-        tomorrowwatts.loc[:, ['SPPH']] = 0
-    if not findhasivp:
-        tomorrowwatts.loc[~hassbpo,'SBPO'] = tomorrowwatts.loc[~hassbpo,'IVP1']
-        tomorrowwatts.loc[~hassbpo,'SBPO'] += tomorrowwatts.loc[~hassbpo,'IVP2']
-        tomorrowwatts.loc[:, ['IVP1', 'IVP2']] = 0
 
-        
     cs = tomorrowwatts.loc[:,'SBPB'].cumsum()
 
     # Clear undercharging data 
@@ -481,9 +452,6 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
         exporting = watts.loc[:, 'SMP']<0
         watts.loc[exporting, 'SMP+'] = 0
 
-        watts.loc[:, 'IVP'] = watts.loc[:, 'IVP1'] + watts.loc[:, 'IVP2']
-
-        
     phase = [k for (k,v) in partitions.items() if len(v) >0]
     start = [t64_to_hm(v.index.values[0]) for (k,v) in partitions.items() if v.size >0]
     stop = [t64_to_hm(v.index.values[-1]) for (k,v) in partitions.items() if v.size >0]

@@ -11,8 +11,9 @@ from utils.typing import (
     f64, f64s, t64, t64s, timeslots
 )
 from utils.common import (
-    PREDICT_NAMES,
     POWER_NAMES,
+    PREDICT_NAMES,
+    PREDICT_POWER_NAMES,
     PARTITION_2_VIEW,
     ymd_yesterday,
     ymd_tomorrow,
@@ -228,7 +229,7 @@ async def plot_predict(request: web.Request) -> dict:
         
     """ Get the dictionary with all the power recordings for logdays """
     logsdf = await get_logs_as_dataframe(
-        POWER_NAMES,
+        PREDICT_POWER_NAMES,
         logpredictmaxdays,
         logpredictformat,
         logprefix,
@@ -315,9 +316,8 @@ async def plot_predict(request: web.Request) -> dict:
                   partitions['tomorrowwatts2'].index[-1]]
 
     time = np.array(list(c.index.values))
-    spph, smp, ivp1, ivp2 = c['SPPH'], c['SMP'], c['IVP1'], c['IVP2']
+    smp = c['SMP']
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
-    spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
@@ -331,14 +331,12 @@ async def plot_predict(request: web.Request) -> dict:
 
         
     w, kwh = await asyncio.gather(
-        get_w_line(time, smp, ivp1, ivp2,
-                   spph, sbpi, sbpo, sbpb, tphase),
+        get_w_line(time, smp, None, None,
+                   None, sbpi, sbpo, sbpb, tphase),
         get_kwh_line(time,
             smpon.cumsum()/1000/60 if smpon is not None else None,
             smpoff.cumsum()/1000/60 if smpoff is not None else None,
-            ivp1.cumsum()/1000/60 if ivp1 is not None else None,
-            ivp2.cumsum()/1000/60 if ivp2 is not None else None,
-            spph.cumsum()/1000/60 if spph is not None else None,
+            None, None,  None, 
             sbpi.cumsum()/1000/60 if sbpi is not None else None,
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
