@@ -183,7 +183,11 @@ def _get_kwh_line(
             title += f' # Profit {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
         else:
             title += f' # Profit {ive.sum()-smeoff.sum():.2f}kWh~{(ive.sum()-smeoff.sum())*price:.2f}€'
-
+    elif (sbeoon is not None) and (smeoff is not None):            
+        if time_format == '%H:%M': # Accumulated
+            title += f' # Profit {(sbeo[-1]-smeoff[-1]):.2f}kWh~{(sbeo[-1]-smeoff[-1])*price:.2f}€'
+        else:
+            title += f' # Profit {sbeo.sum()-smeoff.sum():.2f}kWh~{(sbeo.sum()-smeoff.sum())*price:.2f}€'
 
     ax.set_title(title)
 

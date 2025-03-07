@@ -52,15 +52,18 @@ def _get_log(
 
     if logday is None and logprefix is None and logdir is None:
         logger.info(f'Reading CSV data from "stdin"')
-        logfile = sys.stdin 
+        logfile = sys.stdin
+        samples = read_csv(logfile, names = logcols)
     else:
-        logfile = os.path.join(logdir, f'{logprefix}_{logday}.log')
-        logger.info(f'Reading CSV data from file "{logfile}"')
-        if not os.path.isfile(logfile):
-            logger.warning(f'CSV data file not found "{logfile}"')
+        logname = os.path.join(logdir, f'{logprefix}_{logday}.log')
+        logger.info(f'Reading CSV data from file "{logname}"')
+        if not os.path.isfile(logname):
+            logger.warning(f'CSV data file not found "{logname}"')
             return None
-    return read_csv(logfile, names = logcols)
-    
+        with open(logname, 'r') as logfile:
+            samples = read_csv(logfile, names = logcols)
+    return samples
+
 async def get_log(
         logcols: list,
         logday: str = None,
