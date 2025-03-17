@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 
-__doc__="""
-Sets the new home load for the anker solar bank
+__doc__="""Sets the power output from 100W to 800W of the anker
+solarbank to the home grid. During discharge the solix needs four
+minutes. During charge/bypass it takes one minutes.  There are
+conditions when the solix does not comply with the request without any
+warning. An obvious one is if the irradation is below the request with
+a lack of power. If the battery is full all the power from the solar
+panels via MPPT is passed directly to the grid. This holds also if the
+temperature is below 4 degrees or the battery does not charge in
+general.
+
+The script does not consider inconsistencies of of solarbank and
+inverter samples.
 """
 
 __version__ = "0.0.0"
@@ -64,33 +74,28 @@ async def get_home_load_estimate(samples: int) -> int:
     sbpi_mean = int(sbpi.mean())
     
     """ The normalised solarbank power output """
-    sbpb = c['SBPB']
-    if sbpb.size != samples:
-        logger.error(f'wrong number of solarbank records "{sbpb.size}"')
-        return -13
-    sbpb_mean = int(sbpb.mean())
-
-    """ The normalised solarbank power output """
     sbpo = c['SBPO']
     if sbpo.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
-        return -14
+        return -13
 
-    """ The normalised inverter power samples channel 1 """
-    ivp1 = c['IVP1']
-    """ The normalised inverter power samples channel 2 """
-    ivp2 = c['IVP2']
-    """ The normalised inverter power sum """
-    ivp = ivp1 + ivp2
-    if ivp.size != samples:
-        logger.error(f'wrong number of smartmeter records "{ivp.size}"')
+    """ The normalised solarbank power output """
+    sbpb = c['SBPB']
+    if sbpb.size != samples:
+        logger.error(f'wrong number of solarbank records "{sbpb.size}"')
+        return -14
+    sbpb_mean = int(sbpb.mean())
+
+    """ The normalised solarbank battery SOC """
+    sbsb = c['SBSB']
+    if sbsb.size != samples:
+        logger.error(f'wrong number of SOC records "{sbsb.size}"')
         return -15
+    sbsb_mean = sbsb.mean()
 
     logger.info(f'{sbpi} sbpi')
     logger.info(f'{sbpb} sbpb')
     logger.info(f'{sbpo} sbpo')
-    logger.info(f'{ivp} ivp')
-
 
     if (sbpb > 0).all(): 
         logger.info(f'bank in DISCHARGE.')
@@ -101,37 +106,31 @@ async def get_home_load_estimate(samples: int) -> int:
     else:
         logger.info(f'bank in STANDBY')
 
-    """
-    if not (sbpi>0).all():
-        logger.info(f'No radiation, defaulting!')
-        return 100
-    """
-    """
-    Data in local mode are faster acquired than those from the
-    cloud. Here the cloud solar bank data are at least one minute
-    older than those of the local inverter. After some time the data
-    will stabilize and look reasonable at least, ie values from
-    solarbank are larger than those of the inverter. Home load value
-    shall only be set in stable situation.
-    """
-    if (ivp[-2:] > (sbpo + 10)[-2:]).any(): # Some tolerance for roundings ...
-        logger.error(f'Signals inconsistent. Abort!')
-        return -16
-
         
-    # Use data from the solarbank to set data in the solarbank
-    voted = smp + sbpo 
+    if smp[-1] > 800:
+        logger.error(f'Burst required.')
+        return 800
     
-    # Weighted average (last samples have more influence)
-    estimate = int(sum((2**w)*v for w, v in enumerate(voted)) /
-                   sum(2**w for w, v in enumerate(voted)))
-    logger.info(f"home load proposal is '{estimate}W'")
+    if sbpo[-1] == 0:
+        logger.error(f'Solarbank has no output.')
+        return -18
 
-    estimate = 10*int(min(max(estimate,100), 800)/10)
+    KP, KI, KD = 0.4, 0.1, 0.2
+    logger.info(f"KP {KP}, KI {KI}, KD {KD}")
+    P, I, D = KP*smp[-1], KI*smp.sum(), KD*(smp[-1]-smp[-2])
+    logger.info(f"P {P:.0f}, I {I:.0f}, D {D:.0f}")
+    PID = P + I + D
+    logger.info(f"PID {PID:.0f}")
+    estimate = sbpo[-1]+PID
+
+    logger.info(f"home load proposal is '{estimate:.0f}W'")
+    ubound = 150 if sbpb_mean > 0 else 300 if sbsb_mean>0.4 else 800
+    estimate = 10*int(min(max(estimate,100), ubound)/10)
     logger.info(f"constraint proposal is '{estimate}W'")
 
-    if (estimate>sbpi_mean):
-        logger.info(f"'do best!'")
+    if (estimate>sbpi_mean and sbpb_mean <= 0): #Bypass/Charge
+        logger.info(f"Cannot comply!")
+        return -19
         
     return  estimate # My solix only uses one channel
 
