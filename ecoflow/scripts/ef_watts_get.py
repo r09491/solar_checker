@@ -25,7 +25,7 @@ async def process_watts() -> int:
     
     dm = Delta_Max()    
     w = await dm.get_watts()
-    logger.info(f"Delta Max [sumin, sumout, usb1, usb2, qc1, qc2, pd1, pd2, acin, acout, xt60] is {w} watts")
+    print(f"{w}")
 
     return 0
 
