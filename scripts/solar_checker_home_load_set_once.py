@@ -107,9 +107,11 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.info(f'bank in STANDBY')
 
         
-    if smp[-1] > 800:
-        logger.error(f'Burst required.')
-        return 800
+    if (int(smp[-1]) > 800): # Only during BYPASS/DISCHARGE
+        estimate = 150 if int(sbpb[-1]) > 0 else 800
+        logger.error(f'Burst required "{estimate}"')
+        return estimate
+
     
     if sbpo[-1] == 0:
         logger.error(f'Solarbank has no output.')
