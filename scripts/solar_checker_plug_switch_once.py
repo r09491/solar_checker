@@ -88,21 +88,28 @@ async def main(
         logger.error(f'Samples from stdin are not valid')
         return -10
 
+    sbpb = c['SBPB'][-2:]
+    sbpb_mean = sbpb.mean()
+    logger.info(f'Last SBPB mean "{sbpb_mean:.0f}W"')
+
+    smp = c['SMP'][-2:]
+    smp_mean = smp.mean()
+    logger.info(f'Last SMP mean "{smp_mean:.0f}W"')
         
     spp =  c[SPP]
     sppon = spp[spp>0]
     sppon_mean = sppon.mean() if sppon.size > 0 else 0.0
     logger.info(f"Plug samples mean is {sppon_mean:.0f}W")
 
+    
     sppon_open = max(0.2*sppon_mean,10)
     logger.info(f"Open power is {sppon_open:.0f}W")
     sppon_closed = max(min(0.8*sppon_mean,100),5) 
+    if sbpb_mean < smp_mean < 0: # Internal to external charge
+        sppon_closed = max(sppon_closed + smp_mean, 5)
     logger.info(f"Closed power is {sppon_closed:.0f}W")
 
     
-    smp = c['SMP'][-2:]
-    smp_mean = smp.mean()
-    logger.info(f'Last SMP mean "{smp_mean:.0f}W"')
 
     # Switch to be Open if above import average
     is_to_open =  smp_mean > sppon_open

@@ -9,7 +9,6 @@
 
 solar_checker_latest_once.py --iv_ip apsystems \
 			     --sm_ip tasmota \
-			     --sp_switch_4 "plug0" \
 			     --sp_switch_3 "plug3" \
 			     --sp_switch_2 "plug2" \
 			     --sp_switch_1 "plug1" >> \

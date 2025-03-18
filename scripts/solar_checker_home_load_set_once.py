@@ -117,7 +117,8 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.error(f'Solarbank has no output.')
         return -18
 
-    KP, KI, KD = 0.4, 0.1, 0.2
+    ##KP, KI, KD = 0.4, 0.1, 0.2
+    KP, KI, KD = 1.0, 0.0, 0.0
     logger.info(f"KP {KP}, KI {KI}, KD {KD}")
     P, I, D = KP*smp[-1], KI*smp.sum(), KD*(smp[-1]-smp[-2])
     logger.info(f"P {P:.0f}, I {I:.0f}, D {D:.0f}")
@@ -126,7 +127,9 @@ async def get_home_load_estimate(samples: int) -> int:
     estimate = sbpo[-1]+PID
 
     logger.info(f"home load proposal is '{estimate:.0f}W'")
-    ubound = 150 if sbpb_mean > 0 else 300 if sbsb_mean>0.4 else 800
+    ubound = 150 if sbpb_mean > 0 else 800
+    ##ubound = 150 if sbpb_mean > 0 else 400 if sbsb_mean<0.4 else 600
+    ##ubound = 150 if sbpb_mean > 0 else int(sbsb_mean*800)
     estimate = 10*int(min(max(estimate,100), ubound)/10)
     logger.info(f"constraint proposal is '{estimate}W'")
 
