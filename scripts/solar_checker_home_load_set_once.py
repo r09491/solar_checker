@@ -109,7 +109,7 @@ async def get_home_load_estimate(samples: int) -> int:
         
     if (int(smp[-1]) > 800): # Only during BYPASS/DISCHARGE
         estimate = 150 if int(sbpb[-1]) > 0 else 800
-        logger.error(f'Burst required "{estimate}"')
+        logger.info(f'Burst required "{estimate}"')
         return estimate
 
     

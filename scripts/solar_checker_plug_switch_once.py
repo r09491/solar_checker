@@ -105,9 +105,11 @@ async def main(
     sppon_open = max(0.2*sppon_mean,10)
     logger.info(f"Open power is {sppon_open:.0f}W")
     sppon_closed = max(min(0.8*sppon_mean,100),5) 
-    if sbpb_mean < smp_mean < 0: # Internal to external charge
-        sppon_closed = max(sppon_closed + smp_mean, 5)
     logger.info(f"Closed power is {sppon_closed:.0f}W")
+    if sbpb_mean < smp_mean < 0: # Internal to external charge
+        logger.info(f"Closed power adapted for charge/import")
+        sppon_closed = max(sppon_closed + smp_mean, 5)
+        logger.info(f"Adapted closed power is {sppon_closed:.0f}W")
 
     
 
