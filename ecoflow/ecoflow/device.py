@@ -89,5 +89,5 @@ class Device():
     async def get_quotas(self, quotas: list) -> list:
         params = {"quotas": quotas}
         data = (await self.post({"sn": self.sn, "params": params})).get("data")
-        return [data.get(q) for q in quotas] # ordered per quotas
+        return None if data is None else [data.get(q) for q in quotas] 
     

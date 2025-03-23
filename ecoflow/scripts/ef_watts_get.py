@@ -25,8 +25,10 @@ async def process_watts() -> int:
     
     dm = Delta_Max()    
     w = await dm.get_watts()
+    if w is None:
+        logger.error("Command failed!")
+        return -1
     print(f"{w}")
-
     return 0
 
 

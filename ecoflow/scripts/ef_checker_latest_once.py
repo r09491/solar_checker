@@ -47,7 +47,7 @@ async def dm_latest_get(dm: Delta_Max) -> str:
         text = ','.join(str(w) for w in watts.values())
     else:
         logger.error('No data from Delta Max')
-        text = ','.join('0' for w in range(len(WATTS+XT60_WATTS)))
+        text = ','.join('0' for w in range(len(WATTS+WATTS_XT60)))
 
     logger.info(f'dm_latest_get done')        
     return text
