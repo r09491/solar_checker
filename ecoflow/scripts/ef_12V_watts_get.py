@@ -25,7 +25,7 @@ async def process_12V_watts() -> int:
     
     dm = Delta_Max()    
     w = await dm.get_12V_watts()
-    logger.info(f"Delta Max 12V is {w} watts")
+    print(json.dumps(w))
 
     return 0
 

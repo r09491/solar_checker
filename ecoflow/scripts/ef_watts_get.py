@@ -28,7 +28,7 @@ async def process_watts() -> int:
     if w is None:
         logger.error("Command failed!")
         return -1
-    print(f"{w}")
+    print(json.dumps(w))
     return 0
 
 

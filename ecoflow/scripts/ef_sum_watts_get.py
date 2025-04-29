@@ -25,7 +25,7 @@ async def process_sum_watts() -> int:
     
     dm = Delta_Max()    
     w = await dm.get_sum_watts()
-    logger.info(f"Delta Max SUM [in, out] is {w} watts")
+    print(json.dumps(w))
 
     return 0
 

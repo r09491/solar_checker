@@ -24,11 +24,11 @@ from .helpers import (
 from .device import Device
 
 WATTS_SOC = ["soc", "socmin", "socmax", "soctime"] # 0 - 100, minutes
-WATTS_SUM = ['sumin', 'sumout']
-WATTS_USB = ['usb1', 'usb2', 'qc1', 'qc2', 'pd1', 'pd2']
-WATTS_AC = ['acin', 'acout', 'accharge']
-WATTS_XT60 = ['xt60']
-WATTS_12V = ['12V']
+WATTS_SUM = ["sumin", "sumout"]
+WATTS_USB = ["usb1", "usb2", "qc1", "qc2", "pd1", "pd2"]
+WATTS_AC = ["acin", "acout", "accharge"]
+WATTS_XT60 = ["xt60"]
+WATTS_12V = ["12V"]
 WATTS = WATTS_SOC + WATTS_SUM + WATTS_USB + WATTS_AC + WATTS_XT60 + WATTS_12V 
 
 
@@ -96,26 +96,26 @@ class Delta_Max(Device):
 
     async def get_sum_watts(self) -> list:
         quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
-        return await self.get_quotas(quotas)
-
+        watts = await self.get_quotas(quotas)
+        return dict(zip(WATTS_SUM, watts))
     
     async def get_12V_watts(self) -> list:
         quotas = ["mppt.carOutWatts"]
         watts = await self.get_quotas(quotas)
         watts[0] = int(watts[0]/10)
-        return watts
+        return dict(zip(WATTS_12V, watts))
     
     async def get_usb_watts(self) -> list:
         quotas = ["pd.usb1Watts", "pd.usb2Watts"]
         quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
         quotas += ["pd.typec1Watts", "pd.typec2Watts"]
-        return await self.get_quotas(quotas)
-
+        watts =  await self.get_quotas(quotas)
+        return dict(zip(WATTS_USB, watts)) # ordered per quotas
     
     async def get_ac_watts(self) -> list:
         quotas = ["inv.inputWatts", "inv.outputWatts"]
-        return await self.get_quotas(quotas)
-
+        watts =  await self.get_quotas(quotas)
+        return dict(zip(WATTS_AC, watts)) # ordered per quotas
     
     async def get_watts(self) -> dict:
         quotas = ["pd.soc"]

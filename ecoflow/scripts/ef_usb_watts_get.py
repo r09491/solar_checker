@@ -25,7 +25,7 @@ async def process_usb_watts() -> int:
     
     dm = Delta_Max()    
     w = await dm.get_usb_watts()
-    logger.info(f"Delta Max USB [usb1, usb2, qc1, qc2, pd1, pd2] is {w} watts")
+    print(json.dumps(w))
 
     return 0
 
