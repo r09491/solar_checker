@@ -12,13 +12,17 @@ import sys
 import argparse
 import asyncio
 
-from datetime import datetime
+import numpy as np
 
-from brightsky import Sky
+from datetime import datetime
 
 from aiohttp.client_exceptions import ClientConnectorError
 
 from dataclasses import dataclass
+
+from utils.common import t64_from_iso
+
+from brightsky import Sky
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +38,10 @@ async def main(sky: Sky, what: str) -> int:
             info = await sky.get_solar_info()
         elif what == "sources":
             info = await sky.get_sources_info()
+
+        # Remove time zone
+        index = np.array([t64_from_iso(t[:-6]) for t in info.index])
+        info.set_index(index, inplace = True)
         print(info)
 
         err = 0

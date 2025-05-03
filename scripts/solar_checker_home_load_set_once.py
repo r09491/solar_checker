@@ -108,7 +108,7 @@ async def get_home_load_estimate(samples: int) -> int:
 
         
     if (int(smp[-1]) > 800): # Only during BYPASS/DISCHARGE
-        estimate = 150 if int(sbpb[-1]) > 0 else 800
+        estimate = 200 if int(sbpb[-1]) > 0 else 800
         logger.info(f'Burst required "{estimate}"')
         return estimate
 
@@ -127,9 +127,7 @@ async def get_home_load_estimate(samples: int) -> int:
     estimate = sbpo[-1]+PID
 
     logger.info(f"home load proposal is '{estimate:.0f}W'")
-    ubound = 150 if sbpb_mean > 0 else 800
-    ##ubound = 150 if sbpb_mean > 0 else 400 if sbsb_mean<0.4 else 600
-    ##ubound = 150 if sbpb_mean > 0 else int(sbsb_mean*800)
+    ubound = 200 if sbpb_mean > 0 else 800
     estimate = 10*int(min(max(estimate,100), ubound)/10)
     logger.info(f"constraint proposal is '{estimate}W'")
 

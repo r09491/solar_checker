@@ -64,7 +64,7 @@ async def get_sun_adaptors(
 
     """ Time is in UTC """
     skytasks = [asyncio.create_task(
-        Sky(lat, lon, ld).get_sky_info()
+        Sky(lat, lon, ld, tz).get_sky_info()
     ) for ld in doi]
     
     """ Get the list of associated columns """
@@ -73,10 +73,10 @@ async def get_sun_adaptors(
         if s is None: return None
 
     """ Unify the indices. Takes care of summertime and wintertime """
-    skyindex = sky[0].index.map(t64_from_iso).tz_localize(None)
+    skyindex = np.array([t64_from_iso(t[:-6]) for t in sky[0].index])
     for s in sky:
         s.set_index(skyindex, inplace = True)
-    
+
     H = 60        
     k0 = sky[0].sunshine
     k1 = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])

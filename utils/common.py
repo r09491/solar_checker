@@ -34,7 +34,9 @@ POWER_NAMES = [
 ]
 
 """ The power names for weather forecast """
-FORECAST_NAMES = POWER_NAMES[2:8]
+FORECAST_NAMES = [
+    'SBPI', 'SBPO', 'SBPB', 'SBSB'
+]
 
 """
 Only power samples may be used for predicts. For some sanmples it is
