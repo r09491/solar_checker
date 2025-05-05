@@ -340,13 +340,13 @@ async def partition_closest_watts(
     
     """ Make consistent """
     
-    cs = todaywatts.loc[:,'SBPB'].cumsum()
+    ##cs = todaywatts.loc[:,'SBPB'].cumsum()
     
     # Clear undercharging data 
-    undercharging = (cs<0) & (cs>-max_bat*min_soc)
-    todaywatts.loc[undercharging, 'SBPO'] += todaywatts.loc[undercharging, 'SBPB']
-    todaywatts.loc[undercharging, 'SBPB'] = 0
-    todaywatts.loc[undercharging, 'SBSB'] = min_soc
+    ##undercharging = (cs<0) & (cs>-max_bat*min_soc)
+    ##todaywatts.loc[undercharging, 'SBPO'] += todaywatts.loc[undercharging, 'SBPB']
+    ##todaywatts.loc[undercharging, 'SBPB'] = 0
+    ##todaywatts.loc[undercharging, 'SBSB'] = min_soc
     
     # Clear overcharging data
     ##overcharging = cs<-max_bat
@@ -374,13 +374,13 @@ async def partition_closest_watts(
 
     """ Make consistent """
 
-    cs = tomorrowwatts.loc[:,'SBPB'].cumsum()
+    ##cs = tomorrowwatts.loc[:,'SBPB'].cumsum()
 
     # Clear undercharging data 
-    undercharging = ((cs<0) &(cs>-max_bat*min_soc))
-    tomorrowwatts.loc[undercharging, 'SBPO'] += tomorrowwatts.loc[undercharging, 'SBPB']
-    tomorrowwatts.loc[undercharging, 'SBPB'] = 0
-    tomorrowwatts.loc[undercharging, 'SBSB'] = min_soc
+    ##undercharging = ((cs<0) &(cs>-max_bat*min_soc))
+    ##tomorrowwatts.loc[undercharging, 'SBPO'] += tomorrowwatts.loc[undercharging, 'SBPB']
+    ##tomorrowwatts.loc[undercharging, 'SBPB'] = 0
+    ##tomorrowwatts.loc[undercharging, 'SBSB'] = min_soc
     
     # Clear overcharging data
     ##overcharging = cs<-max_bat

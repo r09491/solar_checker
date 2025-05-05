@@ -13,11 +13,9 @@ logger = logging.getLogger(__name__)
 import sys
 import asyncio
 
-from datetime import datetime
-
 import numpy as np
 
-
+from datetime import datetime
 
 from ..typing import(
     f64, f64s, t64, t64s, strings
@@ -29,18 +27,17 @@ from ..common import(
 
 from ..csvlog import get_log
 
+
 def _str2float(value: str) -> f64:
     try:
         return f64(value)
     except:
         return None
-
+    
 async def get_columns_from_csv(
         logday: str = None,
         logprefix: str = None,
         logdir: str = None) -> dict:
-
-    __me__='_get_columns_from_csv'
         
     df = await get_log(
         logcols=SAMPLE_NAMES,
@@ -50,7 +47,7 @@ async def get_columns_from_csv(
     )
 
     if df is None:
-        logger.error(f'{__me__}:Undefined LOG file')
+        logger.error(f'Undefined LOG file')
         return None
     
     """ The timestamps """
@@ -160,22 +157,8 @@ async def get_columns_from_csv(
     ive2[ive2<0.0] = 0.0
     ive2[np.argmax(ive2)+1:] = ive2[np.argmax(ive2)]
 
-    logger.info(f'{__me__}: done')
     return {'TIME' : time,
             'SMP' : smp, 'IVP1' : ivp1, 'IVP2' : ivp2,
             'SME' : sme, 'IVE1' : ive1, 'IVE2' : ive2, 'SPPH' : spph,
             'SBPI' : sbpi, 'SBPO' : sbpo, 'SBPB' : sbpb, 'SBSB' : sbsb,
             'SPP1' : spp1, 'SPP2' : spp2, 'SPP3' : spp3, 'SPP4' : spp4}
-
-"""
-async def get_columns_from_csv(
-        logday: str = None,
-        logprefix: str = None,
-        logdir: str = None) -> dict:
-    if sys.version_info >= (3, 9): 
-        from asyncio import to_thread
-        return await asyncio.to_thread(
-            _get_columns_from_csv, **vars()) 
-    else:
-        return _get_columns_from_csv(**vars())
-"""

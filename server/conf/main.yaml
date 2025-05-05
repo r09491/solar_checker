@@ -6,7 +6,7 @@ logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
 logpredictformat : '??0[56]??'
 logpredictmaxdays : 180
-logpredictdays : 3
+logpredictdays : 2
 logpredictcolumns: 'SBPI'
 
 energy_price:
