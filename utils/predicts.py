@@ -28,10 +28,6 @@ from .typing import (
     f64, t64, Any, Optional, List, Dict
     )
 from .common import (
-    FORECAST_NAMES,
-    PARTITION_NAMES
-)
-from .common import (
     t64_first,
     t64_last,
     t64_to_hm,
@@ -43,63 +39,15 @@ from .common import (
     ymd_yesterday,
     ymd_over_t64
     )
+from .common import (
+    PARTITION_NAMES
+)
 from .samples import(
     get_columns_from_csv,
 )
 from .csvlog import(
     get_logdays
 )
-
-from brightsky import Sky
-
-
-
-""" Get the factors to adapt the average of the closest days to the
-current sun situation """
-async def get_sun_adaptors(
-        doi: list,
-        lat: float,
-        lon: float,
-        tz: str) -> List:
-
-    """ Time is in UTC """
-    skytasks = [asyncio.create_task(
-        Sky(lat, lon, ld, tz).get_sky_info()
-    ) for ld in doi]
-    
-    """ Get the list of associated columns """
-    sky = await asyncio.gather(*skytasks)
-    for s in sky:
-        if s is None: return None
-
-    """ Unify the indices. Takes care of summertime and wintertime """
-    skyindex = np.array([t64_from_iso(t[:-6]) for t in sky[0].index])
-    for s in sky:
-        s.set_index(skyindex, inplace = True)
-
-    H = 60        
-    k0 = sky[0].sunshine
-    k1 = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
-
-    return 1 + (k0-k1)/H
-
-
-""" Apply the sun adapters to the phase """
-def apply_sun_adapters( phasewatts: pd.DataFrame,
-                        adapter: pd.DataFrame) -> pd.DataFrame:
-
-    if adapter is None or phasewatts.empty:
-        logger.warning(f'Watts for phase is not modified')
-        return phasewatts
-    
-    t = phasewatts.index[0]
-    tt = phasewatts.index[-1]
-    while t<tt:
-        phasewatts.loc[t64_h_first(t):t64_h_last(t),
-                       FORECAST_NAMES] *= adapter[t64_h_first(t)]
-        t = t64_h_next(t)
-    return phasewatts
-
 
 """ Get the list of logdays and the list of dictionaries with all the
 recordings """

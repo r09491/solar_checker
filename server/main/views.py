@@ -29,12 +29,14 @@ from utils.samples import (
     get_kwh_sum_month_unified,
     get_kwh_sum_year_unified
 )
+from utils.casts import(
+    get_sun_adapters,
+    apply_sun_adapters,
+)
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     partition_closest_watts,
-    get_sun_adaptors,
-    apply_sun_adapters,
     concat_today,
     concat_tomorrow,
     concat_total,
@@ -263,8 +265,8 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Get the sun adapters for today and tomorrow """
     todayadapters, tomorrowadapters = await asyncio.gather(
-        get_sun_adaptors(todaydoi, lat, lon, tz),
-        get_sun_adaptors(tomorrowdoi, lat, lon, tz)
+        get_sun_adapters(todaydoi, lat, lon, tz),
+        get_sun_adapters(tomorrowdoi, lat, lon, tz)
     )
 
 

@@ -45,7 +45,7 @@ async def get_logdays(logprefix: str,
 
 
 def _get_log(
-        logcols: list,
+        logcols: List,
         logday: str = None,
         logprefix: str = None,
         logdir: str = None) -> Dict:
@@ -65,7 +65,7 @@ def _get_log(
     return samples
 
 async def get_log(
-        logcols: list,
+        logcols: List,
         logday: str = None,
         logprefix: str = None,
         logdir: str = None) -> Dict:
@@ -80,7 +80,7 @@ async def get_log(
 """ Get the list of logdays and the list of dictionaries with all the
 recordings """
 async def get_logs(
-        logcols: list,
+        logcols: List,
         logmaxdays: int,
         logdayformat: str,
         logprefix: str,

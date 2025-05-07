@@ -58,6 +58,7 @@ setup(name='solar_checker',
           'utils.csvlog',
           'utils.samples',
           'utils.plots',
+          'utils.casts',
       ],
       install_requires=[
           'aiohttp',
