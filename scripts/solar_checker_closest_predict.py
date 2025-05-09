@@ -32,13 +32,15 @@ from utils.common import (
     hm_to_t64,
     t64_to_hm
 )
+from utils.weather import (
+    get_sun_adapters,
+    apply_sun_adapters,
+)
 from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     partition_closest_watts,
-    get_sun_adaptors,
-    apply_sun_adapters,
-    fix_prediction_watts,
+    ##fix_prediction_watts,
     get_predict_table,
     concat_today,
     concat_tomorrow,
@@ -203,8 +205,8 @@ async def main( args: Script_Arguments) -> int:
         )
 
         todayadapters, tomorrowadapters = await asyncio.gather(
-            get_sun_adaptors(todaydoi, args.lat, args.lon, args.tz),
-            get_sun_adaptors(tomorrowdoi, args.lat, args.lon, args.tz)
+            get_sun_adapters(todaydoi, args.lat, args.lon, args.tz),
+            get_sun_adapters(tomorrowdoi, args.lat, args.lon, args.tz)
         )
 
 
@@ -218,16 +220,6 @@ async def main( args: Script_Arguments) -> int:
             partitions['tomorrowwatts1'], tomorrowadapters)
         partitions['tomorrowwatts2'] = apply_sun_adapters(
             partitions['tomorrowwatts2'], tomorrowadapters)
-
-        
-        """ Fix some watts after plausibility check """
-        
-        partitions['todaywatts'], _ = fix_prediction_watts(
-            partitions['todaywatts'], -soc*1600)
-        partitions['tomorrowwatts1'], _ = fix_prediction_watts(
-            partitions['tomorrowwatts1'])
-        partitions['tomorrowwatts2'], _ = fix_prediction_watts(
-            partitions['tomorrowwatts2'])
         
         print_predict(*get_predict_table(partitions))
 

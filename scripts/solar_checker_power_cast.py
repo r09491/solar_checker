@@ -35,7 +35,7 @@ from utils.common import(
 from utils.samples import(
     get_columns_from_csv
 )
-from utils.casts import(
+from utils.weather import(
     get_sun_adapters
 )
 
