@@ -50,7 +50,7 @@ async def get_sun_adapters(
         doi: list,
         lat: float,
         lon: float,
-        tz: str) -> List:
+        tz: str) -> pd.Series:
 
     """ Time is in UTC """
     skytasks = [asyncio.create_task(
@@ -67,11 +67,13 @@ async def get_sun_adapters(
     for s in sky:
         s.set_index(skyindex, inplace = True)
 
-    H = 60        
     k0 = sky[0].sunshine
     k1 = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
 
-    return 1 + (k0-k1)/H
+    return pd.Series(
+        index = k0.index,
+        data = [v1/v2 if v2>0 else 1.0 for (v1,v2) in zip(k0,k1)]
+    )[:-1]
 
 
 """ Apply the sun adapters to the phase """

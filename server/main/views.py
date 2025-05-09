@@ -29,7 +29,7 @@ from utils.samples import (
     get_kwh_sum_month_unified,
     get_kwh_sum_year_unified
 )
-from utils.casts import(
+from utils.weather import(
     get_sun_adapters,
     apply_sun_adapters,
 )
