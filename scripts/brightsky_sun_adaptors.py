@@ -16,7 +16,7 @@ import asyncio
 
 from datetime import datetime
 
-from utils.casts import get_sun_adapters
+from utils.weather import get_sun_adapters
 
 from aiohttp.client_exceptions import ClientConnectorError
 

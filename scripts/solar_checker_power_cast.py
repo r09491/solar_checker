@@ -62,10 +62,11 @@ async def get_logs_from_list(
     return pd.DataFrame(index = logdays, data=logcolumns)[logcols]
 
 
-async def get_w_cast(
+async def cast_watts(
         lat: float, lon: float,
         to_day: str, from_day: str, tz: str,
-        logprefix: str, logdir: str
+        logprefix: str, logdir: str,
+        skip_sun: bool = False
 ) -> Dict:
 
     logdays = [to_day, from_day]
@@ -94,20 +95,23 @@ async def get_w_cast(
     )
 
     # Determine the candidates for the cast
-    cast_df = from_day_df.loc[to_day_df.index[-1]:].iloc[1:]
+    cast_df = from_day_df.loc[to_day_df.index[-1]:].iloc[1:].copy()
 
-    
-    # Acquire the transformation factors
-    adapters = await get_sun_adapters(
+    if not skip_sun:
+        logger.info(f'Adapting power to sun')
+
+        # Acquire the transformation factors
+        adapters = await get_sun_adapters(
             doi = logdays, tz = tz, lat = lat, lon = lon
-    )
+        )
 
-    # Do the cast
-    for t in adapters.index:
-        cast_df.loc[t64_h_first(t):t64_h_last(t),
-                    ['SBPI', 'SBPO', 'SBPB']][:-1] *= adapters.loc[t]
-
+        cast_h_first = t64_h_first(cast_df.index[0])
         
+        # Do the cast
+        for t in adapters.loc[cast_h_first:].index:
+            cast_df.loc[t64_h_first(t):t64_h_last(t),
+                        ['SBPI', 'SBPO', 'SBPB']] *= adapters.loc[t]
+
     # Concat the result for the complete day
     result_df = pd.concat(
         [to_day_df, cast_df], sort = False
@@ -132,32 +136,19 @@ async def get_w_cast(
 async def main(
         lat: float, lon: float,
         to_day: str, from_day: str, tz: str,
-        logprefix: str, logdir: str
+        logprefix: str, logdir: str,
+        skip_sun:bool
 ) -> int:
 
-    w_cast = await get_w_cast(
+    cast_w = await cast_watts(
         lat, lon,
         to_day, from_day, tz,
-        logprefix, logdir
+        logprefix, logdir,
+        skip_sun
     )
 
-    watts_from_df = w_cast["watts_from"]
-    watts_to_df = w_cast["watts_to"]
-
-    """
-    sun_first = w_cast["sun_first"]
-    real_last = w_cast["real_last"]
-    sun_df = watts_df.loc[sun_first:real_last]
-
-    sun_mtimes = sun_df.index
-    sun_htimes = [sun_mtimes[t] for t in range(0, len(sun_mtimes), 60)]
-    sun_means = [sun_df.loc[t64_h_first(h):t64_h_last(h)].mean(axis=0) for h in sun_htimes]
-    sun_means_df = pd.DataFrame(index = sun_htimes, data = sun_means)
-    print("Watts forecast during sunshine per hour [Wh]")
-    print(sun_means_df)
-    print("Total [Wh]")
-    print(sun_means_df.sum())
-    """
+    watts_from_df = cast_w["watts_from"]
+    watts_to_df = cast_w["watts_to"]
 
     watts_from_mtimes = watts_from_df.index
     # Every now and then some samples ar lost, set first explicitly!
@@ -182,6 +173,7 @@ async def main(
         .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
         for h in watts_to_htimes
     ])
+
     sbpb_to_means = np.array([
         watts_to_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPB'].mean(axis=0)
@@ -198,48 +190,34 @@ async def main(
         for h in watts_to_htimes
     ])
 
-    sbpb_to_means_charge = sbpb_to_means.copy() 
-    sbpb_to_means_charge[sbpb_to_means>0] = 0
-    sbpb_to_means_discharge = sbpb_to_means.copy() 
-    sbpb_to_means_discharge[sbpb_to_means<0] = 0
+    sbpb_to_means_in = sbpb_to_means.copy() 
+    sbpb_to_means_in[sbpb_to_means>0] = 0
+    sbpb_to_means_out = sbpb_to_means.copy() 
+    sbpb_to_means_out[sbpb_to_means<0] = 0
     
-    smp_to_means_import = smp_to_means.copy() 
-    smp_to_means_import[smp_to_means<0] = 0
-    smp_to_means_export = smp_to_means.copy() 
-    smp_to_means_export[smp_to_means>0] = 0
+    smp_to_means_in = smp_to_means.copy() 
+    smp_to_means_in[smp_to_means<0] = 0
+    smp_to_means_out = smp_to_means.copy() 
+    smp_to_means_out[smp_to_means>0] = 0
 
     cast_means_df = pd.DataFrame(
         index = watts_from_htimes,
         data = {"BASE":sbpi_from_means,
                 "SUN":sbpi_to_means,
-                ">BAT":sbpb_to_means_charge,
-                "BAT>":sbpb_to_means_discharge,
+                ">BAT":sbpb_to_means_in,
+                "BAT>":sbpb_to_means_out,
                 "BANK":sbpo_to_means,
-                ">GRID":smp_to_means_export,
-                "GRID>":smp_to_means_import
+                ">GRID":smp_to_means_out,
+                "GRID>":smp_to_means_in
         }
     )
 
     print("Watts forecast during sunshine per hour [W]")
     print(cast_means_df)
-
+    print("Total:")
     print(cast_means_df.sum())
 
-
     err = 0
-
-    """
-    try:
-
-        err = 0
-    except ClientConnectorError:
-        logger.error('Cannot connect to server.')
-        err = 1
-    except TypeError:
-        logger.error('Unexpected exception TypeError')
-        err = 2
-    """
-    
     return err
 
 
@@ -252,6 +230,7 @@ class Script_Arguments:
     tz: str
     logprefix:str
     logdir:str
+    skip_sun:bool
 
 def parse_arguments() -> Script_Arguments:
     """Parse command line arguments"""
@@ -282,14 +261,18 @@ def parse_arguments() -> Script_Arguments:
                         help = "Prefix of the record file'")
 
     parser.add_argument('--logdir', type = str, required = True,
-                        help = "Directory of the record files'")
+                        help = "Directory of the record files")
+
+    parser.add_argument('--skip_sun', type = int, default = 0,
+                        help = "Switch to control sun adaptation")
 
     args = parser.parse_args()
 
     return Script_Arguments(
         args.lat, args.lon,
         args.to_day, args.from_day, args.tz,
-        args.logprefix, args.logdir
+        args.logprefix, args.logdir,
+        args.skip_sun
     )
 
 
@@ -323,7 +306,8 @@ if __name__ == '__main__':
     try:
         err = asyncio.run(main(args.lat, args.lon,
                                args.to_day, args.from_day, args.tz,
-                               args.logprefix, args.logdir))
+                               args.logprefix, args.logdir,
+                               args.skip_sun != 0))
     except KeyboardInterrupt: 
         err = 99
        
