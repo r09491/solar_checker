@@ -30,7 +30,8 @@ from utils.common import(
     ymd_over_t64,
     t64_first,
     t64_h_first,
-    t64_h_last
+    t64_h_last,
+    t64_to_hm
 )
 from utils.samples import(
     get_columns_from_csv
@@ -66,7 +67,8 @@ async def cast_watts(
         lat: float, lon: float,
         to_day: str, from_day: str, tz: str,
         logprefix: str, logdir: str,
-        skip_sun: bool = False
+        skip_sun: bool = False,
+        sbpi_max: int = 800
 ) -> Dict:
 
     logdays = [to_day, from_day]
@@ -78,7 +80,7 @@ async def cast_watts(
         logprefix = logprefix,
         logdir = logdir)
 
-    # Get the acquired samples for the day to forecast.
+    # Get the already acquired samples for the day to forecast.
     # Timestamps are normalised to the minute
     to_day_df = pd.DataFrame(
         index = [t64_first(t)
@@ -94,24 +96,37 @@ async def cast_watts(
         data = dict(logsdf.loc[from_day, PREDICT_POWER_NAMES[1:-1]])
     )
 
-    # Determine the candidates for the cast
+    # Copy the candidates for the cast
     cast_df = from_day_df.loc[to_day_df.index[-1]:].iloc[1:].copy()
 
     if not skip_sun:
-        logger.info(f'Adapting power to sun')
+        logger.info(f'Adapting the power for the cast day to sun radiation')
 
         # Acquire the transformation factors
         adapters = await get_sun_adapters(
             doi = logdays, tz = tz, lat = lat, lon = lon
         )
 
+        # Determin the start for adaptation
         cast_h_first = t64_h_first(cast_df.index[0])
         
         # Do the cast
         for t in adapters.loc[cast_h_first:].index:
-            cast_df.loc[t64_h_first(t):t64_h_last(t),
-                        ['SBPI', 'SBPO', 'SBPB']] *= adapters.loc[t]
+            cast_df.loc[
+                t64_h_first(t):t64_h_last(t),
+                ['SBPI', 'SBPO', 'SBPB']
+            ] *= adapters.loc[t]
 
+        # Limit sun radiation
+        _sbpb = cast_df.loc[:,'SBPB']             
+        _sbpo = cast_df.loc[:,'SBPO']            
+        _sbpi = cast_df.loc[:,'SBPI']            
+        _sbpi_max = _sbpi[_sbpi<sbpi_max].max()
+        _ = _sbpi >_sbpi_max
+        _sbpi[_] = _sbpi_max
+        _sbpo[_] = _sbpi[_]+_sbpb[_] 
+
+            
     # Concat the result for the complete day
     result_df = pd.concat(
         [to_day_df, cast_df], sort = False
@@ -173,7 +188,7 @@ async def main(
         .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
         for h in watts_to_htimes
     ])
-
+    
     sbpb_to_means = np.array([
         watts_to_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPB'].mean(axis=0)
@@ -201,21 +216,36 @@ async def main(
     smp_to_means_out[smp_to_means>0] = 0
 
     cast_means_df = pd.DataFrame(
-        index = watts_from_htimes,
-        data = {"BASE":sbpi_from_means,
-                "SUN":sbpi_to_means,
-                ">BAT":sbpb_to_means_in,
-                "BAT>":sbpb_to_means_out,
-                "BANK":sbpo_to_means,
-                ">GRID":smp_to_means_out,
-                "GRID>":smp_to_means_in
+        ##index = watts_from_htimes,
+        data = {
+            "BASE":sbpi_from_means,
+            "SUN":sbpi_to_means,
+            ">BAT":sbpb_to_means_in,
+            "BAT>":sbpb_to_means_out,
+            "BANK":sbpo_to_means,
+            ">GRID":smp_to_means_out,
+            "GRID>":smp_to_means_in
         }
     )
 
-    print("Watts forecast during sunshine per hour [W]")
-    print(cast_means_df)
-    print("Total:")
-    print(cast_means_df.sum())
+    starts = [t64_to_hm(t64_h_first(h)) for h in watts_from_htimes]
+    stops = [t64_to_hm(t64_h_last(h)) for h in watts_from_htimes]
+    start_stop_df =pd.DataFrame({"START":starts, "STOP":stops})
+
+    print()
+    print("Power forecast per hour [W]")
+    print(pd.concat(
+        [start_stop_df,
+         cast_means_df
+        ], axis=1))
+
+    print()
+    print("Energy forecast per hour [Wh]")
+    print(pd.concat(
+        [start_stop_df,
+         cast_means_df.cumsum()
+        ], axis=1))
+
 
     err = 0
     return err
