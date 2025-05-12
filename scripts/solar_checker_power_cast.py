@@ -74,12 +74,16 @@ async def cast_watts(
     logdays = [to_day, from_day]
 
     # Get the df logs for the two days
-    logsdf = await get_logs_from_list(
-        logdays = logdays,
-        logcols = PREDICT_POWER_NAMES,
-        logprefix = logprefix,
-        logdir = logdir)
-
+    try:
+        logsdf = await get_logs_from_list(
+            logdays = logdays,
+            logcols = PREDICT_POWER_NAMES,
+            logprefix = logprefix,
+            logdir = logdir)
+    except AttributeError:
+        logger.error('Cannot read logs')
+        return None
+    
     # Get the already acquired samples for the day to forecast.
     # Timestamps are normalised to the minute
     to_day_df = pd.DataFrame(
@@ -106,6 +110,10 @@ async def cast_watts(
         adapters = await get_sun_adapters(
             doi = logdays, tz = tz, lat = lat, lon = lon
         )
+
+        if adapters is None:
+            logger.error('Cannot read adapters')
+            return None
 
         # Determin the start for adaptation
         cast_h_first = t64_h_first(cast_df.index[0])
@@ -162,47 +170,40 @@ async def main(
         skip_sun
     )
 
-    watts_from_df = cast_w["watts_from"]
+    if cast_w is None:
+        print(f'No cast available')
+        return -1
+
+    watts_from_df = cast_w["watts_from"] 
     watts_to_df = cast_w["watts_to"]
 
-    watts_from_mtimes = watts_from_df.index
-    # Every now and then some samples ar lost, set first explicitly!
-    watts_from_htimes = [
-        t64_h_first(watts_from_mtimes[t])
-        for t in range(0, len(watts_from_mtimes), 60)
-    ]
-    sbpi_from_means = np.array([
-        watts_from_df
-        .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
-        for h in watts_from_htimes
-    ])
+    # Every now and then some samples are missing. The 'to' is the master.
     
-    watts_to_mtimes = watts_to_df.index
-    # Every now and then some samples ar lost, set first explicitly!
-    watts_to_htimes = [
-        t64_h_first(watts_to_mtimes[t])
-        for t in range(0, len(watts_to_mtimes), 60)
+    mtimes = watts_to_df.index
+    htimes = [
+        t64_h_first(mtimes[t])
+        for t in range(0, len(mtimes), 60)
     ]
+
     sbpi_to_means = np.array([
         watts_to_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
-        for h in watts_to_htimes
+        for h in htimes
     ])
-    
     sbpb_to_means = np.array([
         watts_to_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPB'].mean(axis=0)
-        for h in watts_to_htimes
+        for h in htimes
     ])
     sbpo_to_means = np.array([
         watts_to_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPO'].mean(axis=0)
-        for h in watts_to_htimes
+        for h in htimes
     ])
     smp_to_means = np.array([
         watts_to_df
         .loc[t64_h_first(h):t64_h_last(h),'SMP'].mean(axis=0)
-        for h in watts_to_htimes
+        for h in htimes
     ])
 
     sbpb_to_means_in = sbpb_to_means.copy() 
@@ -215,8 +216,15 @@ async def main(
     smp_to_means_out = smp_to_means.copy() 
     smp_to_means_out[smp_to_means>0] = 0
 
+
+    sbpi_from_means = np.array([
+        watts_from_df
+        .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
+        for h in htimes
+    ])
+
     cast_means_df = pd.DataFrame(
-        ##index = watts_from_htimes,
+        ##index = htimes,
         data = {
             "BASE":sbpi_from_means,
             "SUN":sbpi_to_means,
@@ -228,8 +236,8 @@ async def main(
         }
     )
 
-    starts = [t64_to_hm(t64_h_first(h)) for h in watts_from_htimes]
-    stops = [t64_to_hm(t64_h_last(h)) for h in watts_from_htimes]
+    starts = [t64_to_hm(t64_h_first(h)) for h in htimes]
+    stops = [t64_to_hm(t64_h_last(h)) for h in htimes]
     start_stop_df =pd.DataFrame({"START":starts, "STOP":stops})
 
     print()
