@@ -76,6 +76,10 @@ def ymd_over_t64(t: t64, day: str) -> t64:
                         hour=dt_t.hour,
                         second=dt_t.second))
 
+def ymd_today() -> str:
+    dt_today = datetime.today()
+    return dt_today.strftime("%y%m%d")
+
 def ymd_tomorrow(today: str) -> str:
     dt_today = datetime.strptime(today, "%y%m%d")
     return (dt_today + timedelta(days=1)).strftime("%y%m%d")

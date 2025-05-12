@@ -27,7 +27,6 @@ from utils.common import (
     hm_to_t64
 )
 from utils.samples import (
-    get_logdays,
     get_columns_from_csv
 )
 
@@ -35,15 +34,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
-
-    
 @dataclass
 class Script_Arguments:
-    logdayformat: str
+    logday: str
     logprefix: str
     logdir: str
-    logtz: str
-    
 
 def parse_arguments() -> Script_Arguments:
     description='Convert time column to UTC'
@@ -53,8 +48,8 @@ def parse_arguments() -> Script_Arguments:
                         version = __version__)
 
     parser.add_argument(
-        '--logdayformat', type=str,
-        help = "Days to which to find the closest")
+        '--logday', type=str,
+        help = "Day to handle")
     
     parser.add_argument(
         '--logprefix', type=str,
@@ -64,69 +59,29 @@ def parse_arguments() -> Script_Arguments:
         '--logdir', type=str,
         help = "The directory the logfiles are stored")
     
-    parser.add_argument('--logtz', type = str, default='Europe/Berlin',
-                        help = "TZ of times to convert to UTC")
-
     args = parser.parse_args()
     
     return Script_Arguments(
-        args.logdayformat,
-        args.logprefix,
-        args.logdir,
-        args.logtz
-    )
-
-""" Get the list of logs"""
-async def get_logs(
-        logdayformat: str,
-        logprefix: str,
-        logdir: str) -> List:
-
-    """ Get the list of logdays """
-    logdays = (await get_logdays(
-        logprefix, logdir, logdayformat
-    ))
-
-    logtasks = [asyncio.create_task(
-        get_columns_from_csv(
-            ld, logprefix, logdir
-        )) for ld in logdays]
-    
-    """ Get the list of associated columns """
-    logcolumns = await asyncio.gather(*logtasks)
-
-    return pd.DataFrame(index = logdays, data = logcolumns)
-
-
-async def main( args: Script_Arguments) -> int:
-    args = parse_arguments()
-
-    """ Get the dictionary with all the power recordings per logdays """
-    logsdf = await get_logs(
-        args.logdayformat,
+        args.logday,
         args.logprefix,
         args.logdir
     )
 
-    logdays = logsdf.index.values
-    logger.info(f'Have {len(logdays)} logs')
-    
-    dfs = [pd.DataFrame(
-        data = dict(logsdf.loc[ld, :]),
-    ) for ld in logdays]
-
-    for df in dfs:
-        ##print(pd.to_datetime(df['TIME']).dt.tz_localize(args.logtz, ambiguous='infer')) #.dt.tz_convert('utc'))
-        df['TIME'] = pd.to_datetime(df['TIME']) \
-                       .dt.tz_localize(args.logtz, ambiguous= False) \
-                          .dt.tz_convert('utc') \
-                             .dt.tz_localize(None)
-
-        
-    dfs[-1].to_csv('zz.out', index=False)
-    #print(pd.to_datetime(basedfs[0].TIME).tz_localize('utc'))
-    #print(logsdf.iloc[0].loc['TIME',:])  ## .index.tz_localize('utc').tz_convert(args.tz))
-            
+async def main( args: Script_Arguments) -> int:
+    logger.info(1)
+    c1 = await get_columns_from_csv(
+        args.logday,
+        args.logprefix,
+        args.logdir
+    )
+    logger.info(2)
+    logger.info(3)
+    c2 = await get_columns_from_csv(
+        args.logday,
+        args.logprefix,
+        args.logdir
+    )
+    logger.info(4)
     return 0
 
 
