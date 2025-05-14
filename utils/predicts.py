@@ -135,15 +135,6 @@ async def find_closest(
     """ Get the start and stop of the radiation. The times are
     determined from the first input power column after TIME """
 
-    """
-    startontime, stopontime = get_on_times(
-        logsdf.loc[logday, [incols[0],
-                            incols[1][:-1]
-                            if incols[1][-1] == '+' else
-                            incols[1]]] # TIME and first column
-    )
-    """
-    
     startontime, stopontime = get_on_times(
         logsdf.loc[logday, ['TIME', 'SBPI']]
     )
@@ -286,23 +277,6 @@ async def partition_closest_watts(
     ) / len(todaydfs))[1:]
 
     
-    """ Make consistent """
-    
-    ##cs = todaywatts.loc[:,'SBPB'].cumsum()
-    
-    # Clear undercharging data 
-    ##undercharging = (cs<0) & (cs>-max_bat*min_soc)
-    ##todaywatts.loc[undercharging, 'SBPO'] += todaywatts.loc[undercharging, 'SBPB']
-    ##todaywatts.loc[undercharging, 'SBPB'] = 0
-    ##todaywatts.loc[undercharging, 'SBSB'] = min_soc
-    
-    # Clear overcharging data
-    ##overcharging = cs<-max_bat
-    ##todaywatts.loc[overcharging, 'SBPO'] -= todaywatts.loc[overcharging, 'SBPB']
-    ##todaywatts.loc[overcharging, 'SBPB'] = 0
-    ##todaywatts.loc[overcharging, 'SBSB'] = max_soc
-
-    
     """ The tomorrow data for the day from midnight """    
 
     tomorrowdfs = [
@@ -318,24 +292,6 @@ async def partition_closest_watts(
         lambda x,y: x+y,
         [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
-
-
-    """ Make consistent """
-
-    ##cs = tomorrowwatts.loc[:,'SBPB'].cumsum()
-
-    # Clear undercharging data 
-    ##undercharging = ((cs<0) &(cs>-max_bat*min_soc))
-    ##tomorrowwatts.loc[undercharging, 'SBPO'] += tomorrowwatts.loc[undercharging, 'SBPB']
-    ##tomorrowwatts.loc[undercharging, 'SBPB'] = 0
-    ##tomorrowwatts.loc[undercharging, 'SBSB'] = min_soc
-    
-    # Clear overcharging data
-    ##overcharging = cs<-max_bat
-    ##tomorrowwatts.loc[overcharging, 'SBPO'] -= tomorrowwatts.loc[overcharging, 'SBPB']
-    ##tomorrowwatts.loc[overcharging, 'SBPB'] = 0
-    ##tomorrowwatts.loc[overcharging, 'SBSB'] = max_soc
-
     
     tomorrowwatts1 = tomorrowwatts.loc[
         :ymd_over_t64(starttime, tomorrow)

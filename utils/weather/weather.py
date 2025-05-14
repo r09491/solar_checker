@@ -77,17 +77,37 @@ async def get_sun_adapters(
 
 
 """ Apply the sun adapters to the phase """
-def apply_sun_adapters( slicewatts: pd.DataFrame,
-                        adapter: pd.DataFrame) -> pd.DataFrame:
+def apply_sun_adapters( watts: pd.DataFrame,
+                        phase: str,
+                        adapters: pd.DataFrame) -> pd.DataFrame:
 
-    if adapter is None or slicewatts.empty:
-        logger.warning(f'Watts for phase is not modified')
-        return slicewatts
+    if adapters is None or watts[phase].empty:
+        logger.warning(f'Watts for phase "{phase}" is not modified')
+        return #watts
+
+    logger.info(f'Adapting watts "{phase}" to weather')
+
+    # Determine the start for adaptation
+    cast_h_first = t64_h_first(watts[phase].index[0])
+
+    # Do the cast
+    for t in adapters.loc[cast_h_first:].index:
+        watts[phase].loc[
+            t64_h_first(t):t64_h_last(t),
+            ['SBPI', 'SBPO', 'SBPB']
+        ] *= adapters.loc[t]
+
+    logger.info(f'Adapting watts "{phase}" to limits')
     
-    t = slicewatts.index[0]
-    tt = slicewatts.index[-1]
-    while t<tt:
-        slicewatts.loc[t64_h_first(t):t64_h_last(t),
-                       FORECAST_NAMES] *= adapter[t64_h_first(t)]
-        t = t64_h_next(t)
-    return slicewatts
+    # Limit sun radiation
+    _sbpb = watts[phase].loc[:,'SBPB']             
+    _sbpo = watts[phase].loc[:,'SBPO']            
+    _sbpi = watts[phase].loc[:,'SBPI']            
+    _sbpi_max = _sbpi[_sbpi<800].max()
+    _ = _sbpi >_sbpi_max
+    _sbpi[_] = _sbpi_max
+    _sbpo[_] = _sbpi[_]+_sbpb[_] 
+    watts[phase].loc[:,'SBPB'] = _sbpb             
+    watts[phase].loc[:,'SBPO'] = _sbpo           
+    watts[phase].loc[:,'SBPI'] = _sbpi
+

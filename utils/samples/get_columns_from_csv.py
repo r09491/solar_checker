@@ -15,8 +15,6 @@ import asyncio
 
 import numpy as np
 
-from datetime import datetime
-
 from ..typing import(
     f64, f64s, t64, t64s, strings
 )
@@ -32,16 +30,24 @@ from ..csvlog import get_log
 CACHE = dict()
 
 def cache(f):
+
     async def wrapper(*args, **kwargs):
-        logday = args[0]
-        if (logday == ymd_today()) or (not logday in CACHE):
+        logday = None if len(args) == 0 else args[0]
+
+        if ((logday == ymd_today()) or (logday is None)):
             data = await f(*args, **kwargs)
-            CACHE[logday] = data
-            logger.info(f'Stored values of "{logday}" in cache')
-        else:
-            data = CACHE[logday] 
+            return data
+        
+        if (logday in CACHE):
             logger.info(f'Using values of "{logday}" from cache')
+            data = CACHE[logday] 
+            return data
+        
+        data = await f(*args, **kwargs)
+        logger.info(f'Store values of "{logday}" in cache')
+        CACHE[logday] = data
         return data
+
     return wrapper
 
 def _str2float(value: str) -> f64:
