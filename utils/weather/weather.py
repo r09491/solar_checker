@@ -18,9 +18,8 @@ from ..typing import (
 from ..common import (
     t64_first,
     t64_last,
-    t64_to_hm,
+    t64_to_hm, 
     t64_from_iso,
-    t64_h_next,
     t64_h_first,
     t64_h_last,
     ymd_tomorrow,
@@ -94,7 +93,7 @@ def apply_sun_adapters( watts: pd.DataFrame,
     for t in adapters.loc[cast_h_first:].index:
         watts[phase].loc[
             t64_h_first(t):t64_h_last(t),
-            ['SBPI', 'SBPO', 'SBPB']
+            ['SBPI']
         ] *= adapters.loc[t]
 
     logger.info(f'Adapting watts "{phase}" to limits')
@@ -107,7 +106,7 @@ def apply_sun_adapters( watts: pd.DataFrame,
     _ = _sbpi >_sbpi_max
     _sbpi[_] = _sbpi_max
     _sbpo[_] = _sbpi[_]+_sbpb[_] 
-    watts[phase].loc[:,'SBPB'] = _sbpb             
+    ##watts[phase].loc[:,'SBPB'] = _sbpb             
     watts[phase].loc[:,'SBPO'] = _sbpo           
     watts[phase].loc[:,'SBPI'] = _sbpi
 

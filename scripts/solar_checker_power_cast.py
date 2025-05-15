@@ -122,7 +122,7 @@ async def cast_watts(
         for t in adapters.loc[cast_h_first:].index:
             cast_df.loc[
                 t64_h_first(t):t64_h_last(t),
-                ['SBPI', 'SBPO', 'SBPB']
+                ['SBPI']
             ] *= adapters.loc[t]
 
         # Limit sun radiation
