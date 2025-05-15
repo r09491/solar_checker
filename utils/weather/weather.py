@@ -93,7 +93,7 @@ def apply_sun_adapters( watts: pd.DataFrame,
     for t in adapters.loc[cast_h_first:].index:
         watts[phase].loc[
             t64_h_first(t):t64_h_last(t),
-            ['SBPI']
+            ['SBPI','SBPO']
         ] *= adapters.loc[t]
 
     logger.info(f'Adapting watts "{phase}" to limits')
@@ -105,7 +105,8 @@ def apply_sun_adapters( watts: pd.DataFrame,
     _sbpi_max = _sbpi[_sbpi<800].max()
     _ = _sbpi >_sbpi_max
     _sbpi[_] = _sbpi_max
-    _sbpo[_] = _sbpi[_]+_sbpb[_] 
+    ##_sbpo[_] = _sbpi[_]+_sbpb[_][_sbpb[_]<0]
+    ##_sbpo[_sbpo>_sbpi] = _sbpi[_sbpo>_sbpi]
     ##watts[phase].loc[:,'SBPB'] = _sbpb             
     watts[phase].loc[:,'SBPO'] = _sbpo           
     watts[phase].loc[:,'SBPI'] = _sbpi
