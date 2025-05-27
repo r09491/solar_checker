@@ -56,12 +56,12 @@ def _get_kwh_line(
         # Selection Area
         ax.axvspan(tphases[0], tphases[1], 
                    color ='olive',
-                   alpha = 0.2)        
+                   alpha = 0.3)        
         # Cast area
         if len(tphases)>2:
             ax.axvspan(tphases[2], tphases[3], 
                        color ='white',
-                       alpha = 0.5)        
+                       alpha = 0.6)        
     
     if sbeoon is not None:
         ax.fill_between(time, 0, sbeo,

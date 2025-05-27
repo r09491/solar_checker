@@ -86,12 +86,14 @@ def apply_sun_adapters( watts: pd.DataFrame,
 
     logger.info(f'Adapting watts "{phase}" to weather')
 
+    w =watts[phase]
+
     # Determine the start for adaptation
-    cast_h_first = t64_h_first(watts[phase].index[0])
+    cast_h_first = t64_h_first(w.index[0])
 
     # Do the cast
     for t in adapters.loc[cast_h_first:].index:
-        watts[phase].loc[
+        w.loc[
             t64_h_first(t):t64_h_last(t),
             ['SBPI','SBPO']
         ] *= adapters.loc[t]
@@ -99,15 +101,22 @@ def apply_sun_adapters( watts: pd.DataFrame,
     logger.info(f'Adapting watts "{phase}" to limits')
     
     # Limit sun radiation
-    _sbpb = watts[phase].loc[:,'SBPB']             
-    _sbpo = watts[phase].loc[:,'SBPO']            
-    _sbpi = watts[phase].loc[:,'SBPI']            
-    _sbpi_max = _sbpi[_sbpi<800].max()
-    _ = _sbpi >_sbpi_max
-    _sbpi[_] = _sbpi_max
-    ##_sbpo[_] = _sbpi[_]+_sbpb[_][_sbpb[_]<0]
-    ##_sbpo[_sbpo>_sbpi] = _sbpi[_sbpo>_sbpi]
-    ##watts[phase].loc[:,'SBPB'] = _sbpb             
-    watts[phase].loc[:,'SBPO'] = _sbpo           
-    watts[phase].loc[:,'SBPI'] = _sbpi
+    sbpb = w.loc[:,'SBPB']             
+    sbpo = w.loc[:,'SBPO']            
+    sbpi = w.loc[:,'SBPI']            
 
+    _, __ =(sbpi>800), (sbpi>0) & (sbpi<800)
+    sbpi_mean = sbpi[__].mean()
+    sbpi[_] = sbpo[_] = sbpi_mean
+    
+    ##_= sbpi>0
+    sbpb[__] = sbpo[__] - sbpi[__]
+    sbpb[__][sbpb[__]>0] = 0
+    
+    sbpo[~__] = sbpb[~__]
+    
+    watts[phase].loc[:,'SBPB'] = sbpb           
+    watts[phase].loc[:,'SBPO'] = sbpo           
+    watts[phase].loc[:,'SBPI'] = sbpi
+
+    

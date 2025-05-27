@@ -2,10 +2,13 @@ import asyncio
 from aiohttp import web
 import aiohttp_jinja2
 
-from datetime import datetime
-
 import numpy as np
 import pandas as pd
+
+from datetime import(
+    datetime,
+    timedelta
+)
 
 from utils.typing import (
     f64, f64s, t64, t64s, timeslots
@@ -217,6 +220,8 @@ async def plot_predict(request: web.Request) -> dict:
     logpredictcolumns = conf['logpredictcolumns']
 
     lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
+
+    cast_find_hours = conf['cast_find_hours']
     
     try:
         logday = request.match_info['logday']
@@ -239,8 +244,12 @@ async def plot_predict(request: web.Request) -> dict:
     )
 
 
-    """ Get the start and stop time for the reference slot """
-    starttime, stoptime = None, None
+    """ Preset the start and stop time for the find slot """
+    stoptime = pd.to_datetime(logsdf.loc[logday, 'TIME'][-1])
+    starttime = stoptime - timedelta(hours=cast_find_hours)    
+
+    """ Get the list of closest days to the logday. The start and stop
+    time may be ovverriden as per real radiation """
     starttime, stoptime, closestdays = await find_closest(
         logsdf, logday, starttime, stoptime, logpredictcolumns
     )
@@ -347,7 +356,6 @@ async def plot_predict(request: web.Request) -> dict:
 
     atable = pd.concat([rtable.iloc[:,:2],
                         rtable.iloc[:,2:].cumsum()], axis = 1)
-    #atable['BAT>'] =  ptable['BAT>'].cumsum() - full_wh*bat_start_soc 
     atable['START'] = "00:00"
     
     return {'what': what,

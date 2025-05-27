@@ -71,6 +71,10 @@ async def cast_watts(
         sbpi_max: int = 800
 ) -> Dict:
 
+    if (to_day == from_day):
+        logger.error('Cannot predict from the same days.')
+        return None
+
     logdays = [to_day, from_day]
 
     # Get the df logs for the two days
@@ -103,6 +107,13 @@ async def cast_watts(
     # Copy the candidates for the cast
     cast_df = from_day_df.loc[to_day_df.index[-1]:].iloc[1:].copy()
 
+    # Merge the time slots of the already acquired data with with the
+    # remaining time slots of the base day. Sun adaptors not
+    # considered yet
+    to_day_merge_df = pd.concat(
+        [to_day_df, cast_df], sort = False
+    )
+
     if not skip_sun:
         logger.info(f'Adapting the power for the cast day to sun radiation')
 
@@ -129,28 +140,33 @@ async def cast_watts(
         _sbpb = cast_df.loc[:,'SBPB']             
         _sbpo = cast_df.loc[:,'SBPO']            
         _sbpi = cast_df.loc[:,'SBPI']            
-        _sbpi_max = _sbpi[_sbpi<sbpi_max].max()
-        _ = _sbpi >_sbpi_max
+
+        _ = _sbpi < sbpi_max
+        _sbpi_max = _sbpi[_].max()
+        _ = _sbpi >=_sbpi_max
         _sbpi[_] = _sbpi_max
-        _sbpo[_] = _sbpi[_]+_sbpb[_] 
+    
+        _ = _sbpb > 0
+        _sbpo[_] = _sbpb[_]
 
             
     # Concat the result for the complete day
-    result_df = pd.concat(
+    to_day_cast_df = pd.concat(
         [to_day_df, cast_df], sort = False
     )
 
     # Calc some amplyfing data
     
-    issun = result_df.loc[:,'SBPI']>0
-    sun_df = result_df.loc[issun]
+    issun = to_day_cast_df.loc[:,'SBPI']>0
+    sun_df = to_day_cast_df.loc[issun]
     sun_first = sun_df.index[0]
     sun_last = sun_df.index[-1]
 
     real_last = to_day_df.index[-1]
 
     return {"watts_from":from_day_df,
-            "watts_to":result_df,
+            "watts_merge":to_day_merge_df,
+            "watts_cast":to_day_cast_df,
             "sun_first":sun_first,
             "sun_last":sun_last,
             "real_last":real_last}
@@ -175,46 +191,47 @@ async def main(
         return -1
 
     watts_from_df = cast_w["watts_from"] 
-    watts_to_df = cast_w["watts_to"]
+    watts_merge_df = cast_w["watts_merge"]
+    watts_cast_df = cast_w["watts_cast"]
 
     # Every now and then some samples are missing. The 'to' is the master.
     
-    mtimes = watts_to_df.index
+    mtimes = watts_cast_df.index
     htimes = [
         t64_h_first(mtimes[t])
         for t in range(0, len(mtimes), 60)
     ]
 
-    sbpi_to_means = np.array([
-        watts_to_df
+    sbpi_cast_means = np.array([
+        watts_cast_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
         for h in htimes
     ])
-    sbpb_to_means = np.array([
-        watts_to_df
+    sbpb_cast_means = np.array([
+        watts_cast_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPB'].mean(axis=0)
         for h in htimes
     ])
-    sbpo_to_means = np.array([
-        watts_to_df
+    sbpo_cast_means = np.array([
+        watts_cast_df
         .loc[t64_h_first(h):t64_h_last(h),'SBPO'].mean(axis=0)
         for h in htimes
     ])
-    smp_to_means = np.array([
-        watts_to_df
+    smp_cast_means = np.array([
+        watts_cast_df
         .loc[t64_h_first(h):t64_h_last(h),'SMP'].mean(axis=0)
         for h in htimes
     ])
 
-    sbpb_to_means_in = sbpb_to_means.copy() 
-    sbpb_to_means_in[sbpb_to_means>0] = 0
-    sbpb_to_means_out = sbpb_to_means.copy() 
-    sbpb_to_means_out[sbpb_to_means<0] = 0
+    sbpb_cast_means_in = sbpb_cast_means.copy() 
+    sbpb_cast_means_in[sbpb_cast_means>0] = 0
+    sbpb_cast_means_out = sbpb_cast_means.copy() 
+    sbpb_cast_means_out[sbpb_cast_means<0] = 0
     
-    smp_to_means_in = smp_to_means.copy() 
-    smp_to_means_in[smp_to_means<0] = 0
-    smp_to_means_out = smp_to_means.copy() 
-    smp_to_means_out[smp_to_means>0] = 0
+    smp_cast_means_in = smp_cast_means.copy() 
+    smp_cast_means_in[smp_cast_means<0] = 0
+    smp_cast_means_out = smp_cast_means.copy() 
+    smp_cast_means_out[smp_cast_means>0] = 0
 
 
     sbpi_from_means = np.array([
@@ -223,16 +240,23 @@ async def main(
         for h in htimes
     ])
 
-    cast_means_df = pd.DataFrame(
+    sbpi_merge_means = np.array([
+        watts_merge_df
+        .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
+        for h in htimes
+    ])
+    
+    means_df = pd.DataFrame(
         ##index = htimes,
         data = {
-            "BASE":sbpi_from_means,
-            "SUN":sbpi_to_means,
-            ">BAT":sbpb_to_means_in,
-            "BAT>":sbpb_to_means_out,
-            "BANK":sbpo_to_means,
-            ">GRID":smp_to_means_out,
-            "GRID>":smp_to_means_in
+            "FROM":sbpi_from_means,
+            "MERGE":sbpi_merge_means,
+            "CAST":sbpi_cast_means,
+            ">BAT":sbpb_cast_means_in,
+            "BAT>":sbpb_cast_means_out,
+            "BANK":sbpo_cast_means,
+            ">GRID":smp_cast_means_out,
+            "GRID>":smp_cast_means_in
         }
     )
 
@@ -244,14 +268,14 @@ async def main(
     print("Power forecast per hour [W]")
     print(pd.concat(
         [start_stop_df,
-         cast_means_df
+         means_df
         ], axis=1))
 
     print()
     print("Energy forecast per hour [Wh]")
     print(pd.concat(
         [start_stop_df,
-         cast_means_df.cumsum()
+         means_df.cumsum()
         ], axis=1))
 
 

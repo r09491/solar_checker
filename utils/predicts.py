@@ -147,6 +147,7 @@ async def find_closest(
     stoptime = stopontime if stoptime is None else \
         min(ymd_over_t64(stoptime,logday), stopontime)
 
+    
     """ All basic samples for all log days for the requested time slot """
     slotdfs = [bdf.loc[ymd_over_t64(starttime,ld):
                        ymd_over_t64(stoptime,ld),:]

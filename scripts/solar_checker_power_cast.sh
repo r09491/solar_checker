@@ -8,6 +8,6 @@ SOLAR_CHECKER_PREFIX="solar_checker_latest"
     --from_day $SOLAR_CHECKER_FROM_DAY \
     --logprefix $SOLAR_CHECKER_PREFIX \
     --logdir $SOLAR_CHECKER_STORE_DIR \
-    --skip_sun 0 ## 2>/dev/null
+    --skip_sun 0 2>/dev/null
 
 
