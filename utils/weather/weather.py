@@ -109,7 +109,6 @@ def apply_sun_adapters( watts: pd.DataFrame,
     sbpi_mean = sbpi[__].mean()
     sbpi[_] = sbpo[_] = sbpi_mean
     
-    ##_= sbpi>0
     sbpb[__] = sbpo[__] - sbpi[__]
     sbpb[__][sbpb[__]>0] = 0
     

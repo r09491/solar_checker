@@ -221,7 +221,7 @@ async def plot_predict(request: web.Request) -> dict:
 
     lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
 
-    cast_find_hours = conf['cast_find_hours']
+    castfindhours = conf['castfindhours']
     
     try:
         logday = request.match_info['logday']
@@ -245,8 +245,10 @@ async def plot_predict(request: web.Request) -> dict:
 
 
     """ Preset the start and stop time for the find slot """
-    stoptime = pd.to_datetime(logsdf.loc[logday, 'TIME'][-1])
-    starttime = stoptime - timedelta(hours=cast_find_hours)    
+    issbpion = logsdf.loc[logday, 'SBPI']>0
+    timesbpion = logsdf.loc[logday, 'TIME'][issbpion]
+    stoptime = pd.to_datetime(timesbpion[-1])
+    starttime = stoptime - timedelta(hours=castfindhours)    
 
     """ Get the list of closest days to the logday. The start and stop
     time may be ovverriden as per real radiation """

@@ -6,7 +6,7 @@ logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
 logpredictformat : '??0[567]??'
 logpredictmaxdays : 180
-logpredictdays : 3
+logpredictdays : 2
 logpredictcolumns: 'SBPI'
 
 energy_price:
@@ -21,4 +21,4 @@ lat: 49.04885
 lon: 11.78333
 tz: 'Europe/Berlin'
 
-cast_find_hours: 3
+castfindhours: 3
