@@ -245,17 +245,26 @@ async def plot_predict(request: web.Request) -> dict:
 
 
     """ Preset the start and stop time for the find slot """
-    issbpion = logsdf.loc[logday, 'SBPI']>0
-    timesbpion = logsdf.loc[logday, 'TIME'][issbpion]
-    stoptime = pd.to_datetime(timesbpion[-1])
-    starttime = stoptime - timedelta(hours=castfindhours)    
+    issbpion = logsdf.loc[logday, 'SBPI']>0 # radiation
+    timesbpion = logsdf.loc[logday, 'TIME'][issbpion] if (
+        issbpion.any()
+    ) else None
+    stoptime = pd.to_datetime(timesbpion[-1])  if (
+        (timesbpion is not None) and
+        (castfindhours is not None)
+    ) else None
+    starttime = (stoptime - timedelta(hours=castfindhours)) if (
+        (stoptime is not None) and
+        (castfindhours is not None)
+    ) else None
+    
 
     """ Get the list of closest days to the logday. The start and stop
-    time may be ovverriden as per real radiation """
+    time may be overriden as per real radiation """
     starttime, stoptime, closestdays = await find_closest(
         logsdf, logday, starttime, stoptime, logpredictcolumns
     )
-    if (starttime is None or stoptime is None or closestdays is None):
+    if ((starttime is None) or (stoptime is None) or (closestdays is None)):
         return aiohttp_jinja2.render_template('error.html', request,
             {'error' : f'No radiation detected for the log day  "{logday}"'}
         )

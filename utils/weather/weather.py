@@ -105,14 +105,21 @@ def apply_sun_adapters( watts: pd.DataFrame,
     sbpo = w.loc[:,'SBPO']            
     sbpi = w.loc[:,'SBPI']            
 
-    _, __ =(sbpi>800), (sbpi>0) & (sbpi<800)
-    sbpi_mean = sbpi[__].mean()
-    sbpi[_] = sbpo[_] = sbpi_mean
+    # If no radiation and no discharge then no output
+    sbpo[(sbpb<0) & (sbpi<0)] = 0
+
+    # If radiadtion higher than physical possible then restrict to mean
+    sbpi_mean = sbpi[(sbpi>0) & (sbpi<800)].mean()
+    sbpi[sbpi>800] = sbpi_mean
+    sbpo[sbpo>sbpi] = sbpi[sbpo>sbpi]
     
-    sbpb[__] = sbpo[__] - sbpi[__]
-    sbpb[__][sbpb[__]>0] = 0
-    
-    sbpo[~__] = sbpb[~__]
+    # Update battery discharge
+    sbpb[sbpi>0] = sbpo[sbpi>0] - sbpi[sbpi>0]
+    # Radiation and discharge not possible at the same time for solix
+    #sbpb[(sbpb>0) & (sbpi>0)] = 0
+
+    # If there is no radiation solix output is same the battery discharge
+    sbpo[~(sbpi>0)] = sbpb[~(sbpi>0)]
     
     watts[phase].loc[:,'SBPB'] = sbpb           
     watts[phase].loc[:,'SBPO'] = sbpo           
