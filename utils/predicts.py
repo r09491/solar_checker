@@ -149,10 +149,14 @@ async def find_closest(
 
     
     """ All basic samples for all log days for the requested time slot """
-    slotdfs = [bdf.loc[ymd_over_t64(starttime,ld):
-                       ymd_over_t64(stoptime,ld),:]
-               for ld, bdf in zip (logdays, basedfs)]
+    try:
+        slotdfs = [bdf.loc[ymd_over_t64(starttime,ld):
+                           ymd_over_t64(stoptime,ld),:]
+                   for ld, bdf in zip (logdays, basedfs)]
+    except KeyError: # not monotonic
+        return starttime, stoptime, None 
 
+    
     # All samples including extensions for all log days and requested slot
     eslotdfs = []
     for sdf in slotdfs:

@@ -263,14 +263,22 @@ async def plot_predict(request: web.Request) -> dict:
     time may be overriden as per real radiation """
     starttime, stoptime, closestdays = await find_closest(
         logsdf, logday, starttime, stoptime, logpredictcolumns
-    )
-    if ((starttime is None) or (stoptime is None) or (closestdays is None)):
-        return aiohttp_jinja2.render_template('error.html', request,
+    )        
+    if ((starttime is None) and (stoptime is None) and (closestdays is None)):
+        return aiohttp_jinja2.render_template(
+            'error.html', request,
             {'error' : f'No radiation detected for the log day  "{logday}"'}
         )
 
     start = pd.to_datetime(str(starttime)).strftime("%H:%M")
     stop = pd.to_datetime(str(stoptime)).strftime("%H:%M")
+
+    if ((closestdays is None)):
+        return aiohttp_jinja2.render_template(
+            'error.html', request,
+            {'error' : f'Samples not montonic between "{start}" and "{stop}" for logday "{logday}"'}
+        )
+
     
     predictdays = closestdays.index.values[1:logpredictdays]
 
