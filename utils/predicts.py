@@ -148,14 +148,20 @@ async def find_closest(
         min(ymd_over_t64(stoptime,logday), stopontime)
 
     
-    """ All basic samples for all log days for the requested time slot """
-    try:
-        slotdfs = [bdf.loc[ymd_over_t64(starttime,ld):
+    """ All basic samples for all log days for the requested time
+    slot. Skip time solt if samples are missing. """
+    
+    slotdfs = []
+    slotdays = []
+    for (ld, bdf) in zip(logdays, basedfs):
+        try:
+            slot = bdf.loc[ymd_over_t64(starttime,ld):
                            ymd_over_t64(stoptime,ld),:]
-                   for ld, bdf in zip (logdays, basedfs)]
-    except KeyError: # not monotonic
-        return starttime, stoptime, None 
-
+        except KeyError:
+            logger.warning(f'Samples of "{ld}" between "{starttime}" and "{stoptime}" missing. Skip!')
+            continue
+        slotdfs.append(slot)
+        slotdays.append(ld)
     
     # All samples including extensions for all log days and requested slot
     eslotdfs = []
@@ -178,18 +184,17 @@ async def find_closest(
     """ Create the energy (Wh) dataframe for all logdays """
 
     wattsdf = pd.concat(
-        [pd.DataFrame({'LOGDAY':logdays}),
+        [pd.DataFrame({'LOGDAY':slotdays}),
          pd.DataFrame([edf.sum()/60 for edf in eslotdfs])], axis=1
     )
-
     """ Use logday as index """
     wattsdf.set_index('LOGDAY', inplace = True)
 
     """ Remove apriori impossible list entries """
     watts = [wattsdf[d] for d in wattsdf.loc[:,incols[2:]]]
     wattsdrops = [list(w[~((w<0)|(w>0))
-                         if (w.iloc[logdays.index(logday)]<0 or
-                             w.iloc[logdays.index(logday)]>0)
+                         if (w.iloc[slotdays.index(logday)]<0 or
+                             w.iloc[slotdays.index(logday)]>0)
                          else ((w<0)|(w>0))]
                        .index.values)
                   for w in watts]
@@ -210,10 +215,6 @@ async def find_closest(
     return starttime, stoptime, wattsdf
 
 
-MIN_SOC = 0.1
-MAX_SOC = 1.0
-MAX_BAT = 1600
-
 """ 
 Get the partitoned prediction dictionary. The first day in the closest
 days list is the day to be predicted. The successors are used for
@@ -223,10 +224,7 @@ async def partition_closest_watts(
         logsdf: pd.DataFrame,
         starttime: t64,
         stoptime: t64,
-        closestdays: List,
-        min_soc: f64 = MIN_SOC,
-        max_soc: f64 = MAX_SOC,
-        max_bat: f64 = MAX_BAT) -> Any:
+        closestdays: List) -> Any:
 
     # Available days with logs
     logsdays = list(logsdf.index.values)
