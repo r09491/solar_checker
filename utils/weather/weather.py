@@ -75,7 +75,7 @@ async def get_sun_adapters(
     )[:-1]
 
 
-MIN_BAT = 0.1
+MIN_BAT = 160
 MAX_BAT = 1600
 
 """ Apply the sun adapters to the phase """
@@ -107,7 +107,6 @@ def apply_sun_adapters( watts: pd.DataFrame,
     # Restore original grid imports 
     smp[smp>0] = smpinmean
 
-    
     logger.info(f'Adapting watts "{phase}" to limits')
     
     # Limit sun radiation
@@ -130,15 +129,31 @@ def apply_sun_adapters( watts: pd.DataFrame,
     # Solix does not charge between 35 and 100
     sbpb[(sbpi>35) & (sbpi<100)] = 0
 
-    # Inhibit Solix undercharge
-    sbpb[((sbpb/60).cumsum()<0) & ((sbpb/60).cumsum()>-MIN_BAT)] = -MIN_BAT
+    if phase in ['postwatts','todaywatts','tomorrowwatts2']:
+        # Inhibit Solix undercharge
+        under_charge = np.where(
+            (sbpb/60).cumsum()>-MIN_BAT
+        )
+        if len(under_charge[0])>0:
+            logger.info(f'Detected undercharge')
+            sbpb[under_charge[0][0]:] = 0
+            smp[under_charge[0][0]:] = smpinmean
 
+    if phase in ['findwatts','tomorrowwatts1']:
+        # Inhibit Solix overcharge
+        over_charge = np.where(
+            (sbpb/60).cumsum()<-MAX_BAT
+        )
+        if len(over_charge[0])>0:
+            logger.info(f'Detected overcharge')
+            sbpb[over_charge[0][0]:] = 0
+            
     # Inhibit Solix overcharge
-    sbpb[((sbpb/60).cumsum()<-MAX_BAT)] = -MAX_BAT
+    #sbpb[((sbpb/60).cumsum()<-MAX_BAT)] = 0
 
     
     # If there is no radiation solix output is same the battery discharge
-    sbpo[~(sbpi>0)] = sbpb[~(sbpi>0)]
+    #sbpo[~(sbpi>0)] = sbpb[~(sbpi>0)]
     
     watts[phase].loc[:,'SBPB'] = sbpb           
     watts[phase].loc[:,'SBPO'] = sbpo           
