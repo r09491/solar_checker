@@ -295,15 +295,20 @@ async def partition_closest_watts(
         lambda x,y: x+y,
         [tdf for tdf in tomorrowdfs]
     ) / len(tomorrowdfs)
-    
-    tomorrowwatts1 = tomorrowwatts.loc[
-        :ymd_over_t64(starttime, tomorrow)
-    ][:-1]
 
-    
-    tomorrowwatts2 = tomorrowwatts.loc[
-        ymd_over_t64(starttime, tomorrow):
-    ].copy()
+    try:
+        tomorrowwatts1 = tomorrowwatts.loc[
+            :ymd_over_t64(starttime, tomorrow)
+        ][:-1]
+    except KeyError:
+        tomorrowwatts1 = None
+
+    try:
+        tomorrowwatts2 = tomorrowwatts.loc[
+            ymd_over_t64(starttime, tomorrow):
+        ].copy()
+    except KeyError:
+        tomorrowwatts2  =None
 
     
     return ([today] + todaydays,
