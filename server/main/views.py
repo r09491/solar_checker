@@ -301,16 +301,11 @@ async def plot_predict(request: web.Request) -> dict:
     """ Apply adapters to all phases with radiation """
 
     """
-    !!! Adapts also battery limits! 
-    >>> Results in overcharge/undercharge display
+    >>> No overcharge/undercharge check
     """
     
     apply_sun_adapters(
-        partitions, 'postwatts' , todayadapters)    
-    apply_sun_adapters(
         partitions, 'todaywatts', todayadapters)
-    apply_sun_adapters(
-        partitions, 'tomorrowwatts1', tomorrowadapters)
     apply_sun_adapters(
         partitions, 'tomorrowwatts2', tomorrowadapters)
 

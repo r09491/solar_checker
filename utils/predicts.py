@@ -291,22 +291,22 @@ async def partition_closest_watts(
         ) for ts in [logsdf.loc[td] for td in tomorrowdays]]
 
     # Arittmetic middle of days
-    tomorrowwatts = reduce(
+    tomorrowwatts = (reduce(
         lambda x,y: x+y,
         [tdf for tdf in tomorrowdfs]
-    ) / len(tomorrowdfs)
+    ) / len(tomorrowdfs)) if len(tomorrowdfs)>0 else None 
 
     try:
-        tomorrowwatts1 = tomorrowwatts.loc[
+        tomorrowwatts1 = (tomorrowwatts.loc[
             :ymd_over_t64(starttime, tomorrow)
-        ][:-1]
+        ][:-1]) if tomorrowwatts is not None else None
     except KeyError:
         tomorrowwatts1 = None
 
     try:
-        tomorrowwatts2 = tomorrowwatts.loc[
+        tomorrowwatts2 = (tomorrowwatts.loc[
             ymd_over_t64(starttime, tomorrow):
-        ].copy()
+        ].copy()) if tomorrowwatts is not None else None
     except KeyError:
         tomorrowwatts2  =None
 
@@ -345,7 +345,7 @@ def concat_total(partitions: dict) -> pd.DataFrame:
 def get_predict_table(partitions: dict) -> pd.DataFrame:
 
     for watts in partitions.values():
-        if watts.size == 0:
+        if (watts is None) or (watts.size == 0):
             continue
 
         watts.loc[:, 'SBPB-'] = watts.loc[:, 'SBPB']
@@ -364,10 +364,18 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
         exporting = watts.loc[:, 'SMP']<0
         watts.loc[exporting, 'SMP+'] = 0
 
-    phase = [k for (k,v) in partitions.items() if len(v) >0]
-    start = [t64_to_hm(v.index.values[0]) for (k,v) in partitions.items() if v.size >0]
-    stop = [t64_to_hm(v.index.values[-1]) for (k,v) in partitions.items() if v.size >0]
-    swatts = pd.concat([v.sum()/60 for (k,v) in partitions.items() if (v.size >0)], axis=1)
+    phase = [k for (k,v) in partitions.items() if (
+        (v is not None) and (len(v) >0)
+    )]
+    start = [t64_to_hm(v.index.values[0]) for (k,v) in partitions.items() if (
+        (v is not None) and (v.size >0)
+    )]
+    stop = [t64_to_hm(v.index.values[-1]) for (k,v) in partitions.items() if (
+        (v is not None) and (v.size >0)
+    )]
+    swatts = pd.concat([v.sum()/60 for (k,v) in partitions.items() if (
+        (v is not None) and (v.size >0)
+    )], axis=1)
         
     swattphases = pd.concat(
         [pd.DataFrame(

@@ -67,16 +67,25 @@ async def get_sun_adapters(
         s.set_index(skyindex, inplace = True)
 
     k0 = sky[0].sunshine
-    k1 = (reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:])
+    k1 = (
+        reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:]
+    ) if len(sky[1:])>0 else None
+    
 
     return pd.Series(
         index = k0.index,
-        data = [v1/v2 if v2>0 else 1.0 for (v1,v2) in zip(k0,k1)]
-    )[:-1]
+        data = [(v1/v2) if ((v2>0) and (0.25 < (v1/v2) < 2.5)) else 1.0 for (v1,v2) in zip(k0,k1)]
+    )[:-1] if k1 is not None else None
 
 
-MIN_BAT = 160
-MAX_BAT = 1600
+MAX_SBPI = 880
+
+MIN_SBSB = 0.1
+MAX_SBSB = 1.0
+
+MIN_SBPB = 160
+MAX_SBPB = 1600
+MAX_SBPB_CHARGING = 600
 
 """ Apply the sun adapters to the phase """
 def apply_sun_adapters( watts: pd.DataFrame,
@@ -89,78 +98,75 @@ def apply_sun_adapters( watts: pd.DataFrame,
 
     logger.info(f'Adapting watts "{phase}" to weather')
 
+    # Note: Undercharge and overcharge are not checked.
+    
     w =watts[phase]
 
     # Determine the start for adaptation
     cast_h_first = t64_h_first(w.index[0])
 
-    smp = w.loc[cast_h_first:,'SMP']
-    smpinmean = smp[smp>0].mean()
-    
     # Do the cast
     for t in adapters.loc[cast_h_first:].index:
-        w.loc[
-            t64_h_first(t):t64_h_last(t),
-            ['SBPI','SBPO','SBPB', 'SMP']
-        ] *= adapters.loc[t]
-
-    # Restore original grid imports 
-    smp[smp>0] = smpinmean
+        logger.info(f'Adaptation factor for "{t}" is "{adapters.loc[t]:0.2f}"')
+        try:
+            w.loc[t64_h_first(t):t64_h_last(t), ['SBPI']] *= adapters.loc[t]
+        except KeyError:
+            logger.warning(f'Sun adaptation failed for "{t}"')
+            
 
     logger.info(f'Adapting watts "{phase}" to limits')
+
+    try:
+        smp = w.loc[cast_h_first:,'SMP']
+        sbpi = w.loc[cast_h_first:,'SBPI']
+        sbpo = w.loc[cast_h_first:,'SBPO']            
+        sbpb = w.loc[cast_h_first:,'SBPB']
+        #sbsb = w.loc[cast_h_first:,'SBSB']
+    except KeyError:
+        logger.error(f'Samples for phase "{cast_h_first}" are missing.')
+        return
+
+    #soc = -sbsb.iloc[0]*MAX_SBPB
+    soc = -watts[
+        'tomorrowwatts1' if (phase == 'tomorrowwatts2') else 'findwatts'
+    ].loc[:,'SBSB'].iloc[-1]*MAX_SBPB
+    logger.info(f'"SOC is "{-soc:.0f}Wh"')
     
-    # Limit sun radiation
-    sbpb = w.loc[:,'SBPB']             
-    sbpo = w.loc[:,'SBPO']            
-    sbpi = w.loc[:,'SBPI']            
+    # Calculate the overall power consumption without a solarbank as
+    # imported directly from the grid. For unknown reasons there may
+    # be negative values which are skipped.
+    smp += sbpo
+    smp[smp<=0] = 0 
 
-    # If no radiation and no discharge then no output
-    sbpo[(sbpb<=0) & (sbpi<=0)] = 0
+    # The calculated radiation has to meet system constraints of the used panel
+    sbpi[sbpi>MAX_SBPI] = MAX_SBPI
 
-    # If radiadtion higher than physical possible then restrict to mean
-    sbpi_mean = sbpi[(sbpi>0) & (sbpi<800)].mean()
-    sbpi[sbpi>800] = sbpi_mean
-    sbpo[sbpo>sbpi] = sbpi[sbpo>sbpi]
+    # There cannot be more output power then input power
+    sbpo[(sbpi>0) & (sbpo>sbpi)] = sbpi
 
+    # Simulate the charging of the solarbank during radiation
+    # Note: Discharging part will be overridden
+    sbpb[sbpi>0] = sbpo[sbpi>0] - sbpi[sbpi>0]
+    sbpb[(sbpi>0) & (sbpb<-MAX_SBPB_CHARGING)] = -MAX_SBPB_CHARGING
+    sbpo[sbpi>0] = sbpi[sbpi>0] + sbpb[sbpi>0]
+
+    sbpbover = (soc + (sbpb.cumsum()/60)) < -MAX_SBPB
+    if sbpbover.any():
+        logger.info(f'OVERCHARGE: "{np.where(sbpbover)[0][0]/60:.01f}h"')
+    sbpb[sbpbover] = 0
+    sbpo[sbpbover] = sbpi[sbpbover]
     
-    # Charge only if radiation is higher than bank output
-    sbpb[sbpi>0] = sbpo[sbpi>0]-sbpi[sbpi>0]
-
-    # Solix does not charge between 35 and 100
-    sbpb[(sbpi>35) & (sbpi<100)] = 0
-
-    if phase in ['postwatts','tomorrowwatts1']:
-        # Inhibit Solix undercharge
-        under_charge = np.where(
-            (sbpb/60).cumsum()>-MIN_BAT
-        )
-        if len(under_charge[0])>0:
-            logger.info(f'Detected undercharge')
-            sbpb[under_charge[0][0]:] = 0
-            smp[under_charge[0][0]:] = smpinmean
-
-    if phase in ['todaywatts','tomorrowwatts2']:
-        # Inhibit Solix overcharge
-        over_charge = np.where(
-            (sbpb/60).cumsum()<-MAX_BAT
-        )
-        if len(over_charge[0])>0:
-            logger.info(f'Detected overcharge')
-            sbpb[over_charge[0][0]:] = 0
+    sbpbunder = (soc + (sbpb.cumsum()/60)) > -MIN_SBPB
+    if sbpbunder.any():
+        logger.info(f'UNDERCHARGE: {np.where(sbpbunder)[0][0]/60:0.1f}h"')
+    sbpb[sbpbunder] = 0
+    sbpo[sbpbunder] = 0
+        
     
-            under_charge = np.where(
-                (sbpb[over_charge[0][0]:]/60).cumsum()>-MIN_BAT
-            )
-            if len(under_charge[0])>0:
-                logger.info(f'Detected undercharge')
-                sbpb[under_charge[0][0]:] = 0
-            
+    # Reduce the needed grid power by the power from the solarbank
+    smp -= sbpo
     
-    # If there is no radiation solix output is same the battery discharge
-    sbpo[(sbpi<=0)] = sbpb[sbpi<=0]
-    
-    watts[phase].loc[:,'SBPB'] = sbpb           
-    watts[phase].loc[:,'SBPO'] = sbpo           
-    watts[phase].loc[:,'SBPI'] = sbpi
-
-    
+    watts[phase].loc[cast_h_first:,'SMP'] = smp
+    watts[phase].loc[cast_h_first:,'SBPB'] = sbpb           
+    watts[phase].loc[cast_h_first:,'SBPO'] = sbpo           
+    watts[phase].loc[cast_h_first:,'SBPI'] = sbpi
