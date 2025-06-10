@@ -14,7 +14,12 @@ import numpy as np
 import pandas as pd
 pd.options.display.float_format = '{:,.0f}'.format
 
-from datetime import datetime
+from datetime import(
+    datetime,
+    timedelta
+)
+
+import time
 
 from dataclasses import dataclass
 
@@ -215,12 +220,12 @@ async def cast_watts(
             "real_last":real_last}
 
 
-async def main(
+async def shoot_cast_watts(
         lat: float, lon: float,
         to_day: str, from_day: str, tz: str,
         logprefix: str, logdir: str,
         skip_sun:bool
-) -> int:
+) -> (pd.DataFrame, pd.DataFrame):
 
     cast_w = await cast_watts(
         lat, lon,
@@ -231,7 +236,7 @@ async def main(
 
     if cast_w is None:
         print(f'No cast available')
-        return -1
+        return None, None
 
     watts_from_df = cast_w["watts_from"] 
     watts_merge_df = cast_w["watts_merge"]
@@ -307,24 +312,55 @@ async def main(
     stops = [t64_to_hm(t64_h_last(h)) for h in htimes]
     start_stop_df =pd.DataFrame({"START":starts, "STOP":stops})
 
-    print()
-    print("Power forecast per hour [W]")
-    print(pd.concat(
-        [start_stop_df,
-         means_df
-        ], axis=1))
-
-    print()
-    print("Energy forecast per hour [Wh]")
-    print(pd.concat(
-        [start_stop_df,
-         means_df.cumsum()
-        ], axis=1))
+    return start_stop_df, means_df
 
 
+async def main(
+        lat: float, lon: float,
+        to_day: str, from_day: str, tz: str,
+        logprefix: str, logdir: str,
+        skip_sun:bool
+) -> int:
+
+    while True:
+        (start_stop_df, means_df) = await shoot_cast_watts (
+            lat, lon,
+            to_day, from_day, tz,
+            logprefix, logdir,
+            skip_sun
+        )
+
+        if ((start_stop_df is not None) and
+            (means_df is not None)): 
+
+            print()
+            print(f'Power forecast per hour [W] @ {datetime.now().strftime("%H:%M:%S")}')
+            print(pd.concat(
+                [start_stop_df,
+                 means_df
+                ], axis=1))
+
+            print()
+            print(f'Energy forecast per hour [Wh] @ {datetime.now().strftime("%H:%M:%S")}')
+            print(pd.concat(
+                [start_stop_df,
+                 means_df.cumsum()
+                ], axis=1))
+
+        else:
+
+            print()
+            print("No cast available")
+
+        now = time.time()
+        later = 300*(int(now/300) + 1)
+
+        print()
+        print(f'Next shot @ {(datetime.now() + timedelta(seconds=later-now)).strftime("%H:%M:%S")}. Please wait!')
+        await asyncio.sleep(later-now)
+        
     err = 0
     return err
-
 
 @dataclass
 class Script_Arguments:
