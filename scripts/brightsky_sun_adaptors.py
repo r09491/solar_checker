@@ -14,7 +14,10 @@ import sys
 import argparse
 import asyncio
 
-from datetime import datetime
+from datetime import(
+    datetime,
+    timedelta
+)
 
 from utils.weather import get_sun_adapters
 
@@ -33,6 +36,7 @@ async def main(to_day: str, from_day: str, tz: str, lat: float, lon: float) -> i
         adaptors = await get_sun_adapters(
             doi = [to_day, from_day], tz = tz, lat = lat, lon = lon
         )
+        print(f'Adapters from day "{from_day}" to day "{to_day}"')
         print(adaptors)
 
         err = 0
@@ -70,10 +74,10 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--lon', type = float, default = 11.78333,
                         help = "longitude for forecast [-180 - +180]")
     
-    parser.add_argument('--to_day', type = str, required = True,
+    parser.add_argument('--to_day', type = str, default=datetime.today().strftime('%y%m%d'),
                         help = "day for transformation in 'ymd'")
 
-    parser.add_argument('--from_day', type = str, required = True,
+    parser.add_argument('--from_day', type = str, default=(datetime.today()-timedelta(days=1)).strftime('%y%m%d'),
                         help = "day of sun forecast in 'ymd'")
 
     parser.add_argument('--tz', type = str, default='Europe/Berlin',

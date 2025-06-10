@@ -183,10 +183,16 @@ async def find_closest(
 
     """ Create the energy (Wh) dataframe for all logdays """
 
+    """
     wattsdf = pd.concat(
         [pd.DataFrame({'LOGDAY':slotdays}),
          pd.DataFrame([edf.sum()/60 for edf in eslotdfs])], axis=1
     )
+    """
+    wattsdf = pd.concat(
+        [pd.DataFrame({'LOGDAY':slotdays}),
+         pd.DataFrame([edf.mean() for edf in eslotdfs])], axis=1
+    )    
     """ Use logday as index """
     wattsdf.set_index('LOGDAY', inplace = True)
 
@@ -203,11 +209,12 @@ async def find_closest(
     wattsdf.drop(flatdrops, inplace = True)
 
         
-    """ Calculate the norm vector from the watts """
-    closeness = (wattsdf[incols[1]] -
+    """ Calculate the norm vector from the watts (=>1). The
+    'TIME'column (0) is not considered! """
+    closeness = (wattsdf.loc[:,incols[1]] -
                  wattsdf.loc[logday, incols[1]])**2 # after TIME
     for c in incols[2:]:
-        closeness += (wattsdf[c] - wattsdf.loc[logday, c])**2
+        closeness += (wattsdf.loc[:,c] - wattsdf.loc[logday, c])**2
     wattsdf['CLOSENESS'] = np.sqrt(closeness)
 
     wattsdf.sort_values(by = 'CLOSENESS', ascending = True, inplace = True )

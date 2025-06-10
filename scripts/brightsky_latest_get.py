@@ -32,17 +32,34 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 async def main(sky: Sky, what: str) -> int:
 
     try:
+        sunsum = None
+        suncovermean = None
         if what == "sky":
             info = await sky.get_sky_info()
+            sunshine = info['sunshine']
+            suninfo = info[sunshine>0]
+            
+            sunshinetotal = suninfo['sunshine'].sum()
+            suncovermean = suninfo['cloud_cover'].mean()
+
+            info = suninfo
+            
         elif what == "solar":
             info = await sky.get_solar_info()
+
         elif what == "sources":
             info = await sky.get_sources_info()
+
 
         # Remove time zone
         index = np.array([t64_from_iso(t[:-6]) for t in info.index])
         info.set_index(index, inplace = True)
         print(info)
+
+        if sunshinetotal is not None:
+            print(f'Total sunshine: "{sunshinetotal/60:.0f}h"')
+        if suncovermean is not None:
+            print(f'Mean cloud cover: "{suncovermean:.0f}%"')
 
         err = 0
     except ClientConnectorError:
