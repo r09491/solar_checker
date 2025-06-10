@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__doc__=""" Prints the adaptors K to predict the power P0 at the
+__doc__=""" Prints the adapters K to predict the power P0 at the
 target day 'to_day' (T0)from the power P1 at the source day 'from_day'
 (T1) based on their individual hourly sun durations T (P0 = K*P1, K =
 1 + (T0-T1)/60). It is assumed that the power produced
@@ -19,7 +19,7 @@ from datetime import(
     timedelta
 )
 
-from utils.weather import get_sun_adapters
+from utils.weather import get_sky_adapters
 
 from aiohttp.client_exceptions import ClientConnectorError
 
@@ -33,11 +33,13 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 async def main(to_day: str, from_day: str, tz: str, lat: float, lon: float) -> int:
 
     try:
-        adaptors = await get_sun_adapters(
+        adapters = await get_sky_adapters(
             doi = [to_day, from_day], tz = tz, lat = lat, lon = lon
         )
         print(f'Adapters from day "{from_day}" to day "{to_day}"')
-        print(adaptors)
+        adapters["TOTAL"] = adapters.SUNSHINE*adapters.CLOUD_FREE
+        print(adapters)
+
 
         err = 0
     except ClientConnectorError:

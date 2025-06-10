@@ -33,8 +33,8 @@ from utils.common import (
     t64_to_hm
 )
 from utils.weather import (
-    get_sun_adapters,
-    apply_sun_adapters,
+    get_sky_adapters,
+    apply_sky_adapters,
 )
 from utils.predicts import (
     get_logs_as_dataframe,
@@ -205,21 +205,17 @@ async def main( args: Script_Arguments) -> int:
         )
 
         todayadapters, tomorrowadapters = await asyncio.gather(
-            get_sun_adapters(todaydoi, args.lat, args.lon, args.tz),
-            get_sun_adapters(tomorrowdoi, args.lat, args.lon, args.tz)
+            get_sky_adapters(todaydoi, args.lat, args.lon, args.tz),
+            get_sky_adapters(tomorrowdoi, args.lat, args.lon, args.tz)
         )
 
 
         """ Apply adapters to all phases with radiation """
         
-        partitions['postwatts'] = apply_sun_adapters(
-            partitions['postwatts'], todayadapters)    
-        partitions['todaywatts'] = apply_sun_adapters(
-            partitions['todaywatts'], todayadapters)
-        partitions['tomorrowwatts1'] = apply_sun_adapters(
-            partitions['tomorrowwatts1'], tomorrowadapters)
-        partitions['tomorrowwatts2'] = apply_sun_adapters(
-            partitions['tomorrowwatts2'], tomorrowadapters)
+        apply_sky_adapters(
+            partitions, 'todaywatts', todayadapters)
+        apply_sky_adapters(
+            partitions, 'tomorrowwatts2', tomorrowadapters)
         
         print_predict(*get_predict_table(partitions))
 

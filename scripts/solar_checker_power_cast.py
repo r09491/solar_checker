@@ -37,12 +37,21 @@ from utils.samples import(
     get_columns_from_csv
 )
 from utils.weather import(
-    get_sun_adapters
+    get_sky_adapters
 )
 
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
+
+MAX_SBPI = 880
+
+#MIN_SBSB = 0.1
+#MAX_SBSB = 1.0
+
+MIN_SBPB = 160
+MAX_SBPB = 1600
+MAX_SBPB_CHARGING = 600
 
 """ Get the list of logdays and the list of dictionaries with all the
 recordings """
@@ -93,7 +102,7 @@ async def cast_watts(
     to_day_df = pd.DataFrame(
         index = [t64_first(t)
                  for t in logsdf.loc[to_day, 'TIME']],
-        data = dict(logsdf.loc[to_day, PREDICT_POWER_NAMES[1:-1]])
+        data = dict(logsdf.loc[to_day, PREDICT_POWER_NAMES[1:]])
     )
     
     # Separate the samples to be used for the forecast.
@@ -101,7 +110,7 @@ async def cast_watts(
     from_day_df = pd.DataFrame(
         index = [ymd_over_t64(t64_first(t), to_day)
                  for t in logsdf.loc[from_day, 'TIME']],
-        data = dict(logsdf.loc[from_day, PREDICT_POWER_NAMES[1:-1]])
+        data = dict(logsdf.loc[from_day, PREDICT_POWER_NAMES[1:]])
     )
 
     # Copy the candidates for the cast
@@ -118,7 +127,7 @@ async def cast_watts(
         logger.info(f'Adapting the power for the cast day to sun radiation')
 
         # Acquire the transformation factors
-        adapters = await get_sun_adapters(
+        adapters = await get_sky_adapters(
             doi = logdays, tz = tz, lat = lat, lon = lon
         )
 
@@ -132,22 +141,56 @@ async def cast_watts(
         # Do the cast
         for t in adapters.loc[cast_h_first:].index:
             cast_df.loc[
-                t64_h_first(t):t64_h_last(t),
-                ['SBPI', 'SBPO']
-            ] *= adapters.loc[t]
+                t64_h_first(t):t64_h_last(t), ['SBPI']
+            ] *= (adapters.loc[t, "SUNSHINE"]*adapters.loc[t, "CLOUD_FREE"])
 
         # Limit sun radiation
-        _sbpb = cast_df.loc[:,'SBPB']             
-        _sbpo = cast_df.loc[:,'SBPO']            
-        _sbpi = cast_df.loc[:,'SBPI']            
 
-        _ = _sbpi < sbpi_max
-        _sbpi_max = _sbpi[_].max()
-        _ = _sbpi >=_sbpi_max
-        _sbpi[_] = _sbpi_max
+        try:
+            _smp = cast_df.loc[cast_h_first:,'SMP']
+            _sbpi = cast_df.loc[cast_h_first:,'SBPI']
+            _sbpo = cast_df.loc[cast_h_first:,'SBPO']            
+            _sbpb = cast_df.loc[cast_h_first:,'SBPB']
+            _sbsb = cast_df.loc[cast_h_first:,'SBSB']
+        except KeyError:
+            logger.error(f'Samples for phase "{cast_h_first}" are missing.')
+            return None
+
+        _soc = -_sbsb.iloc[0]*MAX_SBPB
+        logger.info(f'"SOC is "{-_soc:.0f}Wh"')
     
-        _ = _sbpb > 0
-        _sbpo[_] = _sbpb[_]
+        # Calculate the overall power consumption without a solarbank as
+        # imported directly from the grid. For unknown reasons there may
+        # be negative values which are skipped.
+        _smp += _sbpo
+        _smp[_smp<=0] = 0 
+
+        # The calculated radiation has to meet system constraints of the used panel
+        _sbpi[_sbpi>MAX_SBPI] = MAX_SBPI
+
+        # There cannot be more output power then input power
+        _sbpo[(_sbpi>0) & (_sbpo>_sbpi)] = _sbpi
+
+        # Simulate the charging of the solarbank during radiation
+        # Note: Discharging part will be overridden
+        _sbpb[_sbpi>0] = _sbpo[_sbpi>0] - _sbpi[_sbpi>0]
+        _sbpb[(_sbpi>0) & (_sbpb<-MAX_SBPB_CHARGING)] = -MAX_SBPB_CHARGING
+        _sbpo[_sbpi>0] = _sbpi[_sbpi>0] + _sbpb[_sbpi>0]
+
+        _sbpbover = (_soc + (_sbpb.cumsum()/60)) < -MAX_SBPB
+        if _sbpbover.any():
+            logger.info(f'OVERCHARGE: "{np.where(_sbpbover)[0][0]/60:.01f}h"')
+        _sbpb[_sbpbover] = 0
+        _sbpo[_sbpbover] = _sbpi[_sbpbover]
+    
+        _sbpbunder = (_soc + (_sbpb.cumsum()/60)) > -MIN_SBPB
+        if _sbpbunder.any():
+            logger.info(f'UNDERCHARGE: {np.where(_sbpbunder)[0][0]/60:0.1f}h"')
+        _sbpb[_sbpbunder] = 0
+        _sbpo[_sbpbunder] = 0
+            
+        # Reduce the needed grid power by the power from the solarbank
+        _smp -= _sbpo
 
             
     # Concat the result for the complete day
