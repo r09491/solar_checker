@@ -1,4 +1,4 @@
 from .weather import(
-    get_sun_adapters,
-    apply_sun_adapters
+    get_sky_adapters,
+    apply_sky_adapters
 )

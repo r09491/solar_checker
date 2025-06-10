@@ -183,7 +183,6 @@ async def find_closest(
 
     """ Create the energy (Wh) dataframe for all logdays """
 
-    """
     wattsdf = pd.concat(
         [pd.DataFrame({'LOGDAY':slotdays}),
          pd.DataFrame([edf.sum()/60 for edf in eslotdfs])], axis=1
@@ -192,7 +191,8 @@ async def find_closest(
     wattsdf = pd.concat(
         [pd.DataFrame({'LOGDAY':slotdays}),
          pd.DataFrame([edf.mean() for edf in eslotdfs])], axis=1
-    )    
+    )  
+    """
     """ Use logday as index """
     wattsdf.set_index('LOGDAY', inplace = True)
 

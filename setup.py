@@ -13,7 +13,7 @@ setup(name='solar_checker',
       long_description=long_description,
       scripts=[
           './scripts/brightsky_latest_get.py',
-          './scripts/brightsky_sun_adaptors.py',
+          './scripts/brightsky_sky_adaptors.py',
           './scripts/apsystems_max_power_set.py',
           './scripts/tuya_plug_latest_get.py',
           './scripts/tuya_plug_switch_set.py',

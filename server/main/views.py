@@ -33,8 +33,8 @@ from utils.samples import (
     get_kwh_sum_year_unified
 )
 from utils.weather import(
-    get_sun_adapters,
-    apply_sun_adapters,
+    get_sky_adapters,
+    apply_sky_adapters,
 )
 from utils.predicts import (
     get_logs_as_dataframe,
@@ -293,8 +293,8 @@ async def plot_predict(request: web.Request) -> dict:
 
     """ Get the sun adapters for today and tomorrow """
     todayadapters, tomorrowadapters = await asyncio.gather(
-        get_sun_adapters(todaydoi, lat, lon, tz),
-        get_sun_adapters(tomorrowdoi, lat, lon, tz)
+        get_sky_adapters(todaydoi, lat, lon, tz),
+        get_sky_adapters(tomorrowdoi, lat, lon, tz)
     )
 
 
@@ -304,9 +304,9 @@ async def plot_predict(request: web.Request) -> dict:
     >>> No overcharge/undercharge check
     """
     
-    apply_sun_adapters(
+    apply_sky_adapters(
         partitions, 'todaywatts', todayadapters)
-    apply_sun_adapters(
+    apply_sky_adapters(
         partitions, 'tomorrowwatts2', tomorrowadapters)
 
     

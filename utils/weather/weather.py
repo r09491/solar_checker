@@ -45,11 +45,11 @@ logger = logging.getLogger(__name__)
 """ Get the factors to adapt the average of the closest days to the
 current sun situation """
 
-async def get_sun_adapters(
+async def get_sky_adapters(
         doi: list,
         lat: float,
         lon: float,
-        tz: str) -> pd.Series:
+        tz: str) -> pd.DataFrame:
 
     """ Time is in UTC """
     skytasks = [asyncio.create_task(
@@ -66,16 +66,32 @@ async def get_sun_adapters(
     for s in sky:
         s.set_index(skyindex, inplace = True)
 
+        
     k0 = sky[0].sunshine
+    
     k1 = (
         reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:]
     ) if len(sky[1:])>0 else None
-    
+    sunshine = np.array(
+        [(v1/v2) if ((v2>0) and (0.25 < (v1/v2) < 2.5)) else 1.0
+         for (v1,v2) in zip(k0,k1)]
+    ) if k1 is not None else None
 
-    return pd.Series(
+    k2 = (100 - (
+        reduce(lambda x,y: x+y, sky[1:])).cloud_cover / len(sky[1:]
+        )
+    ) if len(sky[1:])>0 else None
+    cloud_free = np.array(
+        [(v1/v2) if ((v2>0) and (0.25 < (v1/v2) < 2.5)) else 1.0
+         for (v1,v2) in zip(k0,k2)]
+    )if k2 is not None else None
+    
+    return (pd.DataFrame(
         index = k0.index,
-        data = [(v1/v2) if ((v2>0) and (0.25 < (v1/v2) < 2.5)) else 1.0 for (v1,v2) in zip(k0,k1)]
-    )[:-1] if k1 is not None else None
+        data = {"SUNSHINE":sunshine, "CLOUD_FREE": cloud_free}
+    )[:-1]) if (
+        (sunshine is not None) and (cloud_free is not None)
+    ) else None
 
 
 MAX_SBPI = 880
@@ -88,7 +104,7 @@ MAX_SBPB = 1600
 MAX_SBPB_CHARGING = 600
 
 """ Apply the sun adapters to the phase """
-def apply_sun_adapters( watts: pd.DataFrame,
+def apply_sky_adapters( watts: pd.DataFrame,
                         phase: str,
                         adapters: pd.DataFrame) -> pd.DataFrame:
 
@@ -107,11 +123,14 @@ def apply_sun_adapters( watts: pd.DataFrame,
 
     # Do the cast
     for t in adapters.loc[cast_h_first:].index:
-        logger.info(f'Adaptation factor for "{t}" is "{adapters.loc[t]:0.2f}"')
+        logger.info(f'SUNSHINE factor for "{t}" is "{adapters.loc[t, "SUNSHINE"]:0.2f}"')
+        logger.info(f'CLOUD_FREE factor for "{t}" is "{adapters.loc[t, "CLOUD_FREE"]:0.2f}"')
         try:
-            w.loc[t64_h_first(t):t64_h_last(t), ['SBPI']] *= adapters.loc[t]
+            w.loc[t64_h_first(t):t64_h_last(t), ['SBPI']] *= (
+                adapters.loc[t, "SUNSHINE"]*adapters.loc[t, "CLOUD_FREE"]
+            )
         except KeyError:
-            logger.warning(f'Sun adaptation failed for "{t}"')
+            logger.warning(f'Sky adaptation failed for "{t}"')
             
 
     logger.info(f'Adapting watts "{phase}" to limits')
