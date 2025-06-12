@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 """ Get the factors to adapt the average of the closest days to the
-current sun situation """
+current sky situation """
 
 async def get_sky_adapters(
         doi: list,
@@ -61,33 +61,42 @@ async def get_sky_adapters(
     for s in sky:
         if s is None: return None
 
+
     """ Unify the indices. Takes care of summertime and wintertime """
     skyindex = np.array([t64_from_iso(t[:-6]) for t in sky[0].index])
     for s in sky:
         s.set_index(skyindex, inplace = True)
-
         
-    k0 = sky[0].sunshine
-    
-    k1 = (
-        reduce(lambda x,y: x+y, sky[1:])).sunshine / len(sky[1:]
-    ) if len(sky[1:])>0 else None
-    sunshine = np.array(
-        [(v1/v2) if ((v2>0) and (0.25 < (v1/v2) < 2.5)) else 1.0
-         for (v1,v2) in zip(k0,k1)]
-    ) if k1 is not None else None
+    todaysun = sky[0].sunshine 
+    istodaysun = todaysun>0
 
-    k2 = (100 - (
-        reduce(lambda x,y: x+y, sky[1:])).cloud_cover / len(sky[1:]
+    """ Scale for values during sunshine """
+    
+    k00 = todaysun[istodaysun]
+    e00 = k00.max()/5 # Soften factor for division by low values
+    logger.info(f'Soften factor e00 "{e00}"')
+
+    k01 = (
+        reduce(lambda x,y: x+y, sky[1:])).sunshine[istodaysun] / len(sky[1:]
+    ) if len(sky[1:])>0 else None
+
+    sunshine = (np.array(k00)+e00)/(np.array(k01)+e00) if k01 is not None else None
+
+    
+    todaycover = sky[0].cloud_cover 
+    k10 = 100 - todaycover[istodaysun]
+    e10 = k10.max()/5 # Soften factor division by low values
+    logger.info(f'Soften factor e10 "{e10}"')
+    
+    k11 = (100 - (
+        reduce(lambda x,y: x+y, sky[1:])).cloud_cover[istodaysun] / len(sky[1:]
         )
     ) if len(sky[1:])>0 else None
-    cloud_free = np.array(
-        [(v1/v2) if ((v2>0) and (0.25 < (v1/v2) < 2.5)) else 1.0
-         for (v1,v2) in zip(k0,k2)]
-    )if k2 is not None else None
+
+    cloud_free = (np.array(k10)+e10)/(np.array(k11)+e10) if k11 is not None else None
     
     return (pd.DataFrame(
-        index = k0.index,
+        index = k00.index,
         data = {"SUNSHINE":sunshine, "CLOUD_FREE": cloud_free}
     )[:-1]) if (
         (sunshine is not None) and (cloud_free is not None)
@@ -103,6 +112,9 @@ MIN_SBPB = 160
 MAX_SBPB = 1600
 MAX_SBPB_CHARGING = 600
 
+SUN_WEIGHT = 0.7
+CLOUD_WEIGHT = 1 - SUN_WEIGHT
+
 """ Apply the sun adapters to the phase """
 def apply_sky_adapters( watts: pd.DataFrame,
                         phase: str,
@@ -114,10 +126,15 @@ def apply_sky_adapters( watts: pd.DataFrame,
 
     logger.info(f'Adapting watts "{phase}" to weather')
 
-    # Note: Undercharge and overcharge are not checked.
     
-    w =watts[phase]
+    # Note: Undercharge and overcharge are not checked.
 
+    w = watts[phase]
+    
+    # Maximum radiation before scaling. Should not be exceeded after scaling!
+    max_sbpi = w.loc[:,"SBPI"].max()
+
+    
     # Determine the start for adaptation
     cast_h_first = t64_h_first(w.index[0])
 
@@ -127,7 +144,7 @@ def apply_sky_adapters( watts: pd.DataFrame,
         logger.info(f'CLOUD_FREE factor for "{t}" is "{adapters.loc[t, "CLOUD_FREE"]:0.2f}"')
         try:
             w.loc[t64_h_first(t):t64_h_last(t), ['SBPI']] *= (
-                adapters.loc[t, "SUNSHINE"]*adapters.loc[t, "CLOUD_FREE"]
+                SUN_WEIGHT*adapters.loc[t, "SUNSHINE"]+CLOUD_WEIGHT*adapters.loc[t, "CLOUD_FREE"]
             )
         except KeyError:
             logger.warning(f'Sky adaptation failed for "{t}"')
@@ -150,7 +167,7 @@ def apply_sky_adapters( watts: pd.DataFrame,
         'tomorrowwatts1' if (phase == 'tomorrowwatts2') else 'findwatts'
     ].loc[:,'SBSB'].iloc[-1]*MAX_SBPB
     logger.info(f'"SOC is "{-soc:.0f}Wh"')
-    
+
     # Calculate the overall power consumption without a solarbank as
     # imported directly from the grid. For unknown reasons there may
     # be negative values which are skipped.
@@ -158,7 +175,7 @@ def apply_sky_adapters( watts: pd.DataFrame,
     smp[smp<=0] = 0 
 
     # The calculated radiation has to meet system constraints of the used panel
-    sbpi[sbpi>MAX_SBPI] = MAX_SBPI
+    sbpi[sbpi>max_sbpi] = max_sbpi
 
     # There cannot be more output power then input power
     sbpo[(sbpi>0) & (sbpo>sbpi)] = sbpi

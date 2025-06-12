@@ -19,8 +19,14 @@ from datetime import(
     timedelta
 )
 
-from utils.weather import get_sky_adapters
+import pandas as pd
+pd.options.display.float_format = '{:,.2f}'.format
 
+from utils.weather import (
+    get_sky_adapters,
+    SUN_WEIGHT,
+    CLOUD_WEIGHT
+)
 from aiohttp.client_exceptions import ClientConnectorError
 
 from dataclasses import dataclass
@@ -37,7 +43,7 @@ async def main(to_day: str, from_day: str, tz: str, lat: float, lon: float) -> i
             doi = [to_day, from_day], tz = tz, lat = lat, lon = lon
         )
         print(f'Adapters from day "{from_day}" to day "{to_day}"')
-        adapters["TOTAL"] = adapters.SUNSHINE*adapters.CLOUD_FREE
+        adapters["TOTAL"] = SUN_WEIGHT*adapters.SUNSHINE+0.3*CLOUD_WEIGHT*adapters.CLOUD_FREE
         print(adapters)
 
 

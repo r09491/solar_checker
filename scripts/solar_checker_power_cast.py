@@ -42,17 +42,15 @@ from utils.samples import(
     get_columns_from_csv
 )
 from utils.weather import(
-    get_sky_adapters
+    get_sky_adapters,
+    SUN_WEIGHT,
+    CLOUD_WEIGHT
 )
 
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
-MAX_SBPI = 880
-
-#MIN_SBSB = 0.1
-#MAX_SBSB = 1.0
 
 MIN_SBPB = 160
 MAX_SBPB = 1600
@@ -140,6 +138,9 @@ async def cast_watts(
             logger.error('Cannot read adapters')
             return None
 
+        # Maximum radiation before scaling. Should not be exceeded after scaling!
+        max_sbpi = cast_df.loc[:,"SBPI"].max()
+
         # Determin the start for adaptation
         cast_h_first = t64_h_first(cast_df.index[0])
         
@@ -147,7 +148,7 @@ async def cast_watts(
         for t in adapters.loc[cast_h_first:].index:
             cast_df.loc[
                 t64_h_first(t):t64_h_last(t), ['SBPI']
-            ] *= (adapters.loc[t, "SUNSHINE"]*adapters.loc[t, "CLOUD_FREE"])
+            ] *= (SUN_WEIGHT*adapters.loc[t, "SUNSHINE"]+CLOUD_WEIGHT*adapters.loc[t, "CLOUD_FREE"])
 
         # Limit sun radiation
 
@@ -171,7 +172,7 @@ async def cast_watts(
         _smp[_smp<=0] = 0 
 
         # The calculated radiation has to meet system constraints of the used panel
-        _sbpi[_sbpi>MAX_SBPI] = MAX_SBPI
+        _sbpi[_sbpi>max_sbpi] = max_sbpi
 
         # There cannot be more output power then input power
         _sbpo[(_sbpi>0) & (_sbpo>_sbpi)] = _sbpi
@@ -238,38 +239,16 @@ async def shoot_cast_watts(
         print(f'No cast available')
         return None, None
 
-    watts_from_df = cast_w["watts_from"] 
-    watts_merge_df = cast_w["watts_merge"]
-    watts_cast_df = cast_w["watts_cast"]
+    watts_from_df = cast_w["watts_from"].resample('H').mean() 
+    watts_merge_df = cast_w["watts_merge"].resample('H').mean() 
+    watts_cast_df = cast_w["watts_cast"].resample('H').mean() 
 
     # Every now and then some samples are missing. The 'to' is the master.
-    
-    mtimes = watts_cast_df.index
-    htimes = [
-        t64_h_first(mtimes[t])
-        for t in range(0, len(mtimes), 60)
-    ]
 
-    sbpi_cast_means = np.array([
-        watts_cast_df
-        .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
-        for h in htimes
-    ])
-    sbpb_cast_means = np.array([
-        watts_cast_df
-        .loc[t64_h_first(h):t64_h_last(h),'SBPB'].mean(axis=0)
-        for h in htimes
-    ])
-    sbpo_cast_means = np.array([
-        watts_cast_df
-        .loc[t64_h_first(h):t64_h_last(h),'SBPO'].mean(axis=0)
-        for h in htimes
-    ])
-    smp_cast_means = np.array([
-        watts_cast_df
-        .loc[t64_h_first(h):t64_h_last(h),'SMP'].mean(axis=0)
-        for h in htimes
-    ])
+    sbpi_cast_means = watts_cast_df.loc[:,'SBPI']
+    sbpb_cast_means = watts_cast_df.loc[:,'SBPB']
+    sbpo_cast_means = watts_cast_df.loc[:,'SBPO']
+    smp_cast_means = watts_cast_df.loc[:,'SMP']
 
     sbpb_cast_means_in = sbpb_cast_means.copy() 
     sbpb_cast_means_in[sbpb_cast_means>0] = 0
@@ -281,21 +260,10 @@ async def shoot_cast_watts(
     smp_cast_means_out = smp_cast_means.copy() 
     smp_cast_means_out[smp_cast_means>0] = 0
 
+    sbpi_from_means = watts_from_df.loc[:,'SBPI']
+    sbpi_merge_means = watts_merge_df.loc[:,'SBPI']
 
-    sbpi_from_means = np.array([
-        watts_from_df
-        .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
-        for h in htimes
-    ])
-
-    sbpi_merge_means = np.array([
-        watts_merge_df
-        .loc[t64_h_first(h):t64_h_last(h),'SBPI'].mean(axis=0)
-        for h in htimes
-    ])
-    
     means_df = pd.DataFrame(
-        ##index = htimes,
         data = {
             "FROM":sbpi_from_means,
             "MERGE":sbpi_merge_means,
@@ -308,10 +276,12 @@ async def shoot_cast_watts(
         }
     )
 
-    starts = [t64_to_hm(t64_h_first(h)) for h in htimes]
-    stops = [t64_to_hm(t64_h_last(h)) for h in htimes]
+    starts = means_df.index.strftime("%H:00")
+    stops = means_df.index.strftime("%H:59")
     start_stop_df =pd.DataFrame({"START":starts, "STOP":stops})
 
+    means_df.reset_index(inplace = True, drop=True)
+    
     return start_stop_df, means_df
 
 
