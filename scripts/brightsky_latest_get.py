@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 __doc__="""
-Writes the latest inverter data to stdout
+Writes the latest sky, solar, and origin data to stdout
 """
 
 __version__ = "0.0.0"
@@ -32,7 +32,7 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 async def main(sky: Sky, what: str) -> int:
 
     try:
-        sunsum = None
+        sunshinetotal = None
         suncovermean = None
         if what == "sky":
             info = await sky.get_sky_info()
@@ -42,25 +42,29 @@ async def main(sky: Sky, what: str) -> int:
             sunshinetotal = suninfo['sunshine'].sum()
             suncovermean = suninfo['cloud_cover'].mean()
 
-            info = suninfo
+            # Remove time zone
+            index = np.array([t64_from_iso(t[:-6]) for t in suninfo.index])
+            suninfo.set_index(index, inplace = True)
+            print(suninfo)
+
+            print(f'Total sunshine: "{sunshinetotal/60:.0f}h"')
+            print(f'Mean cloud cover: "{suncovermean:.0f}%"')
+            print(f'Mean cloud free: "{100 - suncovermean:.0f}%"')
             
         elif what == "solar":
             info = await sky.get_solar_info()
+            index = np.array([t64_from_iso(t[:-6]) for t in info.index])
+            info.set_index(index, inplace = True)
+            print(info)
 
         elif what == "sources":
             info = await sky.get_sources_info()
+            print(info)
 
-
-        # Remove time zone
-        index = np.array([t64_from_iso(t[:-6]) for t in info.index])
-        info.set_index(index, inplace = True)
-        print(info)
-
-        if sunshinetotal is not None:
-            print(f'Total sunshine: "{sunshinetotal/60:.0f}h"')
-        if suncovermean is not None:
-            print(f'Mean cloud cover: "{suncovermean:.0f}%"')
-
+        else:
+            logger.error("Illegal request")
+            return -1
+         
         err = 0
     except ClientConnectorError:
         logger.error('Cannot connect to server.')

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 __doc__=""" Prints the adapters K to predict the power P0 at the
-target day 'to_day' (T0)from the power P1 at the source day 'from_day'
-(T1) based on their individual hourly sun durations T (P0 = K*P1, K =
-1 + (T0-T1)/60). It is assumed that the power produced
-increases/decreases linear with the sun duration. """
+target day 'to_day' from the mean power P1 and the mean cloud cover
+at the source days 'from_days' based on their individual hourly sun
+durations and cloud coverage It is assumed that the power produced
+increases/decreases linear with the sun duration and cloud
+coverage. """
 
 __version__ = "0.0.1"
 __author__ = "r09491@gmail.com"
@@ -23,10 +24,9 @@ import pandas as pd
 pd.options.display.float_format = '{:,.2f}'.format
 
 from utils.weather import (
-    get_sky_adapters,
-    SUN_WEIGHT,
-    CLOUD_WEIGHT
+    get_sky_adapters
 )
+
 from aiohttp.client_exceptions import ClientConnectorError
 
 from dataclasses import dataclass
@@ -36,16 +36,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-async def main(to_day: str, from_day: str, tz: str, lat: float, lon: float) -> int:
+async def main(to_day: str, from_days: str, tz: str, lat: float, lon: float) -> int:
 
     try:
         adapters = await get_sky_adapters(
-            doi = [to_day, from_day], tz = tz, lat = lat, lon = lon
+            doi = [to_day] + from_days.split(","), tz = tz, lat = lat, lon = lon
         )
-        print(f'Adapters from day "{from_day}" to day "{to_day}"')
-        adapters["TOTAL"] = SUN_WEIGHT*adapters.SUNSHINE+0.3*CLOUD_WEIGHT*adapters.CLOUD_FREE
+        print(f'Adapters from days "{from_days}" to day "{to_day}"')
         print(adapters)
-
 
         err = 0
     except ClientConnectorError:
@@ -63,7 +61,7 @@ class Script_Arguments:
     lat: float
     lon: float
     to_day: str
-    from_day: str
+    from_days: str
     tz: str
 
 def parse_arguments() -> Script_Arguments:
@@ -85,7 +83,7 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--to_day', type = str, default=datetime.today().strftime('%y%m%d'),
                         help = "day for transformation in 'ymd'")
 
-    parser.add_argument('--from_day', type = str, default=(datetime.today()-timedelta(days=1)).strftime('%y%m%d'),
+    parser.add_argument('--from_days', type = str, default=(datetime.today()-timedelta(days=1)).strftime('%y%m%d'),
                         help = "day of sun forecast in 'ymd'")
 
     parser.add_argument('--tz', type = str, default='Europe/Berlin',
@@ -93,7 +91,7 @@ def parse_arguments() -> Script_Arguments:
 
     args = parser.parse_args()
 
-    return Script_Arguments(args.lat, args.lon, args.to_day, args.from_day, args.tz)
+    return Script_Arguments(args.lat, args.lon, args.to_day, args.from_days, args.tz)
 
 
 if __name__ == '__main__':
@@ -111,12 +109,12 @@ if __name__ == '__main__':
         logger.error('to_day is missing.')
         sys.exit(3)
 
-    if args.from_day is None:
-        logger.error('from_day is missing.')
+    if args.from_days is None:
+        logger.error('from_days is missing.')
         sys.exit(4)        
     
     try:
-        err = asyncio.run(main(args.to_day, args.from_day, args.tz, args.lat, args.lon))
+        err = asyncio.run(main(args.to_day, args.from_days, args.tz, args.lat, args.lon))
     except KeyboardInterrupt: 
         err = 99
        

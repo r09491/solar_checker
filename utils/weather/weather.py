@@ -10,25 +10,14 @@ import asyncio
 import pandas as pd
 import numpy as np
 
-from functools import reduce
-
 from ..typing import (
     List
 )
 from ..common import (
-    t64_first,
-    t64_last,
-    t64_to_hm, 
     t64_from_iso,
     t64_h_first,
     t64_h_last,
-    ymd_tomorrow,
-    ymd_yesterday,
-    ymd_over_t64
     )
-from ..common import (
-    FORECAST_NAMES
-)
 
 from brightsky import(
     Sky
@@ -42,9 +31,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+SUN_WEIGHT = 0.7
+CLOUD_WEIGHT = 1 - SUN_WEIGHT
+
+
 """ Get the factors to adapt the average of the closest days to the
 current sky situation """
-
 async def get_sky_adapters(
         doi: list,
         lat: float,
@@ -63,57 +55,51 @@ async def get_sky_adapters(
 
 
     """ Unify the indices. Takes care of summertime and wintertime """
-    skyindex = np.array([t64_from_iso(t[:-6]) for t in sky[0].index])
+    skyindex = pd.to_datetime([t64_from_iso(t[:-6]) for t in sky[0].index])
     for s in sky:
         s.set_index(skyindex, inplace = True)
         
     todaysun = sky[0].sunshine 
     istodaysun = todaysun>0
 
+    fromdayswithsun = pd.concat(sky[1:], axis=1).loc[istodaysun,:]
+
     """ Scale for values during sunshine """
-    
+
     k00 = todaysun[istodaysun]
     e00 = k00.max()/5 # Soften factor for division by low values
-    logger.info(f'Soften factor e00 "{e00}"')
+    logger.info(f'Soften factor sun e00 "{e00}"')
+    fromsun = fromdayswithsun.sunshine
+    isdataframe = type(fromsun) == pd.core.frame.DataFrame
+    k01 = fromsun.mean(axis=1) if isdataframe else fromsun
+    sunshine = (k00+e00)/(k01+e00)
 
-    k01 = (
-        reduce(lambda x,y: x+y, sky[1:])).sunshine[istodaysun] / len(sky[1:]
-    ) if len(sky[1:])>0 else None
-
-    sunshine = (np.array(k00)+e00)/(np.array(k01)+e00) if k01 is not None else None
-
-    
     todaycover = sky[0].cloud_cover 
     k10 = 100 - todaycover[istodaysun]
-    e10 = k10.max()/5 # Soften factor division by low values
-    logger.info(f'Soften factor e10 "{e10}"')
-    
-    k11 = (100 - (
-        reduce(lambda x,y: x+y, sky[1:])).cloud_cover[istodaysun] / len(sky[1:]
-        )
-    ) if len(sky[1:])>0 else None
-
-    cloud_free = (np.array(k10)+e10)/(np.array(k11)+e10) if k11 is not None else None
+    e10 = k10.max()/5 # Soften factor clouddivision by low values
+    logger.info(f'Soften factor cloud e10 "{e10}"')
+    fromcover = fromdayswithsun.cloud_cover
+    isdataframe = type(fromcover) == pd.core.frame.DataFrame
+    k11 = 100 - fromcover.mean(axis=1) if isdataframe else fromcover
+    cloud_free = (k10+e10)/(k11+e10)
     
     return (pd.DataFrame(
         index = k00.index,
-        data = {"SUNSHINE":sunshine, "CLOUD_FREE": cloud_free}
-    )[:-1]) if (
-        (sunshine is not None) and (cloud_free is not None)
-    ) else None
+        data = {
+            "SUNSHINE": sunshine,
+            "CLOUD_FREE": cloud_free,
+            "ADAPTATION": SUN_WEIGHT*sunshine+CLOUD_WEIGHT*cloud_free,
+        }
+    )[:-1]) 
 
+##MAX_SBPI = 880
 
-MAX_SBPI = 880
-
-MIN_SBSB = 0.1
-MAX_SBSB = 1.0
+##MIN_SBSB = 0.1
+##MAX_SBSB = 1.0
 
 MIN_SBPB = 160
 MAX_SBPB = 1600
 MAX_SBPB_CHARGING = 600
-
-SUN_WEIGHT = 0.7
-CLOUD_WEIGHT = 1 - SUN_WEIGHT
 
 """ Apply the sun adapters to the phase """
 def apply_sky_adapters( watts: pd.DataFrame,
@@ -140,12 +126,9 @@ def apply_sky_adapters( watts: pd.DataFrame,
 
     # Do the cast
     for t in adapters.loc[cast_h_first:].index:
-        logger.info(f'SUNSHINE factor for "{t}" is "{adapters.loc[t, "SUNSHINE"]:0.2f}"')
-        logger.info(f'CLOUD_FREE factor for "{t}" is "{adapters.loc[t, "CLOUD_FREE"]:0.2f}"')
+        logger.info(f'ADAPTATION factor for "{t}" is "{adapters.loc[t, "ADAPTATION"]:0.2f}"')
         try:
-            w.loc[t64_h_first(t):t64_h_last(t), ['SBPI']] *= (
-                SUN_WEIGHT*adapters.loc[t, "SUNSHINE"]+CLOUD_WEIGHT*adapters.loc[t, "CLOUD_FREE"]
-            )
+            w.loc[t64_h_first(t):t64_h_last(t), ['SBPI']] *= adapters.loc[t, "ADAPTATION"]
         except KeyError:
             logger.warning(f'Sky adaptation failed for "{t}"')
             

@@ -2,6 +2,13 @@ __doc__=""" A python library for Bright Sky weather data """
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
+
 from aiohttp import ClientSession
 from aiohttp.http_exceptions import HttpBadRequest
 
@@ -39,6 +46,7 @@ class Sky:
                     raise HttpBadRequest(f"HTTP Error: {resp.status}")
                 return await resp.json()
         except:
+            logger.error('Unknown exption raised!')
             return None
 
         
@@ -46,6 +54,7 @@ class Sky:
         try:
             response = await self._request()
         except:
+            logger.error('Unknown exption raised!')
             return None
         return response['weather']
 
@@ -54,6 +63,7 @@ class Sky:
         try:
             response = await self._get_weather_info()
         except:
+            logger.error('Unknown exption raised!')
             return None
 
         df = pd.DataFrame(response)
@@ -66,6 +76,7 @@ class Sky:
         try:
             response = await self._get_weather_info()
         except:
+            logger.error('Unknown exption raised!')
             return None            
 
         df = pd.DataFrame(response)
@@ -78,6 +89,7 @@ class Sky:
         try:
             response = await self._request()
         except:
+            logger.error('Unknown exption raised!')
             return None
         return response['sources']
 
@@ -86,9 +98,10 @@ class Sky:
         try:
             response = await self._get_sources_info()
         except:
+            logger.error('Unknown exption raised!')
             return None
 
         df = pd.DataFrame(response)
         df.set_index('id', inplace = True)
-        sourcesdf = df.loc[:,['distance','station_name']]
+        sourcesdf = df.loc[:,['distance','height','station_name']]
         return sourcesdf
