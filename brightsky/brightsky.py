@@ -40,21 +40,23 @@ class Sky:
         
     async def _request(self) -> Return_Request:
         try:
-            async with ClientSession() as ses, ses.get(self.url,
-                                                       timeout=self.timeout) as resp:
+            async with ClientSession() as ses, ses.get(
+                    self.url,
+                    timeout=self.timeout
+            ) as resp:
                 if not resp.ok:
                     raise HttpBadRequest(f"HTTP Error: {resp.status}")
                 return await resp.json()
-        except:
-            logger.error('Unknown exption raised!')
+        except TimeoutError:
+            logger.error('Timeout')
             return None
 
         
     async def _get_weather_info(self) -> Optional[Dict[str, Any]]:
         try:
             response = await self._request()
-        except:
-            logger.error('Unknown exption raised!')
+        except TimeoutError:
+            logger.error('Timeout')
             return None
         return response['weather']
 
@@ -62,8 +64,8 @@ class Sky:
     async def get_sky_info(self) -> Optional[pd.DataFrame]:
         try:
             response = await self._get_weather_info()
-        except:
-            logger.error('Unknown exption raised!')
+        except TimeoutError:
+            logger.error('Timeout')
             return None
 
         df = pd.DataFrame(response)
@@ -75,8 +77,8 @@ class Sky:
     async def get_solar_info(self) -> Optional[pd.DataFrame]:
         try:
             response = await self._get_weather_info()
-        except:
-            logger.error('Unknown exption raised!')
+        except TimeoutError:
+            logger.error('Timeout')
             return None            
 
         df = pd.DataFrame(response)
@@ -88,8 +90,8 @@ class Sky:
     async def _get_sources_info(self) -> Optional[Dict[str, Any]]:
         try:
             response = await self._request()
-        except:
-            logger.error('Unknown exption raised!')
+        except TimeoutError:
+            logger.error('Timeout')
             return None
         return response['sources']
 
@@ -97,8 +99,8 @@ class Sky:
     async def get_sources_info(self) -> Optional[pd.DataFrame]:
         try:
             response = await self._get_sources_info()
-        except:
-            logger.error('Unknown exption raised!')
+        except TimeoutError:
+            logger.error('Timeout')
             return None
 
         df = pd.DataFrame(response)

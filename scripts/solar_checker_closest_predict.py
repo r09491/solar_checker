@@ -40,7 +40,6 @@ from utils.predicts import (
     get_logs_as_dataframe,
     find_closest,
     partition_closest_watts,
-    ##fix_prediction_watts,
     get_predict_table,
     concat_today,
     concat_tomorrow,

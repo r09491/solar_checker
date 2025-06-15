@@ -303,12 +303,10 @@ async def plot_predict(request: web.Request) -> dict:
     """
     >>> No overcharge/undercharge check
     """
-    
     apply_sky_adapters(
         partitions, 'todaywatts', todayadapters)
     apply_sky_adapters(
         partitions, 'tomorrowwatts2', tomorrowadapters)
-
     
     # Adapt the relative predict table
 

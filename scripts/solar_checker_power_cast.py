@@ -43,18 +43,16 @@ from utils.samples import(
 )
 from utils.weather import(
     get_sky_adapters,
-    SUN_WEIGHT,
-    CLOUD_WEIGHT
+    MIN_SBPB,
+    MAX_SBPB,
+    MAX_SBPB_CHARGING
+
 )
 
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
-
-MIN_SBPB = 160
-MAX_SBPB = 1600
-MAX_SBPB_CHARGING = 600
 
 """ Get the list of logdays and the list of dictionaries with all the
 recordings """
@@ -148,7 +146,7 @@ async def cast_watts(
         for t in adapters.loc[cast_h_first:].index:
             cast_df.loc[
                 t64_h_first(t):t64_h_last(t), ['SBPI']
-            ] *= (SUN_WEIGHT*adapters.loc[t, "SUNSHINE"]+CLOUD_WEIGHT*adapters.loc[t, "CLOUD_FREE"])
+            ] *= adapters.loc[t, "ADAPTATION"]
 
         # Limit sun radiation
 
