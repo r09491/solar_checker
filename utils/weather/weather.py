@@ -121,14 +121,18 @@ def apply_sky_adapters( watts: pd.DataFrame,
     # Maximum radiation before scaling. Should not be exceeded after scaling!
     max_sbpi = sbpi.max()
 
+    # Do the scaling
     
-    sunsbpi = sbpi[sbpi>0]
-    sunadaptation = adapters.resample('T').ffill().loc[sunsbpi.index, ["ADAPTATION"]]
-    sunsbpi = sunsbpi * sunadaptation
+    issun = sbpi>0
+    sunsbpi = sbpi[issun]
+    castrise, castset = sunsbpi.index[0], sunsbpi.index[-1]
+    logger.info(f'castrise @ "{castrise}", castset @ "{castset}"')
+    sunadapt = adapters.resample('T').ffill().loc[castrise:castset, "ADAPTATION"]
+    sunsbpi = sunsbpi*sunadapt
     
     logger.info(f'Adapting watts "{phase}" to limits')
 
-     soc = -watts[
+    soc = -watts[
         'tomorrowwatts1' if (phase == 'tomorrowwatts2') else 'findwatts'
     ].loc[:,'SBSB'].iloc[-1]*MAX_SBPB
     logger.info(f'"SOC is "{-soc:.0f}Wh"')

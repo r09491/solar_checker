@@ -306,6 +306,8 @@ async def plot_predict(request: web.Request) -> dict:
     apply_sky_adapters(
         partitions, 'todaywatts', todayadapters)
     apply_sky_adapters(
+        partitions, 'tomorrowwatts1', tomorrowadapters)
+    apply_sky_adapters(
         partitions, 'tomorrowwatts2', tomorrowadapters)
     
     # Adapt the relative predict table

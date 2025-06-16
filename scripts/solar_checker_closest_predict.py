@@ -214,6 +214,8 @@ async def main( args: Script_Arguments) -> int:
         apply_sky_adapters(
             partitions, 'todaywatts', todayadapters)
         apply_sky_adapters(
+            partitions, 'tomorrowwatts1', tomorrowadapters)
+        apply_sky_adapters(
             partitions, 'tomorrowwatts2', tomorrowadapters)
         
         print_predict(*get_predict_table(partitions))
