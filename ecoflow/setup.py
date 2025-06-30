@@ -13,7 +13,7 @@ setup(name='ecoflow',
       long_description=long_description,
       scripts=[
           './scripts/ef_12V_out_enabled_set.py',
-          './scripts/ef_ac_in_out_charge_watts_soc_get.py',
+          './scripts/ef_ac_in_out_charge_watts_get.py',
           './scripts/ef_ac_charge_watts_balance_set.py',
           './scripts/ef_ac_charge_watts_set.py',
           './scripts/ef_ac_out_enabled_set.py',
