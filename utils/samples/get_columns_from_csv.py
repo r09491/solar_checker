@@ -21,7 +21,8 @@ from ..typing import(
 from ..common import(
     SAMPLE_NAMES,
     t64_from_iso,
-    ymd_today
+    ymd_today,
+    ymd_yesterday
 )
 
 from ..csvlog import get_log
@@ -34,17 +35,27 @@ def cache(f):
     async def wrapper(*args, **kwargs):
         logday = None if len(args) == 0 else args[0]
 
-        if ((logday == ymd_today()) or (logday is None)):
+        if (
+            (logday == ymd_today()) or
+            (logday is None) #Undefined log file
+        ):
+            logger.info(f'New values without store for "{logday}"')
             data = await f(*args, **kwargs)
             return data
         
-        if (logday in CACHE):
+        if (
+            (logday in CACHE) and
+            (
+                (logday != ymd_yesterday(ymd_today())) or
+                (CACHE[logday] is not None)
+            )
+        ):
             logger.info(f'Using values of "{logday}" from cache')
             data = CACHE[logday] 
             return data
         
         data = await f(*args, **kwargs)
-        logger.info(f'Store values of "{logday}" in cache')
+        logger.info(f'Store and use values of "{logday}" in cache')
         CACHE[logday] = data
         return data
 

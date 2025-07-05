@@ -4,7 +4,7 @@ port : 9442
 logdir : /home/r09491/storage/solar_checker
 logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
-logpredictformat : '??0[567]??'
+logpredictformat : '??0[678]??'
 logpredictmaxdays : 180
 logpredictdays : 4
 logpredictcolumns: 'SBPI'
