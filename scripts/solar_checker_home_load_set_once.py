@@ -78,7 +78,11 @@ async def get_home_load_estimate(samples: int) -> int:
     if sbpo.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return -13
-
+    if sbpo[-1] == 0:
+        logger.error(f'Solarbank has no output.')
+        return -18
+    sbpo_mean = int(sbpo.mean())
+    
     """ The normalised solarbank power output """
     sbpb = c['SBPB']
     if sbpb.size != samples:
@@ -93,9 +97,23 @@ async def get_home_load_estimate(samples: int) -> int:
         return -15
     sbsb_mean = sbsb.mean()
 
+    """ The normalised solarbank power input """
+    ivp1 = c['IVP1']
+    if ivp1.size != samples:
+        logger.error(f'wrong number of solarbank records "{ivp1.size}"')
+        return -16
+    ivp2 = c['IVP2']
+    if ivp2.size != samples:
+        logger.error(f'wrong number of solarbank records "{ivp2.size}"')
+        return -17
+    ivp = ivp1+ivp2
+    ivp_mean = int(ivp.mean())
+    
+
     logger.info(f'{sbpi} sbpi')
     logger.info(f'{sbpb} sbpb')
     logger.info(f'{sbpo} sbpo')
+    logger.info(f'{ivp} ivp')
 
     if (sbpb > 0).all(): 
         logger.info(f'bank in DISCHARGE.')
@@ -113,27 +131,23 @@ async def get_home_load_estimate(samples: int) -> int:
         return estimate
 
     
-    if sbpo[-1] == 0:
-        logger.error(f'Solarbank has no output.')
-        return -18
-
-    ##KP, KI, KD = 0.4, 0.1, 0.2
-    KP, KI, KD = 1.0, 0.0, 0.0
+    KP, KI, KD = 0.5, 0.1, 0.3
     logger.info(f"KP {KP}, KI {KI}, KD {KD}")
-    P, I, D = KP*smp[-1], KI*smp.sum(), KD*(smp[-1]-smp[-2])
+    P, I, D = KP*smp[-1], KI*smp.sum(), KD*(smp[-1]-smp[0])
     logger.info(f"P {P:.0f}, I {I:.0f}, D {D:.0f}")
     PID = P + I + D
     logger.info(f"PID {PID:.0f}")
-    estimate = sbpo[-1]+PID
 
+    estimate = (ivp[-1] if ivp[-1]>0 else sbpo[-1]) + PID
     logger.info(f"home load proposal is '{estimate:.0f}W'")
+    
     ubound = 200 if sbpb_mean > 0 else 800
     estimate = 10*int(min(max(estimate,100), ubound)/10)
     logger.info(f"constraint proposal is '{estimate}W'")
 
     if (estimate>sbpi_mean and sbpb_mean <= 0): #Bypass/Charge
         logger.info(f"Cannot comply!")
-        return -19
+        return -20
         
     return  estimate # My solix only uses one channel
 
