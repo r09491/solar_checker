@@ -29,7 +29,7 @@ class Sky:
                  lat: float,
                  lon: float,
                  day: str,
-                 tz: str = 'UTC', timeout: int = 10):
+                 tz: str = 'UTC', timeout: int = 20):
         
         self.url = f'https://{self._URL}/{self._ENDPOINT}?'
         self.url += f'lat={lat}&lon={lon}&'
@@ -55,20 +55,22 @@ class Sky:
     async def _get_weather_info(self) -> Optional[Dict[str, Any]]:
         try:
             response = await self._request()
-        except TimeoutError:
-            logger.error('Timeout')
+        except:
+            logger.error('Raised unknown exception')
             return None
-        return response['weather']
+        return response['weather'] if response is not None else None
 
 
     async def get_sky_info(self) -> Optional[pd.DataFrame]:
         try:
             response = await self._get_weather_info()
-        except TimeoutError:
-            logger.error('Timeout')
+        except:
+            logger.error('Raised unknown exception')
             return None
-
-        df = pd.DataFrame(response)
+        if response is None:
+            return None
+        
+        df = pd.DataFrame(response) 
         df.set_index('timestamp', inplace = True)
         skydf = df.loc[:,['sunshine', 'cloud_cover']]
         return skydf
@@ -77,10 +79,12 @@ class Sky:
     async def get_solar_info(self) -> Optional[pd.DataFrame]:
         try:
             response = await self._get_weather_info()
-        except TimeoutError:
-            logger.error('Timeout')
+        except:
+            logger.error('Raised unknown exception')
             return None            
-
+        if response is None:
+            return None
+        
         df = pd.DataFrame(response)
         df.set_index('timestamp', inplace = True)
         solardf  = df.loc[:,['solar']]
@@ -90,19 +94,21 @@ class Sky:
     async def _get_sources_info(self) -> Optional[Dict[str, Any]]:
         try:
             response = await self._request()
-        except TimeoutError:
-            logger.error('Timeout')
+        except:
+            logger.error('Raised unknown exception')
             return None
-        return response['sources']
+        return response['sources'] if response is not None else None
 
     
     async def get_sources_info(self) -> Optional[pd.DataFrame]:
         try:
             response = await self._get_sources_info()
-        except TimeoutError:
-            logger.error('Timeout')
+        except:
+            logger.error('Raised unknown exception')
             return None
-
+        if response is None:
+            return None
+        
         df = pd.DataFrame(response)
         df.set_index('id', inplace = True)
         sourcesdf = df.loc[:,['distance','height','station_name']]
