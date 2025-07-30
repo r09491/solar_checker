@@ -4,7 +4,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='solar_checker',
-      version='1.4.1',
+      version='1.5.0',
       description='Solar checker with Ecoflow Delta Max,APsystems,Anker,Tuya and BrightSky API',
       url='https://github.com/r09491/solar_checker',
       author='r09491',
@@ -70,6 +70,7 @@ setup(name='solar_checker',
           'pandas',
           'matplotlib',
           'scipy',
+          'pvlib',
           'scikit-learn',
           'lightgbm',
           'joblib',
