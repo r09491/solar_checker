@@ -18,7 +18,12 @@ import joblib
 import pandas as pd
 import numpy as np
 
-import lightgbm as lgb
+try:
+    import lightgbm as lgb
+except OSError:
+    logger.error(f'Unable to run on this system. Upgrade!')
+    sys.exit(-99)
+    
 from sklearn.model_selection import (
     train_test_split
 )

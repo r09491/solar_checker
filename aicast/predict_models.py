@@ -1,3 +1,10 @@
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
+
 import asyncio
 import numpy as np
 import pandas as pd
@@ -22,10 +29,14 @@ async def predict_models(
     modeldir: str,
 ) -> pd.DataFrame:
 
-    sbpi_model = joblib.load(f'{modeldir}/lightgbm_sbpi_model.pkl')
-    sbpo_model = joblib.load(f'{modeldir}/lightgbm_sbpo_model.pkl')
-    smp_model = joblib.load(f'{modeldir}/lightgbm_smp_model.pkl')
-
+    try:
+        sbpi_model = joblib.load(f'{modeldir}/lightgbm_sbpi_model.pkl')
+        sbpo_model = joblib.load(f'{modeldir}/lightgbm_sbpo_model.pkl')
+        smp_model = joblib.load(f'{modeldir}/lightgbm_smp_model.pkl')
+    except OSError:
+        logger.error('Unable to run on this system. Upgrade!')
+        return None
+        
     # Get the basic pool for prediction
     try:
         pool = await get_predict_pool(
