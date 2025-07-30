@@ -28,9 +28,9 @@ from aicast.train_models import (
     train_models
 )
 
-MODELDIR='/mnt/fritz/SOLAR_CHECKER/aicast/models'
+MODELDIR='/home/r09491/storage/solar_checker/aicast/models'
 
-LOGDIR='/mnt/fritz/SOLAR_CHECKER'
+LOGDIR='/home/r09491/storage/solar_checker'
 LOGPREFIX='solar_checker_latest'
 LOGDAYFORMAT='*'
 

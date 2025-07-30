@@ -40,8 +40,8 @@ DAY=(datetime.today()+timedelta(days=1)).strftime('%y%m%d')
 
 LAT, LON, TZ = 49.04885, 11.78333, 'Europe/Berlin'
 
-CASTSDIR='/mnt/fritz/SOLAR_CHECKER/aicast/casts'
-MODELDIR='/mnt/fritz/SOLAR_CHECKER/aicast/models'
+CASTSDIR='/home/r09491/storage/solar_checker/aicast/casts'
+MODELDIR='/home/r09491/storage/solar_checker/aicast/models'
 
 @dataclass
 class Script_Arguments:

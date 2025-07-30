@@ -146,13 +146,15 @@ async def get_train_pool(
     if sky_pool is None:
         logger.error(f'No sky pool for "{logday}"')
         return None
-
+    logger.info(f'Have sky pool for "{logday}"')
+    
     daylight_pool = (await get_daylight_pool(
         sky_pool.index, lat, lon
     ))['is_daylight']
     if daylight_pool is None:
         logger.error(f'No dayligh pool for "{logday}"')
         return None
+    logger.info(f'Have daylight pool for "{logday}"')
 
     sample_pool = await get_sample_pool(
         logdir, logprefix,logday,tz
@@ -160,6 +162,7 @@ async def get_train_pool(
     if sample_pool is None:
         logger.error(f'No sample pool for "{logday}"')
         return None
+    logger.info(f'Have sample pool for "{logday}"')
     
     pools = [sample_pool, daylight_pool, sky_pool] 
     
