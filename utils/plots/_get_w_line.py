@@ -23,6 +23,8 @@ from ..typing import (
     f64, f64s, Any
 )
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 XSIZE, YSIZE = 10, 5
 

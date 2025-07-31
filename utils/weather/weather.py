@@ -128,7 +128,7 @@ def apply_sky_adapters( watts: pd.DataFrame,
     if len(sunsbpi)>0:
         castrise, castset = sunsbpi.index[0], sunsbpi.index[-1]
         logger.info(f'castrise @ "{castrise}", castset @ "{castset}"')
-        sunadapt = adapters.resample('T').ffill().loc[castrise:castset, "ADAPTATION"]
+        sunadapt = adapters.resample('ME').ffill().loc[castrise:castset, "ADAPTATION"]
         sunsbpi = sunsbpi*sunadapt
     
     logger.info(f'Adapting watts "{phase}" to limits')
