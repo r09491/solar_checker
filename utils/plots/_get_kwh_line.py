@@ -54,14 +54,21 @@ def _get_kwh_line(
 
     if tphases is not None:
         # Selection Area
-        ax.axvspan(tphases[0], tphases[1], 
-                   color ='olive',
-                   alpha = 0.3)        
+        ax.axvspan(
+            mdates.date2num(tphases[0]),
+            mdates.date2num(tphases[1]), 
+            color ='olive',
+            alpha = 0.3
+        )        
         # Cast area
         if len(tphases)>2:
-            ax.axvspan(tphases[2], tphases[3], 
-                       color ='white',
-                       alpha = 0.6)        
+            ax.axvspan(
+                mdates.date2num(tphases[2]),
+                mdates.date2num(tphases[3]), 
+                color ='white',
+                alpha = 0.6
+            )        
+
     
     if sbeoon is not None:
         ax.fill_between(time, 0, sbeo,

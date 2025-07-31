@@ -10,7 +10,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
-
+from matplotlib.dates import date2num
 import numpy as np
 
 import base64
@@ -92,15 +92,22 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if tphases is not None:
         # Selection area
-        ax.axvspan(tphases[0], tphases[1], 
-                   color ='olive',
-                   alpha = 0.3)
+        ax.axvspan(
+            mdates.date2num(tphases[0]),
+            mdates.date2num(tphases[1]), 
+            color ='olive',
+            alpha = 0.3
+        )
         # Cast area
         if len(tphases)>2:
-            ax.axvspan(tphases[2], tphases[3], 
-                       color ='white',
-                       alpha = 0.6)        
+            ax.axvspan(
+                mdates.date2num(tphases[2]),
+                mdates.date2num(tphases[3]), 
+                color ='white',
+                alpha = 0.6
+            )        
 
+    
     """ Plot solarbank and smartmeter filled """
     
     if sbpoon is not None:
