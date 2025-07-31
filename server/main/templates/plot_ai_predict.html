@@ -1,0 +1,28 @@
+{% set title = 'P12 Kraftwerk AI Predict' %}
+
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style='display:flex;justify-content:center;'>
+  <div style='margin:30px;width:90px;text-align:center;'>
+    <a href='/plot_ai_predict/{{castyesterday}}'>{{castyesterday}}</a>
+  </div>
+
+  <div style='display:flex;justify-content:center;'>
+    <h1 style='margin:4px;'>AI Cast {{castday}}</h1>
+  </div>
+
+  <div style='margin:30px;width:90px;text-align:center;'> 
+    <a href='/plot_ai_predict/{{casttomorrow}}'>{{casttomorrow}}</a>
+  </div>
+</div>
+
+<div style='display:flex;justify-content:center;' >
+  <img src='data:image/png;base64,{{w}}'/>
+</div>
+<div style='display:flex;justify-content:center;' >
+  <img src='data:image/png;base64,{{kwh}}'/>
+</div>
+
+{% endblock content %}

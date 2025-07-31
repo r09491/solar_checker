@@ -26,7 +26,8 @@ from ..typing import (
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-XSIZE, YSIZE = 10, 5
+TZ='Europe/Berlin'
+XSIZE, YSIZE = 9, 6
 
 def _get_w_line(time: t64s, smp: f64s,
                 ivp1: f64s, ivp2: f64s, spph: f64s,
@@ -207,7 +208,7 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.set_ylabel('Power [W]')
     ax.set_yscale('symlog')
     ax.xaxis_date()
-    hm_formatter = mdates.DateFormatter('%H:%M')
+    hm_formatter = mdates.DateFormatter('%H:%M', tz=TZ)
     ax.xaxis.set_major_formatter(hm_formatter)
     ax.grid(which='major', ls='-', lw=1, axis='both')
     ax.grid(which='minor', ls=':', lw=1, axis='both')

@@ -1,6 +1,8 @@
 host : 0.0.0.0
 port : 9442
 
+modeldir : /home/r09491/storage/solar_checker/aicast/models
+
 logdir : /home/r09491/storage/solar_checker
 logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
@@ -8,6 +10,7 @@ logpredictformat : '??0[678]??'
 logpredictmaxdays : 180
 logpredictdays : 4
 logpredictcolumns: 'SBPI'
+
 
 energy_price:
   '24': 0.369

@@ -23,7 +23,8 @@ from ..typing import (
     f64, f64s, Any
 )
 
-XSIZE, YSIZE = 10, 5
+TZ='Europe/Berlin'
+XSIZE, YSIZE = 9, 6
 
 def _get_kwh_line(
         time: t64s, smeon: f64s, smeoff: f64s,
@@ -200,7 +201,7 @@ def _get_kwh_line(
     ax.legend(loc="upper left")
     ax.set_ylabel('Energy [kWh]')
     ax.xaxis_date()
-    ax_formatter = mdates.DateFormatter(time_format)
+    ax_formatter = mdates.DateFormatter(time_format, tz=TZ)
     ax.xaxis.set_major_formatter(ax_formatter)
     ax.grid(which='major', ls='-', lw=1, axis='both')
     ax.grid(which='minor', ls=':', lw=1, axis='both')
