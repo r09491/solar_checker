@@ -4,7 +4,9 @@ SBPI_FEATURES = [
     'day_of_year',
     'is_daylight',
     'sunshine',
-    'cloud_cover'
+    'cloud_cover',
+    'temperature',
+    'visibility'
 ]
 
 SBPO_FEATURES = [
@@ -20,7 +22,7 @@ SMP_FEATURES = [
     'hour',
     'minute',
     'day_of_year',
-#    'is_daylight'
+    'is_daylight'
 ]
 
 

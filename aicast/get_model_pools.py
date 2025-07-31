@@ -115,7 +115,7 @@ async def get_sky_pool(
 ) -> Optional[pd.DataFrame]:
     
     sky = Sky(lat,lon, logday, tz)
-    df = await sky.get_sky_info()
+    df = await sky.get_ai_feature_info()
     if df is None:
         logger.error(f'No sky features for {logday}')
         return None

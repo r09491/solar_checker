@@ -5,3 +5,4 @@ __pycache__/
 build
 dist
 nohup.out
+p12run

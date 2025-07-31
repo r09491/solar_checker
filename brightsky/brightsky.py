@@ -10,7 +10,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from aiohttp import ClientSession
-from aiohttp.http_exceptions import HttpBadRequest
 
 from dataclasses import dataclass
 
@@ -44,9 +43,7 @@ class Sky:
                     self.url,
                     timeout=self.timeout
             ) as resp:
-                if not resp.ok:
-                    raise HttpBadRequest(f"HTTP Error: {resp.status}")
-                return await resp.json()
+                return await resp.json() if resp.ok else None
         except TimeoutError:
             logger.error('Timeout')
             return None
@@ -75,6 +72,21 @@ class Sky:
         skydf = df.loc[:,['sunshine', 'cloud_cover']]
         return skydf
 
+    
+    async def get_ai_feature_info(self) -> Optional[pd.DataFrame]:
+        try:
+            response = await self._get_weather_info()
+        except:
+            logger.error('Raised unknown exception')
+            return None
+        if response is None:
+            return None
+        
+        df = pd.DataFrame(response) 
+        df.set_index('timestamp', inplace = True)
+        skydf = df.loc[:,['sunshine', 'cloud_cover', 'temperature', 'visibility']]
+        return skydf
+    
 
     async def get_solar_info(self) -> Optional[pd.DataFrame]:
         try:
