@@ -25,4 +25,29 @@
   <img src='data:image/png;base64,{{kwh}}'/>
 </div>
 
+
+<div style='display:flex;justify-content:center;' >
+  <h3>Hourly Power (W)</h3>
+</div>  
+<div style='display:flex;justify-content:center;' >
+  {{ predicttables[0].to_html(
+  border=0,
+  col_space=70,
+  justify='center',
+  float_format='{:,.0f}'.format)
+  .replace('<td>', '<td align="center">') | safe }}
+</div>
+
+<div style='display:flex;justify-content:center;' >
+  <h3>Hourly Energy (Wh)</h3>
+</div>  
+<div style='display:flex;justify-content:center;' >
+  {{ predicttables[1].to_html(
+  border=0,
+  col_space=70,
+  justify='center',
+  float_format='{:,.0f}'.format)
+  .replace('<td>', '<td align="center">') | safe }}
+</div>
+
 {% endblock content %}

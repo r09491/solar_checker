@@ -63,6 +63,10 @@ from aicast.predict_models import (
     predict_models
 )
 
+from aicast.get_predict_tables import (
+    get_predict_tables
+)
+
 
 @aiohttp_jinja2.template('plot_day.html')
 async def plot_day(request: web.Request) -> dict:
@@ -435,6 +439,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
             {"error" : f'Model files for  "{castday}" not found or not valid'}
         )
 
+    
     time = np.array(pool['TIME'])
     sbpi = np.array(pool['SBPI'])
     sbpo = np.array(pool['SBPO'])
@@ -486,11 +491,19 @@ async def plot_ai_cast(request: web.Request) -> dict:
         )
     )
 
+    predicttables = await get_predict_tables(pool)
+    if predicttables is None:
+        return aiohttp_jinja2.render_template(
+            "error.html", request,
+            {"error" : f'Cannot output predict tables for "{castday}"'}
+        )
+
     return {'castday': castday,
             'castyesterday': ymd_yesterday(castday),
             'casttomorrow': ymd_tomorrow(castday),
             'w': w,
-            'kwh': kwh}
+            'kwh': kwh,
+            'predicttables': predicttables}
 
 
 @aiohttp_jinja2.template('train_ai_cast.html')
