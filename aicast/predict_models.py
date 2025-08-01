@@ -53,7 +53,17 @@ async def predict_models(
     pool['SMP'] = smp_model.predict(pool[SMP_FEATURES]).astype(int)
     pool['SBPO'] = sbpo_model.predict(pool[SBPO_FEATURES]).astype(int)
 
+    # Plausibilit check to get rid of noise
+
+    # Radiation cannot be negative
+    sbpi_is_impossible = pool['SBPI']<0
+    pool.loc[sbpi_is_impossible, 'SBPI'] = 0
+
+    # Solix is chargin the battery below 35W and has no output
+    sbpo_is_impossible = (0 < pool['SBPI']) & (pool['SBPI'] < 35)
+    pool.loc[sbpo_is_impossible, 'SBPO'] = 0
+    
     # Using system knowlegde
-    pool['SBPB'] = pool['SBPO'] - pool['SBPI'].astype(int)
+    pool['SBPB'] = pool['SBPO'] - pool['SBPI']
 
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]
