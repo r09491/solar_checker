@@ -5,8 +5,8 @@ from views import (
     plot_month,
     plot_year,
     plot_predict,
-    plot_ai_predict,
-    start_ai_train
+    plot_ai_cast,
+    train_ai_cast
 )
 
 def setup_routes(app: web.Application):
@@ -18,9 +18,9 @@ def setup_routes(app: web.Application):
     app.router.add_get('/plot_year', plot_year)
     app.router.add_get('/plot_year/{logyear}', plot_year)
     app.router.add_get('/plot_predict/{logday}/{what}', plot_predict)
-    app.router.add_get('/plot_ai_predict', plot_ai_predict)
-    app.router.add_get('/plot_ai_predict/{castday}', plot_ai_predict)
-    app.router.add_get('/start_ai_train', start_ai_train)
+    app.router.add_get('/plot_ai_cast', plot_ai_cast)
+    app.router.add_get('/plot_ai_cast/{castday}', plot_ai_cast)
+    app.router.add_get('/train_ai_cast', train_ai_cast)
     
     app.router.add_static('/static/',
                           path= BASE_DIR / 'main' / 'static',

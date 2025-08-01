@@ -383,8 +383,8 @@ async def plot_predict(request: web.Request) -> dict:
             'predicttables': [rtable, atable]}
 
 
-@aiohttp_jinja2.template('plot_ai_predict.html')
-async def plot_ai_predict(request: web.Request) -> dict:
+@aiohttp_jinja2.template('plot_ai_cast.html')
+async def plot_ai_cast(request: web.Request) -> dict:
 
     conf = request.app['conf']
 
@@ -474,8 +474,8 @@ async def plot_ai_predict(request: web.Request) -> dict:
             'kwh': kwh}
 
 
-@aiohttp_jinja2.template('start_ai_train.html')
-async def start_ai_train(request: web.Request) -> dict:
+@aiohttp_jinja2.template('train_ai_cast.html')
+async def train_ai_cast(request: web.Request) -> dict:
 
     return aiohttp_jinja2.render_template(
         'error.html', request,
