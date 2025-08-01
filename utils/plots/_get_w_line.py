@@ -32,7 +32,8 @@ XSIZE, YSIZE = 9, 6
 def _get_w_line(time: t64s, smp: f64s,
                 ivp1: f64s, ivp2: f64s, spph: f64s,
                 sbpi: f64s, sbpo: f64s, sbpb: f64s,
-                tphases: t64s = None):
+                tphases: t64s = None,
+                tz: str = None):
     __me__ ='_get_w_line'
     logger.info(f'started')
 
@@ -208,7 +209,7 @@ def _get_w_line(time: t64s, smp: f64s,
     ax.set_ylabel('Power [W]')
     ax.set_yscale('symlog')
     ax.xaxis_date()
-    hm_formatter = mdates.DateFormatter('%H:%M', tz=TZ)
+    hm_formatter = mdates.DateFormatter('%H:%M', tz=tz)
     ax.xaxis.set_major_formatter(hm_formatter)
     ax.grid(which='major', ls='-', lw=1, axis='both')
     ax.grid(which='minor', ls=':', lw=1, axis='both')

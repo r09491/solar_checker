@@ -32,7 +32,8 @@ def _get_kwh_line(
         sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
         empty_kwh, full_kwh: f64s, price: f64,
         tphases: t64s = None,
-        time_format: str = '%H:%M'):
+        time_format: str = '%H:%M',
+        tz: str = None):
     __me__ ='_get_kwh_line'
     logger.info(f'started')
 
@@ -201,7 +202,7 @@ def _get_kwh_line(
     ax.legend(loc="upper left")
     ax.set_ylabel('Energy [kWh]')
     ax.xaxis_date()
-    ax_formatter = mdates.DateFormatter(time_format, tz=TZ)
+    ax_formatter = mdates.DateFormatter(time_format, tz=tz)
     ax.xaxis.set_major_formatter(ax_formatter)
     ax.grid(which='major', ls='-', lw=1, axis='both')
     ax.grid(which='minor', ls=':', lw=1, axis='both')

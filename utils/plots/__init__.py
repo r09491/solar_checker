@@ -18,7 +18,8 @@ if sys.version_info >= (3, 9):
 async def get_w_line(time: t64s, smp: f64s,
                      ivp1: f64s, ivp2: f64s, spph: f64s,
                      sbpi: f64s, sbpo: f64s, sbpb: f64s,
-                     tphases: t64s = None):
+                     tphases: t64s = None,
+                     tz:str = None):
     if sys.version_info >= (3, 9):
         return await to_thread(_get_w_line,**vars())
     else:
@@ -31,7 +32,8 @@ async def get_kwh_line(
         sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
         empty_kwh: f64s, full_kwh: f64s, price: f64,
         tphases: t64s = None,
-        time_format: str = '%H:%M'):
+        time_format: str = '%H:%M',
+        tz:str = None):
     if sys.version_info >= (3, 9): 
         return await to_thread(_get_kwh_line, **vars())
     else:
