@@ -18,17 +18,14 @@ import argparse
 import asyncio
 import joblib
 
-import pandas as pd
-pd.options.display.float_format = '{:,.0f}'.format
-
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(os.path.basename(sys.argv[0]))
-
 from dataclasses import dataclass
 
 from aicast.predict_models import (
     predict_models
+)
+
+from aicast.get_predict_tables import (
+    get_predict_tables
 )
 
 from datetime import (
@@ -98,53 +95,6 @@ def parse_arguments() -> Script_Arguments:
         args.castsdir
     )
 
-
-async def shoot_pool_watts(
-        pool: pd.DataFrame
-) -> (pd.DataFrame, pd.DataFrame):
-
-    if pool is None:
-        print(f'No cast available')
-        return None, None
-
-    pool.set_index('TIME', inplace=True)
-    
-    means = pool.resample('h').mean() 
-
-    sbpi_means = means.loc[:,'SBPI']
-    sbpb_means = means.loc[:,'SBPB']
-    sbpo_means = means.loc[:,'SBPO']
-    smp_means = means.loc[:,'SMP']
-
-    sbpb_means_in = sbpb_means.copy() 
-    sbpb_means_in[sbpb_means>0] = 0
-    sbpb_means_out = sbpb_means.copy() 
-    sbpb_means_out[sbpb_means<0] = 0
-    
-    smp_means_in = smp_means.copy() 
-    smp_means_in[smp_means<0] = 0
-    smp_means_out = smp_means.copy() 
-    smp_means_out[smp_means>0] = 0
-
-    means_df = pd.DataFrame(
-        data = {
-            "SBPI":sbpi_means,
-            ">SBPB":sbpb_means_in,
-            "SBPB>":sbpb_means_out,
-            "SBPO":sbpo_means,
-            ">SMP":smp_means_out,
-            "SMP>":smp_means_in
-        }
-    )
-
-    starts = means_df.index.strftime("%H:00")
-    stops = means_df.index.strftime("%H:59")
-    start_stop_df =pd.DataFrame({"START":starts, "STOP":stops})
-
-    means_df.reset_index(inplace = True, drop=True)
-    
-    return start_stop_df, means_df
-
 async def main(
         day:str,
         tz:str,
@@ -167,20 +117,18 @@ async def main(
     pool.to_csv(f'{castsdir}/cast_{day}.csv')
     logger.info(f'Saved cast to "{castsdir}/cast_{day}.csv"')
 
-    (start_stop_df, means_df) = await shoot_pool_watts(pool)
-    if ((start_stop_df is None) or
-        (means_df is None)
-        ): 
+    tables = await get_predict_tables(pool)
+    if tables is None:
         logger.error(f'Cannot print hourly pool data')
         return -2
 
     print()
     print(f'Power forecast per hour [W]')
-    print(pd.concat([start_stop_df, means_df], axis=1))
+    print(tables[0])
 
     print()
     print(f'Energy forecast per hour [Wh]')
-    print(pd.concat([start_stop_df, means_df.cumsum()], axis=1))
+    print(tables[1])
 
     print()
     
