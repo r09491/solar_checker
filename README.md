@@ -3,18 +3,19 @@
 ## Overview
 
 The Solar Checker repository provides APIs for the APsystems EZ1
-microinverter, Tasmota smartmeter, Tuya smartplug, Anker Solix
-solarbank, Ecoflow Dealt Max powerstation, and Brightsky weather
+microinverter, Tasmota smartmeter, Tuya smartplugs, Anker Solix
+solarbank, Ecoflow Delta Max power station, and Brightsky weather
 server. Based on these APIs there are scripts to record their latest
-power data which in turn can be used for plots, grid zeroise and
-forecast outputs on consoles and web browsers.
+power data which in turn can be used for plots, grid output zeroise
+and forecast outputs on consoles and web browsers.
 
-Initially the main motiviation was to assess if my PV system will pay
-off at a point of time not trusting the sellers' claims.
-
-Later the Anker API was extended for setting the home load power
-to minimize the output from the Anker solarbank to the power grid.
-Finally rule and KI based forecast functions were added. 
+Initially motivated to assess if my PV system will pay off at a point
+of time the Anker API was extended to set the home load power of the
+solarbank to minimize the output from the Anker solarbank to the power
+grid later.  Finally rule and KI based forecast functions were
+added. For example 'solar_checker_ai_train.py' will train a forecast
+models based on the disk recorded data. Using these models
+'solar_checker_ai_predict.py' outputs the forecast for any day.
 
 The following is the output of a log day on the HTTP server. It shows
 the components with the power flow in minutes. There is an extreme
@@ -110,12 +111,11 @@ the ip addresses and add it to 'cron'. Be sure to have the 'PATH and
 'SOLAR_CHECKER_STORE_DIR* environment variables set as documented in
 the script!
 
-To start the http server run 'p12run' under the server/mein directory.
+To start the http server run 'p12run' under the server/main directory.
 
 You may have to addapt some ip addresses in the scripts.
 
-An example for 'cron' setup is in 'scripts/crontab.example'. It also
-has some docu for the 'zeroise' philosophy.
+An example for 'cron' setup wit some docu is in 'scripts/crontab.example'.
 
 ---
 
