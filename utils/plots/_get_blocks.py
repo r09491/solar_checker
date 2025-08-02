@@ -23,7 +23,7 @@ from ..typing import (
     f64, f64s, Any
 )
 
-XSIZE, YSIZE = 10, 5
+XSIZE, YSIZE = 9, 6
 
 def _get_blocks(time: t64, smp: f64,
                 ivp1: f64, ivp2: f64, spph: f64,
