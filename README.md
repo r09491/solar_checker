@@ -33,9 +33,11 @@ cyan values are donated to the power grid.
 
 ![alt text](images/solar_checker_logmonth.png)
 
-My solar system produced 101.8 kWh. 67% were directly used which
-resulted in an saving of 24.98€. Nevertheless I still have to pay
-13.85€ to my supplier and he gets energy worth 12.57€ as a present.
+My solar system produced 83.0 kWh measured by the inverter (without
+the losses in the solarbank). 82% are directly used which results in a
+bonus of 23.15€. Nevertheless I still have to pay 26.56€ to my
+supplier for his grid imports and he gets energy worth 5.00€ as a
+gift for my grid exports.
 
 ---
 
