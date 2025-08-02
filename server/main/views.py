@@ -462,6 +462,8 @@ async def plot_ai_cast(request: web.Request) -> dict:
         sbpbcharge[sbpb>0] = 0
         sbpbdischarge[sbpb<0] = 0
 
+    sbeb = sbpb.cumsum()/1000/60 if sbpb is not None else None
+
     w, kwh = await asyncio.gather(
         get_w_line(
             time,
@@ -485,7 +487,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000/60 if sbpbcharge is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpbdischarge is not None else None,
-            0.5*full_kwh - sbpb.cumsum()/1000/60 if sbpb is not None else None,
+            (empty_kwh + sbeb.max() - sbeb) if sbeb is not None else None,
             empty_kwh,
             full_kwh,
             price[castday[:2]],
