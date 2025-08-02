@@ -5,6 +5,8 @@ logging.basicConfig(
     datefmt='%H:%M:%S',)
 logger = logging.getLogger(__name__)
 
+import sys
+
 import asyncio
 from aiohttp import web
 import aiohttp_jinja2
@@ -407,6 +409,12 @@ async def plot_predict(request: web.Request) -> dict:
 
 @aiohttp_jinja2.template('plot_ai_cast.html')
 async def plot_ai_cast(request: web.Request) -> dict:
+
+    if sys.version_info < (3, 11):
+        return aiohttp_jinja2.render_template(
+            'error.html', request,
+            {'error' : f'AI cast cannot run on this system.Upgrade!'}
+    )
 
     conf = request.app['conf']
 
