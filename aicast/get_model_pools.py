@@ -119,6 +119,10 @@ async def get_sky_pool(
     if df is None:
         logger.error(f'No sky features for {logday}')
         return None
+    if df.isnull().any().any():
+        logger.error(f'At least one undefined column for {logday}')
+        return None
+        
     try:
         df.index = pd.DatetimeIndex(df.index).tz_convert(tz)
     except TypeError:
@@ -249,14 +253,14 @@ async def get_predict_pool(
     if sky_pool is None:
         logger.error(f'No sky pool for "{day}"')
         return None
-
+    
     daylight_pool = (await get_daylight_pool(
         sky_pool.index, lat, lon
     ))['is_daylight']
     if daylight_pool is None:
         logger.error(f'No dayligh pool for "{day}"')
         return None
-
+    
     t = sky_pool.index[:-1]
     sample_pool = pd.DataFrame(
         data = {

@@ -6,7 +6,6 @@ SBPI_FEATURES = [
     'sunshine',
     'cloud_cover',
     'temperature',
-    'relative_humidity',
     'dew_point',
     'visibility'
 ]

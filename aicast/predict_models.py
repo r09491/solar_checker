@@ -47,6 +47,10 @@ async def predict_models(
         )
     except:
         return None
+
+    if pool is None or pool.empty:
+        logger.error(f'Predict pool is empty for "{day}"')
+        return None
     
     # Predict with models, sequence is mandatory
     pool['SBPI'] = sbpi_model.predict(pool[SBPI_FEATURES]).astype(int) 
