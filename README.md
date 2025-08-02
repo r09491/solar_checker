@@ -1,40 +1,38 @@
-# Solar Checker -  Python Library
+# Solar Checker -  Python Libraries
 
 ## Overview
 
-The Solar Checker Python library provides APIs for the APsystems EZ1
-microinverter, Tasmota smartmeter, a poor Tuya library for
-smartplugs, and a poor Anker library for the Solix solarbank. Based on
-these four APIs there are scripts to record their latest power data
-which in turn can be used for plots to visualise them.
+The Solar Checker repository provides APIs for the APsystems EZ1
+microinverter, Tasmota smartmeter, Tuya smartplug, Anker Solix
+solarbank, Ecoflow Dealt Max powerstation, and Brightsky weather
+server. Based on these APIs there are scripts to record their latest
+power data which in turn can be used for plots, grid zeroise and
+forecast outputs on consoles and web browsers.
 
-After some time a HTTP server was created to visualize the recorded
-data. It facilitates the process to monitor my solar power station and
-to assess if it will pay off at a point of time.
+Initially the main motiviation was to assess if my PV system will pay
+off at a point of time not trusting the sellers' claims.
 
-Again after some time the Anker API was extended for setting the home
-load power with the intention to minimize the output delivered from
-the solarbank to the power grid.
+Later the Anker API was extended for setting the home load power
+to minimize the output from the Anker solarbank to the power grid.
+Finally rule and KI based forecast functions were added. 
 
 The following is the output of a log day on the HTTP server. It shows
-the components with the minutely power flow. There is an extreme high
-power import from the grid since my wife switched the dryer on. Very
-low sun power since the sun is almost set! Battery not charged!
+the components with the power flow in minutes. There is an extreme
+high power import from the grid since the dryer is switched on, very
+low sun power since the sun is almost set, battery not charged!
 
 ![alt text](images/solar_checker_logday.png)
 
 For each month and year an overview can be calculated showing the
-power imported from the grid in blue and the solar power produced in
-grey. Positive grey values are consumed in the home, negative
-grey values are donated to the power grid.
+power imported from the grid in blue and the inverter output in
+cyan. Positive cyan values are consumed in the home, negative
+cyan values are donated to the power grid.
 
 ![alt text](images/solar_checker_logmonth.png)
 
-In July I was on vacation in the period with small blue bars. On the days
-without blue my smartmeter was not working.  My solar
-system produced 101.8 kWh. 67% were directly used which resulted in an
-saving of 24.98€. Nevertheless I still have to pay 13.85€ to my
-supplier and he gets energy worth 12.57€ as a present.
+My solar system produced 101.8 kWh. 67% were directly used which
+resulted in an saving of 24.98€. Nevertheless I still have to pay
+13.85€ to my supplier and he gets energy worth 12.57€ as a present.
 
 ---
 
@@ -73,22 +71,24 @@ Ensure you have a proper '.poortuya' is in your home directory!
 
 ## Setup Pooranker for your Solarbank
 
-Install the anker-solix-api [repositiory](https://github.com/thomluther/anker-solix-api-2)
+Install the anker-solix-api
+[repositiory](https://github.com/thomluther/anker-solix-api-2)
 
 if you want to install on a Raspberry with Python 3.7 clone the
 [fork](https://github.com/r09491/anker-solix-api-2.git) and run ''pip3
-install .'
+install .' Ths repository is a quick and dirty patch of the original
+one to run on systems with Python 3.7 only and Solix generation 1.
 
 ## Installation
 
-I installed the 'apsystems', the 'tosmota' 'pooranker' and the
-'poortuya' APIs on a standard raspberry buster system with python
-version 3.7.3. In order to use the scripts the python3-numpy,
-python3-pandas, python3-matplotlib packages have to be installed with
-'apt' in advance. I used 'sudo' for a system wide install avoiding to
-deal with local paths and local pip libraries in cron. You might have
-a different philosophy and use virtual environments.
-It should be installable on any Linux with python >= 3.7.1.
+I installed all APIs on a standard raspberry buster system with Python
+3.7.3. In order to use the scripts the python3-asyncio,
+python3-aiohttp ,python3-numpy, python3-pandas, python3-matplotlib,
+python-scipy packages have to be installed with 'apt' in advance. I
+used 'sudo' for a system wide install avoiding to deal with local
+paths and local pip libraries in cron. You might have a different
+philosophy and use virtual environments.  It should be installable on
+any Linux with python >= 3.7.1.
 
 I installed the repository also under 'termux' on my Android
 smartphone.
@@ -113,6 +113,9 @@ the script!
 To start the http server run 'p12run' under the server/mein directory.
 
 You may have to addapt some ip addresses in the scripts.
+
+An example for 'cron' setup is in 'scripts/crontab.example'. It also
+has some docu for the 'zeroise' philosophy.
 
 ---
 
@@ -164,13 +167,6 @@ Power:4W
 Energy:4227kWh
 ~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems
 24,0.032,0.698,24,0.029,0.658
-~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems| \
-                          awk -F',' '{printf("Channel1: %.0fW %.3fkWh %.3fkWh\n", $1, $2,$3)}'
-Channel1: 26W 0.034kWh 0.700kWh
-~/solar_checker/scripts $ apsystems_latest_get.py --ip apsystems| \
-                         awk -F',' '{printf("Channel 1: %.0fW %.3fkWh %.3fkWh\nChannel 2: %.0fW %.3fkWh %.3fkWh\n", $1,$2,$3,$4,$5,$6)}'
-Channel 1: 25W 0.035kWh 0.701kWh
-Channel 2: 24W 0.032kWh 0.661kWh
 ~/solar_checker/scripts $
 ```
 ---
