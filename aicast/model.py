@@ -6,6 +6,8 @@ SBPI_FEATURES = [
     'sunshine',
     'cloud_cover',
     'temperature',
+    'relative_humidity',
+    'dew_point',
     'visibility'
 ]
 
@@ -13,7 +15,6 @@ SBPO_FEATURES = [
     'hour',
     'minute',
     'day_of_year',
-#    'is_daylight',
     'SBPI',
     'SMP'
 ]

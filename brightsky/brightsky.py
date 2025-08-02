@@ -81,10 +81,17 @@ class Sky:
             return None
         if response is None:
             return None
-        
+
         df = pd.DataFrame(response) 
         df.set_index('timestamp', inplace = True)
-        skydf = df.loc[:,['sunshine', 'cloud_cover', 'temperature', 'visibility']]
+        skydf = df.loc[:,['sunshine',
+                          'cloud_cover',
+                          'temperature',
+                          'relative_humidity',
+                          'dew_point',
+                          'visibility'
+                          ]
+                       ]
         return skydf
     
 
