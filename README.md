@@ -13,14 +13,16 @@ Initially motivated to assess if my PV system will pay off at a point
 of time the Anker API was extended to set the home load power of the
 solarbank to minimize the output from the Anker solarbank to the power
 grid later.  Finally rule and KI based forecast functions were
-added. For example 'solar_checker_ai_train.py' will train a forecast
-models based on the disk recorded data. Using these models
-'solar_checker_ai_predict.py' outputs the forecast for any day.
+added. For example 'solar_checker_ai_train.py' will train forecast
+models based on all disk recorded data taking quite a long time. Using
+these models 'solar_checker_ai_predict.py' outputs the forecast for
+any day in quite short time.
 
 The following is the output of a log day on the HTTP server. It shows
-the components with the power flow in minutes. There is an extreme
-high power import from the grid since the dryer is switched on, very
-low sun power since the sun is almost set, battery not charged!
+the system components with the power flow in minutes. There is an
+extreme high power import from the grid since the dryer is switched
+on, very low sun power since the sun is almost set, battery not
+charged!
 
 ![alt text](images/solar_checker_logday.png)
 
@@ -39,7 +41,8 @@ resulted in an saving of 24.98€. Nevertheless I still have to pay
 
 ## Setup your Inverter
 
-The local API access needs to be activated once in the settings of the APsystems Easy Power App. 
+The local API access needs to be activated once in the settings of the
+APsystems Easy Power App.
 <ul>
 <li>Step 1: Connect to the inverter using the "Direct Connection" method.</li>
 <li>Step 2: Establish a connection with your inverter.</li>
