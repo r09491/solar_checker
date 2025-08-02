@@ -1,23 +1,49 @@
-# Record the latest power of the smartmeter and inverter
-* * * * * solar_checker_latest_once.sh
+#### crontab.example
 
-## Needs a few minutes to settle (with period<4 starts oszilation)
-*/4 00-07 * * * sleep 15 && solar_checker_home_load_set_once.sh
-*/1 08-17 * * * sleep 15 && solar_checker_home_load_set_once.sh
-*/4 18-23 * * * sleep 15 && solar_checker_home_load_set_once.sh
+SHELL=/bin/bash
+## Insert venv bin path if venv is used
+PATH=/usr/local/bin:/usr/bin:/bin
+SOLAR_CHECKER_STORE_DIR=/home/r09491/storage/solar_checker
+ECOFLOW_CHECKER_STORE_DIR=/home/r09491/storage/ecoflow_checker
+SHOTS_DIR=/media/fritzdisk/MOTION/uhttpd/store/1
 
-## USB etc
-1-59/8 * * * * sleep 45 && solar_checker_switch_on_export_once_plug1.sh
-## Laptop etc
-3-59/8 00-16 * * * sleep 45 && solar_checker_switch_on_export_once_plug2.sh
-## Ecoflow, Bike etc
-5-59/8 10-16 * * * sleep 45 && solar_checker_switch_on_export_once_plug3.sh
-## Wildcard
-7-59/8 * * * * sleep 45 && solar_checker_switch_on_export_once_plug4.sh
 
-## Backup the recording directory of the solar checker
-10 */2 * * * rsync -cau --delete /home/r09491/storage/solar_checker/ /home/r09491/backup/solar_checker/
+### Start the http server
 
-0 10 * * * solar_checker_closest_predict_default.sh 1>> $SOLAR_CHECKER_STORE_DIR/predict_default_10.txt
-0 13 * * * solar_checker_closest_predict_default.sh 1>> $SOLAR_CHECKER_STORE_DIR/predict_default_13.txt
-0 16 * * * solar_checker_closest_predict_default.sh 1>> $SOLAR_CHECKER_STORE_DIR/predict_default_16.txt
+@reboot p12run > $SOLAR_CHECKER_STORE_DIR/p12run.out
+
+
+### Record the latest power of the smartmeter and inverter
+
+## Uncomment if zeroise is used (Recording and switching to be separated)
+* 00-06,20-23 * * * solar_checker_latest_once.sh
+
+## Uncomment if zeroise is not used
+##* * * * * solar_checker_latest_once.sh
+
+## Uncomment if Ecoflow Delta Max recording is required 
+* * * * * ef_checker_latest_once.sh
+
+
+### Zeroise
+
+##  Uncomment early morning switching if zeroise is not used! 4 minutes latency in discharge mode! 
+*/4 00-06 * * * sleep 30 && (solar_checker_home_load_set_once.sh || solar_checker_plug_switch_once_plug3.sh || solar_checker_plug_switch_once_plug2.sh  || solar_checker_plug_switch_once_plug1.sh)
+
+##  Uncomment daylight recording and switching if zeroise is not used! 1 minutes latency in charge mode! 
+* 07-19 * * * solar_checker_latest_once.sh && (solar_checker_ef_ac_charge_set_once.sh || solar_checker_home_load_set_once.sh || solar_checker_plug_switch_once_plug1.sh || solar_checker_plug_switch_once_plug2.sh || solar_checker_plug_switch_once_plug3.sh )
+
+##  Uncomment late evening switching if zeroise is not used! 4 minutes latency in discharge mode! 
+*/4 20-23 * * * sleep 30 && (solar_checker_home_load_set_once.sh || solar_checker_plug_switch_once_plug3.sh || solar_checker_plug_switch_once_plug2.sh || solar_checker_plug_switch_once_plug1.sh)
+
+
+### Backup
+
+# Backup the recording directory of the solar checker 
+50 * * * * rsync -cau --delete /home/r09491/storage/solar_checker/ /media/magentacloud/BACKUP/solar_checker/
+
+
+### Make weather movie for the HTTP server
+
+## Uncomment if movie is required
+#5 * * * * sleep 30 && ffmpeg -hide_banner -loglevel quiet -framerate 1 -pattern_type glob -i "$SHOTS_DIR/$(date +\%Y\%m\%d)*-snap.jpg" -vcodec libx264 -vf format=yuv420p -movflags +faststart "$SHOTS_DIR/$(date +\%y\%m\%d)-shots.mp4" -y
