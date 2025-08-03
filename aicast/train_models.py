@@ -33,7 +33,7 @@ from utils.typing import (
     Optional, Any, Dict, List
 )
 
-from aicast.model import (
+from aicast.model_features import (
     SBPI_FEATURES,
     SBPO_FEATURES,
     SMP_FEATURES
