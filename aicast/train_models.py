@@ -55,7 +55,8 @@ async def get_model(
 
     model = lgb.LGBMRegressor(
         n_estimators=125,
-        learning_rate=0.05
+        learning_rate=0.05,
+        force_row_wise=True
     )
     model.fit(
         X_train, y_train, eval_set=[(X_val, y_val)]
