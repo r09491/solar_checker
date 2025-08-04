@@ -71,7 +71,12 @@ async def predict_models(
         (pool['SBPI']>35) &
         (pool['SBPI']<100), 'SBPB'
     ] = 0
+    pool.loc[
+        (pool['SBPI']>0) &
+        (pool['SBPB']>0), 'SBPB'
+    ] = 0
 
+    
     pool['SMP'] = smp_model.predict(pool[SMP_FEATURES]).astype(int)
     
     pool['SBPO'] = pool['SBPI'] + pool['SBPB']
