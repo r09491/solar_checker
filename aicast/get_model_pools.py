@@ -55,6 +55,16 @@ async def get_sample_pool(
         logger.error(f'No SBPI samples for {logday}')
         return None
         
+    sbpb = cols['SBPB']
+    if sbpb is None:
+        logger.error(f'No SBPB samples for {logday}')
+        return None
+
+    sbsb = cols['SBSB']
+    if sbsb is None:
+        logger.error(f'No SBSB samples for {logday}')
+        return None
+
     sbpo = cols['SBPO']
     if sbpo is None:
         logger.error(f'No SBPO samples for {logday}')
@@ -80,6 +90,8 @@ async def get_sample_pool(
             'day_of_year':t.day_of_year,
             'date':t.date.astype(str),
             'SBPI':sbpi,
+            'SBPB':sbpb,
+            'SBSB':100*sbsb,
             'SBPO':sbpo,
             'SMP':smp,
         }

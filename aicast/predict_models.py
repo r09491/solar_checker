@@ -13,7 +13,8 @@ import joblib
 
 from aicast.model_features import (
     SBPI_FEATURES,
-    SBPO_FEATURES,
+    SBSB_FEATURES,
+    SBPB_FEATURES,
     SMP_FEATURES
 )
 
@@ -31,7 +32,8 @@ async def predict_models(
 
     try:
         sbpi_model = joblib.load(f'{modeldir}/lightgbm_sbpi_model.pkl')
-        sbpo_model = joblib.load(f'{modeldir}/lightgbm_sbpo_model.pkl')
+        sbsb_model = joblib.load(f'{modeldir}/lightgbm_sbsb_model.pkl')
+        sbpb_model = joblib.load(f'{modeldir}/lightgbm_sbpb_model.pkl')
         smp_model = joblib.load(f'{modeldir}/lightgbm_smp_model.pkl')
     except OSError:
         logger.error('Unable to run on this system. Upgrade!')
@@ -54,20 +56,28 @@ async def predict_models(
     
     # Predict with models, sequence is mandatory
     pool['SBPI'] = sbpi_model.predict(pool[SBPI_FEATURES]).astype(int) 
+    pool.loc[
+        pool['SBPI']<0, 'SBPI'
+    ] = 0
+    pool.loc[
+        pool['is_daylight']==0, 'SBPI'
+    ] = 0
+
+
+    pool['SBSB'] = sbsb_model.predict(pool[SBSB_FEATURES]).astype(int)
+        
+    pool['SBPB'] = sbpb_model.predict(pool[SBPB_FEATURES]).astype(int) 
+    pool.loc[
+        (pool['SBPI']>35) &
+        (pool['SBPI']<100), 'SBPB'
+    ] = 0
+
     pool['SMP'] = smp_model.predict(pool[SMP_FEATURES]).astype(int)
-    pool['SBPO'] = sbpo_model.predict(pool[SBPO_FEATURES]).astype(int)
-
-    # Plausibilit check to get rid of noise
-
-    # Radiation cannot be negative
-    sbpi_is_impossible = pool['SBPI']<0
-    pool.loc[sbpi_is_impossible, 'SBPI'] = 0
-
-    # Solix is chargin the battery below 35W and has no output
-    sbpo_is_impossible = (0 < pool['SBPI']) & (pool['SBPI'] < 35)
-    pool.loc[sbpo_is_impossible, 'SBPO'] = 0
     
-    # Using system knowlegde
-    pool['SBPB'] = pool['SBPO'] - pool['SBPI']
-
+    pool['SBPO'] = pool['SBPI'] + pool['SBPB']
+    pool.loc[
+        (pool['SBPI']>0) &
+        (pool['SBPI']<=35), 'SBPO'
+    ] = 0
+    
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]

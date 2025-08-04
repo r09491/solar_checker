@@ -115,12 +115,14 @@ async def main(
         logger.error('Unable to train models')
         return -1
 
-    [sbpi_model, sbpo_model, smp_model] = models
+    [sbpi_model, sbsb_model, sbpb_model, smp_model] = models
      
     joblib.dump(sbpi_model, f'{modeldir}/lightgbm_sbpi_model.pkl')
     logger.info(f'Model saved as "{modeldir}/lightgbm_sbpi_model.pkl"')
-    joblib.dump(sbpo_model, f'{modeldir}/lightgbm_sbpo_model.pkl')
-    logger.info(f'Model saved as "{modeldir}/lightgbm_sbpo_model.pkl"')
+    joblib.dump(sbsb_model, f'{modeldir}/lightgbm_sbsb_model.pkl')
+    logger.info(f'Model saved as "{modeldir}/lightgbm_sbsb_model.pkl"')
+    joblib.dump(sbpb_model, f'{modeldir}/lightgbm_sbpb_model.pkl')
+    logger.info(f'Model saved as "{modeldir}/lightgbm_sbpb_model.pkl"')
     joblib.dump(smp_model, f'{modeldir}/lightgbm_smp_model.pkl')
     logger.info(f'Model saved as "{modeldir}/lightgbm_smp_model.pkl"')
 

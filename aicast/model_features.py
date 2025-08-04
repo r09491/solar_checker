@@ -10,6 +10,21 @@ SBPI_FEATURES = [
     'visibility'
 ]
 
+SBSB_FEATURES = [
+    'hour',
+    'minute',
+    'day_of_year'
+]
+
+SBPB_FEATURES = [
+    'hour',
+    'minute',
+    'day_of_year',
+    'is_daylight',
+    'SBPI',
+    'SBSB'
+]
+
 SBPO_FEATURES = [
     'hour',
     'minute',
@@ -22,7 +37,6 @@ SMP_FEATURES = [
     'hour',
     'minute',
     'day_of_year',
-    'is_daylight'
 ]
 
 

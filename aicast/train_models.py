@@ -35,7 +35,8 @@ from utils.typing import (
 
 from aicast.model_features import (
     SBPI_FEATURES,
-    SBPO_FEATURES,
+    SBSB_FEATURES,
+    SBPB_FEATURES,
     SMP_FEATURES
 )
 
@@ -70,10 +71,14 @@ async def get_sbpi_model(pools: pd.DataFrame) -> Optional[Any]:
     model = await get_model(X=pools[SBPI_FEATURES], y=pools['SBPI'])
     return model
 
+async def get_sbsb_model(pools: pd.DataFrame) -> Optional[Any]:
 
-async def get_sbpo_model(pools: pd.DataFrame) -> Optional[Any]:
+    model = await get_model(X=pools[SBSB_FEATURES], y=pools['SBSB'])
+    return model
 
-    model = await get_model(X=pools[SBPO_FEATURES], y=pools['SBPO'])
+async def get_sbpb_model(pools: pd.DataFrame) -> Optional[Any]:
+
+    model = await get_model(X=pools[SBPB_FEATURES], y=pools['SBPB'])
     return model
 
 
@@ -90,7 +95,10 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
             get_sbpi_model(pools)
         ),
         asyncio.create_task(
-            get_sbpo_model(pools)
+            get_sbsb_model(pools)
+        ),
+        asyncio.create_task(
+            get_sbpb_model(pools)
         ),
         asyncio.create_task(
             get_smp_model(pools)
