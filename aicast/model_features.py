@@ -31,5 +31,6 @@ SMP_FEATURES = [
     'day_of_year',
     'is_daylight',
     'SBPI',
-    'SBPB'
+    'SBPB',
+    'SMP_lag1'
 ]
