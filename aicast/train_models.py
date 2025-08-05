@@ -27,7 +27,10 @@ except OSError:
 from sklearn.model_selection import (
     train_test_split
 )
-
+from sklearn.metrics import (
+    mean_squared_error,
+    r2_score
+)
 
 from utils.typing import (
     Optional, Any, Dict, List
@@ -63,27 +66,36 @@ async def get_model(
         X_train, y_train, eval_set=[(X_val, y_val)]
     )
 
+    y_pred = model.predict(X_val)
+    rmse = np.sqrt(mean_squared_error(y_val, y_pred))
+    r2 = r2_score(y_val, y_pred)
+    logger.info(f'RMSE "{rmse:.2f}"')
+    logger.info(f'R² Score "{r2:.3f}"')
+    
     return model
 
 
 async def get_sbpi_model(pools: pd.DataFrame) -> Optional[Any]:
-    
+
+    logger.info(f'"SBPI" model')
     model = await get_model(X=pools[SBPI_FEATURES], y=pools['SBPI'])
     return model
 
 async def get_sbsb_model(pools: pd.DataFrame) -> Optional[Any]:
 
+    logger.info(f'"SBSB" model')
     model = await get_model(X=pools[SBSB_FEATURES], y=pools['SBSB'])
     return model
 
 async def get_sbpb_model(pools: pd.DataFrame) -> Optional[Any]:
 
+    logger.info(f'"SBPB" model')
     model = await get_model(X=pools[SBPB_FEATURES], y=pools['SBPB'])
     return model
 
-
 async def get_smp_model(pools: pd.DataFrame) -> Optional[Any]:
 
+    logger.info(f'"SMP" model')
     model = await get_model(X=pools[SMP_FEATURES], y=pools['SMP'])
     return model
 

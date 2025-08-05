@@ -25,18 +25,11 @@ SBPB_FEATURES = [
     'SBSB'
 ]
 
-SBPO_FEATURES = [
-    'hour',
-    'minute',
-    'day_of_year',
-    'SBPI',
-    'SMP'
-]
-
 SMP_FEATURES = [
     'hour',
     'minute',
     'day_of_year',
+    'is_daylight',
+    'SBPI',
+    'SBPB'
 ]
-
-
