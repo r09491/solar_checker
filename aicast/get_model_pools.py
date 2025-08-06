@@ -40,7 +40,8 @@ async def get_sample_pool(
         logdir: str,
         logprefix: str,
         logday: str,
-        logtz: str
+        logtz: str,
+        full_wh: float = -1600
 ) -> Optional[pd.DataFrame]:
 
     cols = await get_columns_from_csv(
@@ -85,14 +86,16 @@ async def get_sample_pool(
     df = pd.DataFrame(
         data = {
             'TIME':t,
-            'hour':t.hour,
-            'minute':t.minute,
-            'day_of_year':t.day_of_year,
+            'hour':t.hour.astype(int),
+            'minute':t.minute.astype(int),
+            'month':t.month.astype(int),
+            'year':t.year.astype(int),
+            'day_of_year':t.day_of_year.astype(int),
             'date':t.date.astype(str),
             'SBPI':sbpi,
             'SBPB':sbpb,
-            'SBSB':100*sbsb,
-            'SBPO':sbpo,
+            'SBSB':full_wh*sbsb,
+            ##'SBPO':sbpo,
             'SMP':smp,
         }
     ).set_index('TIME')
@@ -189,7 +192,8 @@ async def get_train_pool(
         return None
     
     day_pool = day_pool.dropna().tz_convert(tz).reset_index()
-    logger.info (f'Have train pool for "{logday}"')
+
+    logger.info (f'Have train pool for "{logday}" with "{len(day_pool)}" entries.')
     return day_pool
 
 """ """
@@ -248,7 +252,8 @@ async def get_train_pools(
     except ValueError:
         logger.error('Unable to create training pools')
         pool = None
-    return pool
+
+    return pool.loc[pool["is_daylight"]==1,:] if pool is not None else None
 
 
 """ """
@@ -277,9 +282,11 @@ async def get_predict_pool(
     sample_pool = pd.DataFrame(
         data = {
             'TIME':t,
-            'hour':t.hour,
-            'minute':t.minute,
-            'day_of_year':t.day_of_year,
+            'hour':t.hour.astype(int),
+            'minute':t.minute.astype(int),
+            'month':t.month.astype(int),
+            'year':t.year.astype(int),
+            'day_of_year':t.day_of_year.astype(int),
             'date':t.date.astype(str),
         }
     ).set_index('TIME')
@@ -291,7 +298,13 @@ async def get_predict_pool(
     except pd.errors.InvalidIndexError:
         logger.error (f'Skipped pool for "{day}"')
         return None
+
     day_pool = day_pool.dropna().tz_convert(tz).reset_index()
-    logger.info (f'Have predict pool for "{day}"')
+
+    day_pool = day_pool.loc[ (
+        day_pool['is_daylight'] == 1
+    ),:]
+
+    logger.info (f'Have predict pool for "{day}" with "{len(day_pool)}" entries.')
 
     return day_pool.rename(columns={'index':'TIME'})

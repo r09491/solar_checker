@@ -63,7 +63,6 @@ async def predict_models(
         pool['is_daylight']==0, 'SBPI'
     ] = 0
 
-
     pool['SBSB'] = sbsb_model.predict(pool[SBSB_FEATURES]).astype(int)
         
     pool['SBPB'] = sbpb_model.predict(pool[SBPB_FEATURES]).astype(int) 
@@ -84,5 +83,5 @@ async def predict_models(
         (pool['SBPI']>0) &
         (pool['SBPI']<=35), 'SBPO'
     ] = 0
-    
+
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]

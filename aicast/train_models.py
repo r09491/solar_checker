@@ -49,8 +49,8 @@ from aicast.get_model_pools import (
 
 
 async def get_model(
-        X: pd.DataFrame,
-        y: pd.DataFrame
+        X: pd.DataFrame, # for training
+        y: pd.DataFrame  # for testing
 ) -> Any:
 
     X_train, X_val, y_train, y_val = train_test_split(

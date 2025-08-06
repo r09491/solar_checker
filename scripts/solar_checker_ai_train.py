@@ -18,10 +18,6 @@ import argparse
 import asyncio
 import joblib
 
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(os.path.basename(sys.argv[0]))
-
 from dataclasses import dataclass
 
 from aicast.train_models import (

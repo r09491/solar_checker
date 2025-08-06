@@ -1,6 +1,8 @@
 SBPI_FEATURES = [
     'hour',
     'minute',
+    'month',
+    'year',
     'day_of_year',
     'is_daylight',
     'sunshine',
@@ -13,12 +15,17 @@ SBPI_FEATURES = [
 SBSB_FEATURES = [
     'hour',
     'minute',
-    'day_of_year'
+    'month',
+    'year',
+    'day_of_year',
+    'is_daylight'
 ]
 
 SBPB_FEATURES = [
     'hour',
     'minute',
+    'month',
+    'year',
     'day_of_year',
     'is_daylight',
     'SBPI',
@@ -28,9 +35,11 @@ SBPB_FEATURES = [
 SMP_FEATURES = [
     'hour',
     'minute',
+    'month',
+    'year',
     'day_of_year',
     'is_daylight',
     'SBPI',
     'SBPB',
-    'SMP_lag1'
+    'SBSB'
 ]
