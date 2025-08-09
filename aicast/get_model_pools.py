@@ -88,7 +88,7 @@ async def get_sample_pool(
         }
     ).set_index('TIME')
 
-    return df[~df.index.duplicated(keep='last')] 
+    return df[~df.index.duplicated(keep='last')]
 
 
 """ """
@@ -178,10 +178,9 @@ async def get_train_pool(
     except pd.errors.InvalidIndexError:
         logger.error (f'Skipped pool for "{logday}"')
         return None
-    
-    day_pool = day_pool.dropna().tz_convert(tz).reset_index()
-
-    logger.info (f'Have train pool for "{logday}" with "{len(day_pool)}" entries.')
+    logger.info (f'Initial day pool for "{logday}" with "{len(day_pool)}" entries.')    
+    day_pool = day_pool.dropna().tz_convert(tz).resample('1min').bfill()
+    logger.info (f'Final day pool for "{logday}" with "{len(day_pool)}" entries.')
     return day_pool
 
 """ """
