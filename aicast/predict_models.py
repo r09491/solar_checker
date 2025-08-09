@@ -13,7 +13,6 @@ import joblib
 
 from aicast.model_features import (
     SBPI_FEATURES,
-    SBSB_FEATURES,
     SBPB_FEATURES,
     SMP_FEATURES
 )
@@ -32,7 +31,6 @@ async def predict_models(
 
     try:
         sbpi_model = joblib.load(f'{modeldir}/lightgbm_sbpi_model.pkl')
-        sbsb_model = joblib.load(f'{modeldir}/lightgbm_sbsb_model.pkl')
         sbpb_model = joblib.load(f'{modeldir}/lightgbm_sbpb_model.pkl')
         smp_model = joblib.load(f'{modeldir}/lightgbm_smp_model.pkl')
     except OSError:
@@ -63,8 +61,6 @@ async def predict_models(
         pool['is_daylight']==0, 'SBPI'
     ] = 0
 
-    pool['SBSB'] = sbsb_model.predict(pool[SBSB_FEATURES]).astype(int)
-        
     pool['SBPB'] = sbpb_model.predict(pool[SBPB_FEATURES]).astype(int) 
     pool.loc[
         (pool['SBPI']>35) &
