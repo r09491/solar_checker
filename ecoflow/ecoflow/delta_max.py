@@ -91,31 +91,37 @@ class Delta_Max(Device):
 
     async def set_ac_charge_watts(self, watts: int) -> None:
         params  = {"cmdSet":32, "slowChgPower":watts, "id":69}
-        payload = await self.put({"moduleType":0, "sn": self.sn, "operateType": "TCP", "params": params})
+        payload = await self.put(
+            {"moduleType":0,
+             "sn": self.sn,
+             "operateType": "TCP",
+             "params": params})
 
 
     async def get_sum_watts(self) -> list:
         quotas = ["pd.wattsInSum", "pd.wattsOutSum"]
         watts = await self.get_quotas(quotas)
-        return dict(zip(WATTS_SUM, watts))
+        return dict(zip(WATTS_SUM, watts)) if watts is not None else None
     
     async def get_12V_watts(self) -> list:
         quotas = ["mppt.carOutWatts"]
         watts = await self.get_quotas(quotas)
+        if watts is None:
+            return None
         watts[0] = int(watts[0]/10)
-        return dict(zip(WATTS_12V, watts))
+        return dict(zip(WATTS_12V, watts)) 
     
     async def get_usb_watts(self) -> list:
         quotas = ["pd.usb1Watts", "pd.usb2Watts"]
         quotas += ["pd.qcUsb1Watts", "pd.qcUsb2Watts"]
         quotas += ["pd.typec1Watts", "pd.typec2Watts"]
         watts =  await self.get_quotas(quotas)
-        return dict(zip(WATTS_USB, watts)) # ordered per quotas
+        return dict(zip(WATTS_USB, watts)) if watts is not None else None
     
     async def get_ac_watts(self) -> list:
         quotas = ["inv.inputWatts", "inv.outputWatts"]
         watts =  await self.get_quotas(quotas)
-        return dict(zip(WATTS_AC, watts)) # ordered per quotas
+        return dict(zip(WATTS_AC, watts)) if watts is not None else None
     
     async def get_watts(self) -> dict:
         quotas = ["pd.soc"]
@@ -129,9 +135,11 @@ class Delta_Max(Device):
         quotas += ["mppt.inWatts"]
         quotas += ["mppt.carOutWatts"]
         watts = await self.get_quotas(quotas)
-        watts[-2] = int(watts[-2]/10)
-        watts[-1] = int(watts[-1]/10)
-        return dict(zip(WATTS, watts)) # ordered per quotas
+        if watts is None:
+            return None
+        watts[-2] = int(watts[-2]/10) 
+        watts[-1] = int(watts[-1]/10) 
+        return dict(zip(WATTS, watts))
 
     
     async def get_ac_in_out_charge_watts(self) -> list:
@@ -142,8 +150,12 @@ class Delta_Max(Device):
             smp: int = None,
             minp: int = MIN_CHARGE_WATTS,
             maxp :int = MAX_CHARGE_WATTS) -> Optional[int]:
-        
-        acpi, acpo, acpc0 = await self.get_ac_in_out_charge_watts()
+
+        acp = await self.get_ac_in_out_charge_watts()
+        if acp is None:
+            logger.error(f'Unable to receive data. Abort!')
+            return None
+        acpi, acpo, acpc0 = acp 
 
         info = 'DM balancing inputs'
         info += f' SMP:{smp},'

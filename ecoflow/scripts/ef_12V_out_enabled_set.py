@@ -26,6 +26,10 @@ async def process_12V_out_enabled(enabled: int = None) -> int:
     dm = Delta_Max()
     
     e = await dm.get_12V_out_enabled()
+    if e is None:
+        logger.error("Cannot acquire Delta Max data.")
+        return -1
+
     logger.info(f"Old 12V out state is {'ON' if e else 'OFF'}")
 
     if enabled is None:

@@ -25,6 +25,9 @@ async def process_usb_watts() -> int:
     
     dm = Delta_Max()    
     w = await dm.get_usb_watts()
+    if w is None:
+        logger.error("Cannot acquire Delta Max data.")
+        return -1
     print(json.dumps(w))
 
     return 0
