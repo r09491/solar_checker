@@ -44,7 +44,14 @@ class Delta_Max(Device):
     
     def __init__(self, timeout: int = 10):
         super().__init__()
-        self.url, self.key, self.secret, self.sn = get_dot_ecoflow_api()
+
+        ecoflow_api = get_dot_ecoflow_api()
+        if ecoflow_api is None:
+            logger.error(f'Missing Ecoflow Credentials')
+            self.url, self.key, self.secret, self.sn = None, None, None, None
+        else:
+            logger.info(f'Found Ecoflow Credentials')
+            self.url, self.key, self.secret, self.sn = ecoflo_api
 
 
     async def get_ac_out_enabled(self) -> int:    

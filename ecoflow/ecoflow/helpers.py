@@ -9,8 +9,16 @@ import binascii
 from typing import Optional
 
 def hmac_sha256(data, key):
-    hashed = hmac.new(key.encode('utf-8'), data.encode('utf-8'), hashlib.sha256).digest()
-    sign = binascii.hexlify(hashed).decode('utf-8')
+    if (data is None) or (key is None):
+        return None
+    hashed = hmac.new(
+        key.encode('utf-8'),
+        data.encode('utf-8'),
+        hashlib.sha256
+    ).digest()
+    sign = binascii.hexlify(
+        hashed
+    ).decode('utf-8')
     return sign
 
 def get_map(json_obj, prefix=""):

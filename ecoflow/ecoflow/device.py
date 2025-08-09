@@ -45,6 +45,9 @@ class Device():
 
     async def _post(self, headers: dict, json: dict) -> dict:
         url, timeout = self.url, self.timeout
+        if (url is None) or (timeout is None):
+            return None
+        
         async with ClientSession() as session:
             async with session.post(
                     url = url,
@@ -58,6 +61,9 @@ class Device():
 
     async def _put(self, headers: dict, json: dict) -> dict:
         url, timeout = self.url, self.timeout
+        if (url is None) or (timeout is None):
+            return None
+
         async with ClientSession() as session:
             async with session.put(
                     url = url,
@@ -73,21 +79,28 @@ class Device():
     def _get_headers(self, params: dict):
         return get_headers(self.key, self.secret, params)
             
-    async def get(self, params: dict = None) -> dict:
+    async def get(self, params: dict) -> dict:
+        if params is None:
+            return None
         headers = self._get_headers(params)
         return await self._get(headers=headers, json=params)
 
-    async def post(self, params: dict = None) -> dict:
+    async def post(self, params: dict) -> dict:
+        if params is None:
+            return None
         headers = self._get_headers(params)
         return await self._post(headers=headers, json=params)
 
-    async def put(self, params: dict = None) -> dict:
+    async def put(self, params: dict) -> dict:
+        if params is None:
+            return None
         headers = self._get_headers(params)
         return await self._put(headers=headers, json=params)
 
     
     async def get_quotas(self, quotas: list) -> list:
         params = {"quotas": quotas}
-        data = (await self.post({"sn": self.sn, "params": params})).get("data")
+        result = await self.post({"sn": self.sn, "params": params})
+        data = result.get("data") if result is not None else None
         return None if data is None else [data.get(q) for q in quotas] 
     
