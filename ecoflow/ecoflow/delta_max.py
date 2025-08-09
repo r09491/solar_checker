@@ -51,7 +51,7 @@ class Delta_Max(Device):
             self.url, self.key, self.secret, self.sn = None, None, None, None
         else:
             logger.info(f'Found Ecoflow Credentials')
-            self.url, self.key, self.secret, self.sn = ecoflo_api
+            self.url, self.key, self.secret, self.sn = ecoflow_api
 
 
     async def get_ac_out_enabled(self) -> int:    
