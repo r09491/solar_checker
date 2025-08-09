@@ -61,6 +61,11 @@ async def get_sample_pool(
         logger.error(f'No SBPB samples for {logday}')
         return None
 
+    sbpo = cols['SBPO']
+    if sbpo is None:
+        logger.error(f'No SBPO samples for {logday}')
+        return None
+    
     smp = cols['SMP']
     if smp is None:
         logger.error(f'No SMP samples for {logday}')
@@ -84,10 +89,11 @@ async def get_sample_pool(
             'date':t.date.astype(str),
             'SBPI':sbpi,
             'SBPB':sbpb,
+            'SBPO':sbpo,
             'SMP':smp,
         }
     ).set_index('TIME')
-
+    
     return df[~df.index.duplicated(keep='last')]
 
 
@@ -238,9 +244,12 @@ async def get_train_pools(
         pool = pd.concat(pool_frames)
     except ValueError:
         logger.error('Unable to create training pools')
-        pool = None
+        return None
 
-    return pool.loc[pool["is_daylight"]==1,:] if pool is not None else None
+    pool['SMP_roll5'] = pool['SMP'].rolling(5).mean()
+    pool['SMP_roll17'] = pool['SMP'].rolling(17).mean()
+    
+    return pool.loc[pool["is_daylight"]==1,:]
 
 
 """ """
