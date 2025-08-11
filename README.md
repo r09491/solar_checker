@@ -4,25 +4,25 @@
 
 The Solar Checker repository provides APIs for the APsystems EZ1
 microinverter, Tasmota smartmeter, Tuya smartplugs, Anker Solix
-solarbank, Ecoflow Delta Max power station, and Brightsky weather
-server. Based on these APIs there are scripts to record their latest
-power data which in turn can be used for plots, grid output zeroise
-and forecast outputs on consoles and web browsers.
+solarbank, Ecoflow Delta Max power station, and the Brightsky weather
+server. Based on these there are scripts to record continuously the
+power samples of my PV system (2*440VA panels -> Anker SOlix gen 1 ->
+APsytems inverter) which in turn are used for plots, grid output
+zeroise and predictions withi output on consoles and web browsers.
 
-Initially motivated to assess if my PV system will pay off at a point
-of time the Anker API was extended to set the home load power of the
-solarbank to minimize the output from the Anker solarbank to the power
-grid later.  Finally rule and KI based forecast functions were
-added. For example 'solar_checker_ai_train.py' will train forecast
-models based on all disk recorded data taking quite a long time. Using
-these models 'solar_checker_ai_predict.py' outputs the forecast for
-any day in quite short time.
+Initially motivated to assess my PV system if it will pay off at a
+point of time the Anker API was extended to set the home load power of
+the solarbank to control the power grid export later.  Finally rule
+and KI based forecast functions were added.
+
+'solar_checker_ai_train.py' will train forecast models based on all or
+a subset of disk recorded data.
+
+Using these models 'solar_checker_ai_predict.py' outputs the forecast
+for any day.
 
 The following is the output of a log day on the HTTP server. It shows
-the system components with the power flow in minutes. There is an
-extreme high power import from the grid since the dryer is switched
-on, very low sun power since the sun is almost set, battery not
-charged!
+the system components with the power flow in minutes.
 
 ![alt text](images/solar_checker_logday.png)
 
