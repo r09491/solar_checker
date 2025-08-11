@@ -10,7 +10,7 @@ solar_checker_closest_predict.py \
     --logdayformat $SOLAR_CHECKER_LOGFORMAT \
     --logprefix $SOLAR_CHECKER_PREFIX \
     --logdir $SOLAR_CHECKER_STORE_DIR \
-    --column $1 2>/dev/null
+    --columns $1 2>/dev/null
 
 
 # Find the closest logfiles to the yesterdays's logfile using samples based on radiation

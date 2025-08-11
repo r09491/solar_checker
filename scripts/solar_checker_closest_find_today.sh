@@ -14,7 +14,7 @@ solar_checker_closest_predict.py \
     --logdir $SOLAR_CHECKER_STORE_DIR \
     --stoptime $SOLAR_CHECKER_STOPTIME \
     --starttime $SOLAR_CHECKER_STARTTIME \
-    --column $1 2>/dev/null
+    --columns $1 2>/dev/null
 
 
 # Find the closest logfiles to the today'slogfile using samples of the last hours
