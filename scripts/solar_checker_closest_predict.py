@@ -71,7 +71,14 @@ def print_predict(
     print(awatts)
     print()
 
+TODAY=datetime.today().strftime('%y%m%d')
     
+LOGDIR='/home/r09491/storage/solar_checker'
+LOGPREFIX='solar_checker_latest'
+LOGDAYFORMAT='*'
+
+LAT, LON, TZ = 49.04885, 11.78333, 'Europe/Berlin'
+     
 @dataclass
 class Script_Arguments:
     logday: str
@@ -97,7 +104,7 @@ def parse_arguments() -> Script_Arguments:
                         version = __version__)
 
     parser.add_argument(
-        '--logday', type=str,
+        '--logday', type=str, default=TODAY,
         help = "Day to which to find the closest")
 
     parser.add_argument(
@@ -105,15 +112,15 @@ def parse_arguments() -> Script_Arguments:
         help = "Days to which to find the closest")
 
     parser.add_argument(
-        '--logdayformat', type=str,
+        '--logdayformat', type=str, default=LOGDAYFORMAT,
         help = "Days to which to find the closest")
     
     parser.add_argument(
-        '--logprefix', type=str,
+        '--logprefix', type=str, default=LOGPREFIX,
         help = "The prefix used in log file names")
 
     parser.add_argument(
-        '--logdir', type=str,
+        '--logdir', type=str, default=LOGDIR,
         help = "The directory the logfiles are stored")
     
     parser.add_argument(
@@ -137,13 +144,13 @@ def parse_arguments() -> Script_Arguments:
         help = "The list names of the to be used. The first determines the time slot for the evaluation an prediction"
     )
 
-    parser.add_argument('--lat', type = float, default = 49.04885,
+    parser.add_argument('--lat', type = float, default=LAT,
                         help = "latitude for forecast [-90 - +90]")
 
-    parser.add_argument('--lon', type = float, default = 11.78333,
+    parser.add_argument('--lon', type = float, default=LON,
                         help = "longitude for forecast [-180 - +180]")
         
-    parser.add_argument('--tz', type = str, default='Europe/Berlin',
+    parser.add_argument('--tz', type = str, default=TZ,
                         help = "TZ for forecast")
 
     args = parser.parse_args()
