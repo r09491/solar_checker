@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 import pandas as pd
 pd.options.display.float_format = '{:,.0f}'.format
 
+from utils.common import(
+    PARTITION_2_VIEW
+)
+
 async def get_hourly_cast_watts(
         pool: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
@@ -71,6 +75,8 @@ async def get_predict_tables(
         logger.error(f'Cannot print hourly pool data')
         return None
 
+    means_df.rename(columns=PARTITION_2_VIEW, inplace=True)
+        
     watts_table = pd.concat([start_stop_df, means_df], axis=1)
 
     energy_table = pd.concat([start_stop_df, means_df.cumsum()], axis=1)

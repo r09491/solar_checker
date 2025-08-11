@@ -49,12 +49,12 @@ PREDICT_POWER_NAMES = [
 ]
 
 PREDICT_NAMES = [
-    'SMP', 'SMP+', 'SMP-', 
-    'SBPI', 'SBPO', 'SBPB', 'SBPB+','SBPB-'
+    'SMP', 'SMP>', '>SMP', 
+    'SBPI', 'SBPO', 'SBPB', 'SBPB>','>SBPB'
 ]
 
 
-PARTITION_NAMES = ['SBPI','SBPB-','SBPB+','SBPO','SMP-','SMP+']
+PARTITION_NAMES = ['SBPI','>SBPB','SBPB>','SBPO','>SMP','SMP>']
 VIEW_NAMES = ['SUN', '>BAT', 'BAT>', 'BANK', '>GRID', 'GRID>']
 PARTITION_2_VIEW = dict(zip(PARTITION_NAMES, VIEW_NAMES))
 

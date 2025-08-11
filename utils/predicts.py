@@ -356,21 +356,21 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
         if (watts is None) or (watts.size == 0):
             continue
 
-        watts.loc[:, 'SBPB-'] = watts.loc[:, 'SBPB']
+        watts.loc[:, 'SBPB>'] = watts.loc[:, 'SBPB']
         discharging = watts.loc[:, 'SBPB']>0
-        watts.loc[discharging, 'SBPB-'] = 0
+        watts.loc[discharging, 'SBPB>'] = 0
 
-        watts.loc[:, 'SBPB+'] = watts.loc[:, 'SBPB']
+        watts.loc[:, '>SBPB'] = watts.loc[:, 'SBPB']
         charging = watts.loc[:, 'SBPB']<0
-        watts.loc[charging, 'SBPB+'] = 0
+        watts.loc[charging, '>SBPB'] = 0
 
-        watts.loc[:, 'SMP-'] = watts.loc[:, 'SMP']
+        watts.loc[:, 'SMP>'] = watts.loc[:, 'SMP']
         importing = watts.loc[:, 'SMP']>0
-        watts.loc[importing, 'SMP-'] = 0
+        watts.loc[importing, 'SMP>'] = 0
         
-        watts.loc[:, 'SMP+'] = watts.loc[:, 'SMP']
+        watts.loc[:, '>SMP'] = watts.loc[:, 'SMP']
         exporting = watts.loc[:, 'SMP']<0
-        watts.loc[exporting, 'SMP+'] = 0
+        watts.loc[exporting, '>SMP'] = 0
 
     phase = [k for (k,v) in partitions.items() if (
         (v is not None) and (len(v) >0)
@@ -399,6 +399,6 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
     relative_watts = pd.concat([startstop, watts], axis=1)
 
 
-    bat_soc_start =  0 if partitions['prewatts'].empty else partitions['prewatts'].iloc[0,:]['SBPB-']
+    bat_soc_start =  0 if partitions['prewatts'].empty else partitions['prewatts'].iloc[0,:]['SBPB>']
         
     return relative_watts, bat_soc_start # percent
