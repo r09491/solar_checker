@@ -3,26 +3,26 @@
 ## Overview
 
 The Solar Checker repository provides APIs for the APsystems EZ1
-microinverter, Tasmota smartmeter, Tuya smartplugs, Anker Solix
+microinverter, Tasmota smartmeter, Tuya smartplug, Anker Solix
 solarbank, Ecoflow Delta Max power station, and the Brightsky weather
 server. Based on these there are scripts to record continuously the
-power samples of my PV system (2*440VA panels -> Anker SOlix gen 1 ->
-APsytems inverter) which in turn are used for plots, grid output
-zeroise and predictions withi output on consoles and web browsers.
+power of my PV system (2*440VA panels -> Anker Solix Solarbank gen.1 ->
+APsytems inverter) which in turn are used for plots, grid zeroise and
+forecasts with output on consoles and web browsers.
 
 Initially motivated to assess my PV system if it will pay off at a
-point of time the Anker API was extended to set the home load power of
+point of time the Anker API was hacked to set the home load power of
 the solarbank to control the power grid export later.  Finally rule
 and KI based forecast functions were added.
 
 'solar_checker_ai_train.py' will train forecast models based on all or
 a subset of disk recorded data.
 
-Using these models 'solar_checker_ai_predict.py' outputs the forecast
-for any day.
+'solar_checker_ai_predict.py' outputs the forecast for any day using
+these models.
 
-The following is the output of a log day on the HTTP server. It shows
-the system components with the power flow in minutes.
+The following is a log day on the HTTP server. It shows the system
+componens with the power flow in minutes on top.
 
 ![alt text](images/solar_checker_logday.png)
 
