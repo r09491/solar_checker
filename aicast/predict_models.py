@@ -14,8 +14,10 @@ import joblib
 from aicast.model_features import (
     SBPI_FEATURES,
     SBPB_FEATURES,
+    SMP_lag1_FEATURES,
+    SMP_lag2_FEATURES,
     SMP_roll5_FEATURES,
-    SMP_roll17_FEATURES,
+    SMP_roll15_FEATURES,
     SMP_FEATURES
 )
 
@@ -34,8 +36,10 @@ async def predict_models(
     try:
         sbpi_model = joblib.load(f'{modeldir}/lightgbm_sbpi_model.pkl')
         sbpb_model = joblib.load(f'{modeldir}/lightgbm_sbpb_model.pkl')
+        smp_lag1_model = joblib.load(f'{modeldir}/lightgbm_smp_lag1_model.pkl')
+        smp_lag2_model = joblib.load(f'{modeldir}/lightgbm_smp_lag2_model.pkl')
         smp_roll5_model = joblib.load(f'{modeldir}/lightgbm_smp_roll5_model.pkl')
-        smp_roll17_model = joblib.load(f'{modeldir}/lightgbm_smp_roll17_model.pkl')
+        smp_roll15_model = joblib.load(f'{modeldir}/lightgbm_smp_roll15_model.pkl')
         smp_model = joblib.load(f'{modeldir}/lightgbm_smp_model.pkl')
     except OSError:
         logger.error('Unable to run on this system. Upgrade!')
@@ -82,19 +86,27 @@ async def predict_models(
     ] = 0
 
     
+    pool['SMP_lag1'] = smp_lag1_model.predict(
+        pool[SMP_lag1_FEATURES]
+    ).astype(int)
+    pool['SMP_lag2'] = smp_lag2_model.predict(
+        pool[SMP_lag2_FEATURES]
+    ).astype(int)
     pool['SMP_roll5'] = smp_roll5_model.predict(
         pool[SMP_roll5_FEATURES]
     ).astype(int)
-    pool['SMP_roll17'] = smp_roll17_model.predict(
-        pool[SMP_roll17_FEATURES]
+    pool['SMP_roll15'] = smp_roll15_model.predict(
+        pool[SMP_roll15_FEATURES]
     ).astype(int)
     pool['SMP'] = smp_model.predict(
         pool[SMP_FEATURES]
     ).astype(int)
 
+    """
     pool.loc[
         (pool['SMP']>0) &
-        (pool['SMP']<pool['SBPI']), 'SMP'
+        (pool['SMP']<=pool['SBPI']), 'SMP'
     ] = 0
+    """
     
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]

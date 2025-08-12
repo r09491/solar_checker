@@ -22,7 +22,7 @@ SBPB_FEATURES = [
     'SBPI'
 ]
 
-SMP_roll5_FEATURES = [
+SMP_lag1_FEATURES = [
     'hour',
     'minute',
     'month',
@@ -34,7 +34,7 @@ SMP_roll5_FEATURES = [
     'SBPO'
 ]
 
-SMP_roll17_FEATURES = [
+SMP_lag2_FEATURES = [
     'hour',
     'minute',
     'month',
@@ -44,6 +44,36 @@ SMP_roll17_FEATURES = [
     'SBPI',
     'SBPB',
     'SBPO',
+    'SMP_lag1'
+]
+
+
+SMP_roll5_FEATURES = [
+    'hour',
+    'minute',
+    'month',
+    'year',
+    'day_of_year',
+    'is_daylight',
+    'SBPI',
+    'SBPB',
+    'SBPO',
+    'SMP_lag1',
+    'SMP_lag2'
+]
+
+SMP_roll15_FEATURES = [
+    'hour',
+    'minute',
+    'month',
+    'year',
+    'day_of_year',
+    'is_daylight',
+    'SBPI',
+    'SBPB',
+    'SBPO',
+    'SMP_lag1',
+    'SMP_lag2',
     'SMP_roll5'    
 ]
 
@@ -57,6 +87,8 @@ SMP_FEATURES = [
     'SBPI',
     'SBPB',
     'SBPO',
+    'SMP_lag1',
+    'SMP_lag2',
     'SMP_roll5',
-    'SMP_roll17'
+    'SMP_roll15'
 ]

@@ -39,8 +39,10 @@ from utils.typing import (
 from aicast.model_features import (
     SBPI_FEATURES,
     SBPB_FEATURES,
+    SMP_lag1_FEATURES,
+    SMP_lag2_FEATURES,
     SMP_roll5_FEATURES,
-    SMP_roll17_FEATURES,
+    SMP_roll15_FEATURES,
     SMP_FEATURES
 )
 
@@ -88,16 +90,28 @@ async def get_sbpb_model(pools: pd.DataFrame) -> Optional[Any]:
     model = await get_model(X=pools[SBPB_FEATURES], y=pools['SBPB'])
     return model
 
+async def get_smp_lag1_model(pools: pd.DataFrame) -> Optional[Any]:
+
+    logger.info(f'"SMP_lag1" model')
+    model = await get_model(X=pools[SMP_lag1_FEATURES], y=pools['SMP_lag1'])
+    return model
+
+async def get_smp_lag2_model(pools: pd.DataFrame) -> Optional[Any]:
+
+    logger.info(f'"SMP_lag2" model')
+    model = await get_model(X=pools[SMP_lag2_FEATURES], y=pools['SMP_lag2'])
+    return model
+
 async def get_smp_roll5_model(pools: pd.DataFrame) -> Optional[Any]:
 
     logger.info(f'"SMP_roll5" model')
     model = await get_model(X=pools[SMP_roll5_FEATURES], y=pools['SMP_roll5'])
     return model
 
-async def get_smp_roll17_model(pools: pd.DataFrame) -> Optional[Any]:
+async def get_smp_roll15_model(pools: pd.DataFrame) -> Optional[Any]:
 
-    logger.info(f'"SMP_roll17" model')
-    model = await get_model(X=pools[SMP_roll17_FEATURES], y=pools['SMP_roll17'])
+    logger.info(f'"SMP_roll15" model')
+    model = await get_model(X=pools[SMP_roll15_FEATURES], y=pools['SMP_roll15'])
     return model
 
 async def get_smp_model(pools: pd.DataFrame) -> Optional[Any]:
@@ -110,8 +124,10 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
 
     model_names = ["sbpi_model",
                    "sbpb_model",
+                   "smp_lag1_model",
+                   "smp_lag2_model",
                    "smp_roll5_model",
-                   "smp_roll17_model",
+                   "smp_roll15_model",
                    "smp_model"
                    ]
 
@@ -123,10 +139,16 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
             get_sbpb_model(pools)
         ),
         asyncio.create_task(
+            get_smp_lag1_model(pools)
+        ),
+        asyncio.create_task(
+            get_smp_lag2_model(pools)
+        ),
+        asyncio.create_task(
             get_smp_roll5_model(pools)
         ),
         asyncio.create_task(
-            get_smp_roll17_model(pools)
+            get_smp_roll15_model(pools)
         ),
         asyncio.create_task(
             get_smp_model(pools)
