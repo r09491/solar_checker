@@ -18,6 +18,7 @@ from aicast.model_features import (
     SMP_lag2_FEATURES,
     SMP_roll5_FEATURES,
     SMP_roll15_FEATURES,
+    SMP_roll60_FEATURES,
     SMP_FEATURES
 )
 
@@ -40,6 +41,7 @@ async def predict_models(
         smp_lag2_model = joblib.load(f'{modeldir}/lightgbm_smp_lag2_model.pkl')
         smp_roll5_model = joblib.load(f'{modeldir}/lightgbm_smp_roll5_model.pkl')
         smp_roll15_model = joblib.load(f'{modeldir}/lightgbm_smp_roll15_model.pkl')
+        smp_roll60_model = joblib.load(f'{modeldir}/lightgbm_smp_roll60_model.pkl')
         smp_model = joblib.load(f'{modeldir}/lightgbm_smp_model.pkl')
     except OSError:
         logger.error('Unable to run on this system. Upgrade!')
@@ -97,6 +99,9 @@ async def predict_models(
     ).astype(int)
     pool['SMP_roll15'] = smp_roll15_model.predict(
         pool[SMP_roll15_FEATURES]
+    ).astype(int)
+    pool['SMP_roll60'] = smp_roll60_model.predict(
+        pool[SMP_roll60_FEATURES]
     ).astype(int)
     pool['SMP'] = smp_model.predict(
         pool[SMP_FEATURES]

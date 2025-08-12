@@ -77,7 +77,7 @@ SMP_roll15_FEATURES = [
     'SMP_roll5'    
 ]
 
-SMP_FEATURES = [
+SMP_roll60_FEATURES = [
     'hour',
     'minute',
     'month',
@@ -91,4 +91,21 @@ SMP_FEATURES = [
     'SMP_lag2',
     'SMP_roll5',
     'SMP_roll15'
+]
+
+SMP_FEATURES = [
+    'hour',
+    'minute',
+    'month',
+    'year',
+    'day_of_year',
+    'is_daylight',
+    'SBPI',
+    'SBPB',
+    'SBPO',
+    'SMP_lag1',
+    'SMP_lag2',
+    'SMP_roll5',
+    'SMP_roll15',
+    'SMP_roll60'
 ]

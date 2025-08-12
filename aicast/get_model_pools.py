@@ -251,6 +251,7 @@ async def get_train_pools(
     
     pool['SMP_roll5'] = pool['SMP'].rolling(5).mean()
     pool['SMP_roll15'] = pool['SMP'].rolling(15).mean()
+    pool['SMP_roll60'] = pool['SMP'].rolling(60).mean()
     
     ##return pool.loc[pool["is_daylight"]==1,:]
     return pool.dropna()

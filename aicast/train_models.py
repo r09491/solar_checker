@@ -43,6 +43,7 @@ from aicast.model_features import (
     SMP_lag2_FEATURES,
     SMP_roll5_FEATURES,
     SMP_roll15_FEATURES,
+    SMP_roll60_FEATURES,
     SMP_FEATURES
 )
 
@@ -114,6 +115,12 @@ async def get_smp_roll15_model(pools: pd.DataFrame) -> Optional[Any]:
     model = await get_model(X=pools[SMP_roll15_FEATURES], y=pools['SMP_roll15'])
     return model
 
+async def get_smp_roll60_model(pools: pd.DataFrame) -> Optional[Any]:
+
+    logger.info(f'"SMP_roll60" model')
+    model = await get_model(X=pools[SMP_roll60_FEATURES], y=pools['SMP_roll60'])
+    return model
+
 async def get_smp_model(pools: pd.DataFrame) -> Optional[Any]:
 
     logger.info(f'"SMP" model')
@@ -128,6 +135,7 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
                    "smp_lag2_model",
                    "smp_roll5_model",
                    "smp_roll15_model",
+                   "smp_roll60_model",
                    "smp_model"
                    ]
 
@@ -149,6 +157,9 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
         ),
         asyncio.create_task(
             get_smp_roll15_model(pools)
+        ),
+        asyncio.create_task(
+            get_smp_roll60_model(pools)
         ),
         asyncio.create_task(
             get_smp_model(pools)
