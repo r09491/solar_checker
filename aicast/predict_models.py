@@ -107,11 +107,4 @@ async def predict_models(
         pool[SMP_FEATURES]
     ).astype(int)
 
-    """
-    pool.loc[
-        (pool['SMP']>0) &
-        (pool['SMP']<=pool['SBPI']), 'SMP'
-    ] = 0
-    """
-    
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]

@@ -185,6 +185,7 @@ async def get_train_pool(
         logger.error (f'Skipped pool for "{logday}"')
         return None
     logger.info (f'Initial day pool for "{logday}" with "{len(day_pool)}" entries.')    
+
     day_pool = day_pool.dropna().tz_convert(tz).resample('1min').bfill()
     logger.info (f'Final day pool for "{logday}" with "{len(day_pool)}" entries.')
     return day_pool
@@ -252,9 +253,9 @@ async def get_train_pools(
     pool['SMP_roll5'] = pool['SMP'].rolling(5).mean()
     pool['SMP_roll15'] = pool['SMP'].rolling(15).mean()
     pool['SMP_roll60'] = pool['SMP'].rolling(60).mean()
-    
-    ##return pool.loc[pool["is_daylight"]==1,:]
+
     return pool.dropna()
+
 
 """ """
 async def get_predict_pool(
@@ -273,7 +274,7 @@ async def get_predict_pool(
     
     daylight_pool = (await get_daylight_pool(
         sky_pool.index, lat, lon
-    )) ###['is_daylight']
+    ))
     if daylight_pool is None:
         logger.error(f'No dayligh pool for "{day}"')
         return None
@@ -300,13 +301,6 @@ async def get_predict_pool(
         return None
 
     day_pool = day_pool.dropna().tz_convert(tz).reset_index()
-
-    """
-    day_pool = day_pool.loc[ (
-        day_pool['is_daylight'] == 1
-    ),:]
-    """
-    
     logger.info (f'Have predict pool for "{day}" with "{len(day_pool)}" entries.')
 
     return day_pool.rename(columns={'index':'TIME'})
