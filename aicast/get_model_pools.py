@@ -184,10 +184,10 @@ async def get_train_pool(
     except pd.errors.InvalidIndexError:
         logger.error (f'Skipped pool for "{logday}"')
         return None
-    logger.info (f'Initial day pool for "{logday}" with "{len(day_pool)}" entries.')    
 
     day_pool = day_pool.dropna().tz_convert(tz).resample('1min').bfill()
     logger.info (f'Final day pool for "{logday}" with "{len(day_pool)}" entries.')
+
     return day_pool
 
 """ """
@@ -250,9 +250,9 @@ async def get_train_pools(
     pool['SMP_lag1'] = pool['SMP'].shift(1)
     pool['SMP_lag2'] = pool['SMP'].shift(2)
     
-    pool['SMP_roll5'] = pool['SMP'].rolling(5).mean()
-    pool['SMP_roll15'] = pool['SMP'].rolling(15).mean()
-    pool['SMP_roll60'] = pool['SMP'].rolling(60).mean()
+    pool['SMP_roll5'] = pool['SMP'].shift(1).rolling(5).mean()
+    pool['SMP_roll10'] = pool['SMP'].shift(5).rolling(10).mean()
+    pool['SMP_roll20'] = pool['SMP'].shift(10).rolling(20).mean()
 
     return pool.dropna()
 

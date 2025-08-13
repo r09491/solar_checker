@@ -42,8 +42,8 @@ from aicast.model_features import (
     SMP_lag1_FEATURES,
     SMP_lag2_FEATURES,
     SMP_roll5_FEATURES,
-    SMP_roll15_FEATURES,
-    SMP_roll60_FEATURES,
+    SMP_roll10_FEATURES,
+    SMP_roll20_FEATURES,
     SMP_FEATURES
 )
 
@@ -109,16 +109,16 @@ async def get_smp_roll5_model(pools: pd.DataFrame) -> Optional[Any]:
     model = await get_model(X=pools[SMP_roll5_FEATURES], y=pools['SMP_roll5'])
     return model
 
-async def get_smp_roll15_model(pools: pd.DataFrame) -> Optional[Any]:
+async def get_smp_roll10_model(pools: pd.DataFrame) -> Optional[Any]:
 
-    logger.info(f'"SMP_roll15" model')
-    model = await get_model(X=pools[SMP_roll15_FEATURES], y=pools['SMP_roll15'])
+    logger.info(f'"SMP_roll10" model')
+    model = await get_model(X=pools[SMP_roll10_FEATURES], y=pools['SMP_roll10'])
     return model
 
-async def get_smp_roll60_model(pools: pd.DataFrame) -> Optional[Any]:
+async def get_smp_roll20_model(pools: pd.DataFrame) -> Optional[Any]:
 
-    logger.info(f'"SMP_roll60" model')
-    model = await get_model(X=pools[SMP_roll60_FEATURES], y=pools['SMP_roll60'])
+    logger.info(f'"SMP_roll20" model')
+    model = await get_model(X=pools[SMP_roll20_FEATURES], y=pools['SMP_roll20'])
     return model
 
 async def get_smp_model(pools: pd.DataFrame) -> Optional[Any]:
@@ -134,8 +134,8 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
                    "smp_lag1_model",
                    "smp_lag2_model",
                    "smp_roll5_model",
-                   "smp_roll15_model",
-                   "smp_roll60_model",
+                   "smp_roll10_model",
+                   "smp_roll20_model",
                    "smp_model"
                    ]
 
@@ -156,10 +156,10 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
             get_smp_roll5_model(pools)
         ),
         asyncio.create_task(
-            get_smp_roll15_model(pools)
+            get_smp_roll10_model(pools)
         ),
         asyncio.create_task(
-            get_smp_roll60_model(pools)
+            get_smp_roll20_model(pools)
         ),
         asyncio.create_task(
             get_smp_model(pools)

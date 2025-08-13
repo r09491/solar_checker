@@ -62,7 +62,7 @@ SMP_roll5_FEATURES = [
     'SMP_lag2'
 ]
 
-SMP_roll15_FEATURES = [
+SMP_roll10_FEATURES = [
     'hour',
     'minute',
     'month',
@@ -77,7 +77,7 @@ SMP_roll15_FEATURES = [
     'SMP_roll5'    
 ]
 
-SMP_roll60_FEATURES = [
+SMP_roll20_FEATURES = [
     'hour',
     'minute',
     'month',
@@ -90,7 +90,7 @@ SMP_roll60_FEATURES = [
     'SMP_lag1',
     'SMP_lag2',
     'SMP_roll5',
-    'SMP_roll15'
+    'SMP_roll10'
 ]
 
 SMP_FEATURES = [
@@ -106,6 +106,6 @@ SMP_FEATURES = [
     'SMP_lag1',
     'SMP_lag2',
     'SMP_roll5',
-    'SMP_roll15',
-    'SMP_roll60'
+    'SMP_roll10',
+    'SMP_roll20'
 ]
