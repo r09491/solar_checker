@@ -62,8 +62,13 @@ async def get_model(
     )
 
     model = lgb.LGBMRegressor(
+        boosting_type="gbdt",
+        objective="regression",
+        metric="rmse",
         n_estimators=125,
         learning_rate=0.05,
+        #max_depth=128,
+        #num_leaves=127,
         force_row_wise=True
     )
     model.fit(
