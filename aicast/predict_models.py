@@ -63,7 +63,7 @@ async def predict_models(
         return None
     
     # Predict with models, sequence is mandatory
-    pool['SBPI'] = sbpi_model.predict(pool[SBPI_FEATURES]).astype(int) 
+    pool['SBPI'] = sbpi_model.predict(pool[SBPI_FEATURES]) 
     pool.loc[
         pool['SBPI']<0, 'SBPI'
     ] = 0
@@ -71,7 +71,7 @@ async def predict_models(
         pool['is_daylight']==0, 'SBPI'
     ] = 0
 
-    pool['SBPB'] = sbpb_model.predict(pool[SBPB_FEATURES]).astype(int) 
+    pool['SBPB'] = sbpb_model.predict(pool[SBPB_FEATURES]) 
     pool.loc[
         (pool['SBPI']>35) &
         (pool['SBPI']<100), 'SBPB'
@@ -90,21 +90,21 @@ async def predict_models(
     
     pool['SMP_lag1'] = smp_lag1_model.predict(
         pool[SMP_lag1_FEATURES]
-    ).astype(int)
+    )
     pool['SMP_lag2'] = smp_lag2_model.predict(
         pool[SMP_lag2_FEATURES]
-    ).astype(int)
+    )
     pool['SMP_roll5'] = smp_roll5_model.predict(
         pool[SMP_roll5_FEATURES]
-    ).astype(int)
+    )
     pool['SMP_roll10'] = smp_roll10_model.predict(
         pool[SMP_roll10_FEATURES]
-    ).astype(int)
+    )
     pool['SMP_roll20'] = smp_roll20_model.predict(
         pool[SMP_roll20_FEATURES]
-    ).astype(int)
+    )
     pool['SMP'] = smp_model.predict(
         pool[SMP_FEATURES]
-    ).astype(int)
+    )
 
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]

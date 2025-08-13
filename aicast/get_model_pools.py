@@ -81,11 +81,11 @@ async def get_sample_pool(
     df = pd.DataFrame(
         data = {
             'TIME':t,
-            'hour':t.hour.astype(int),
-            'minute':t.minute.astype(int),
-            'month':t.month.astype(int),
-            'year':t.year.astype(int),
-            'day_of_year':t.day_of_year.astype(int),
+            'hour':t.hour,
+            'minute':t.minute,
+            'month':t.month,
+            'year':t.year,
+            'day_of_year':t.day_of_year,
             'date':t.date.astype(str),
             'SBPI':sbpi,
             'SBPB':sbpb,
@@ -249,12 +249,12 @@ async def get_train_pools(
 
     pool['SMP_lag1'] = pool['SMP'].shift(1)
     pool['SMP_lag2'] = pool['SMP'].shift(2)
-    
-    pool['SMP_roll5'] = pool['SMP'].shift(1).rolling(5).mean()
-    pool['SMP_roll10'] = pool['SMP'].shift(5).rolling(10).mean()
-    pool['SMP_roll20'] = pool['SMP'].shift(10).rolling(20).mean()
 
-    return pool.dropna()
+    pool['SMP_roll5'] = pool['SMP'].shift(1).rolling(5).mean()
+    pool['SMP_roll10'] = pool['SMP'].shift(1).rolling(10).mean()
+    pool['SMP_roll20'] = pool['SMP'].shift(1).rolling(20).mean()
+
+    return pool.dropna() # With above value the oldest 20 Min are dropped!
 
 
 """ """
@@ -283,11 +283,11 @@ async def get_predict_pool(
     sample_pool = pd.DataFrame(
         data = {
             'TIME':t,
-            'hour':t.hour.astype(int),
-            'minute':t.minute.astype(int),
-            'month':t.month.astype(int),
-            'year':t.year.astype(int),
-            'day_of_year':t.day_of_year.astype(int),
+            'hour':t.hour,
+            'minute':t.minute,
+            'month':t.month,
+            'year':t.year,
+            'day_of_year':t.day_of_year,
             'date':t.date.astype(str),
         }
     ).set_index('TIME')
