@@ -24,6 +24,10 @@ from utils.typing import (
     Optional, Any, Dict, List
 )
 
+from utils.csvlog import (
+    get_logdays
+)
+
 from utils.samples import (
     get_columns_from_csv
 )
@@ -190,29 +194,6 @@ async def get_train_pool(
 
     return day_pool
 
-""" """
-def _get_logdays(logdir: str,
-                 logprefix: str,
-                 logdayformat: str = '*') -> List[str]:
-    pattern = os.path.join(logdir, f'{logprefix}_{logdayformat}.log')
-    logpaths = glob.glob(pattern)
-    logfiles = [os.path.basename(lp) for lp in logpaths]
-    lognames = [os.path.splitext(lf)[0] for lf in logfiles]
-    logdays = [ln.replace(f'{logprefix}_', '') for ln in lognames]
-    logdays.sort()
-    return logdays
-
-
-""" """
-async def get_logdays(logdir: str,
-                      logprefix: str,
-                      logdayformat: str = '*') -> List[str]:
-    if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(
-            _get_logdays, **vars()) # type: ignore[unused-ignore]
-    else:
-        return _get_logdays(**vars())
-
 
 """ """
 async def get_train_pools(
@@ -226,9 +207,9 @@ async def get_train_pools(
 
     """ Get the list of logdays """
     logdays = (await get_logdays(
-        logdir,
-        logprefix,
-        logdayformat
+        logdir=logdir,
+        logprefix=logprefix,
+        logdayformat=logdayformat
     ))
 
     pool_tasks = [
