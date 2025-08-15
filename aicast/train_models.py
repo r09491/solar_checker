@@ -62,13 +62,20 @@ async def get_model(
     )
 
     model = lgb.LGBMRegressor(
-        boosting_type="gbdt",
         objective="regression",
         metric="rmse",
-        n_estimators=125,
+        boosting_type="gbdt",
+        random_state=42,
+        #n_estimators=125,
+        #num_boost_round=2000,
+        #early_stopping_round=50,
         learning_rate=0.05,
-        #max_depth=128,
-        #num_leaves=127,
+        #max_depth=64,
+        num_leaves=63,         # increase to cover more dependencies 
+        #min_data_in_leaf=128,   # increase to decrease overfitting
+        #feature_fraction=0.9,   # decrease for more stabiliyt
+        #bagging_fraction=0.8,  # decrease for more stabiliyt
+        #bagging_freq =5,
         force_row_wise=True
     )
     model.fit(
@@ -78,8 +85,7 @@ async def get_model(
     y_pred = model.predict(X_val)
     rmse = np.sqrt(mean_squared_error(y_val, y_pred))
     r2 = r2_score(y_val, y_pred)
-    logger.info(f'RMSE "{rmse:.2f}"')
-    logger.info(f'R² Score "{r2:.3f}"')
+    logger.info(f'RMSE "{rmse:.2f}", R² Score "{r2:.3f}"')
     
     return model
 

@@ -190,7 +190,7 @@ async def get_train_pool(
         return None
 
     day_pool = day_pool.dropna().tz_convert(tz).resample('1min').bfill()
-    logger.info (f'Final day pool for "{logday}" with "{len(day_pool)}" entries.')
+    logger.info (f'Have day pool for "{logday}"')
 
     return day_pool
 
