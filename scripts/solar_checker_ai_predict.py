@@ -24,7 +24,7 @@ from aicast.predict_models import (
     predict_models
 )
 
-from aicast.get_predict_tables import (
+from aicast.predict_tables import (
     get_predict_tables
 )
 

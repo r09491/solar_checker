@@ -4,7 +4,10 @@ SBPI_FEATURES = [
     'month',
     'year',
     'day_of_year',
+    'azimuth',
+    'elevation',
     'is_daylight',
+    'can_see_sun',
     'sunshine',
     'cloud_cover',
     'temperature',
@@ -18,7 +21,10 @@ SBPB_FEATURES = [
     'month',
     'year',
     'day_of_year',
+    'azimuth',
+    'elevation',
     'is_daylight',
+    'can_see_sun',
     'SBPI'
 ]
 
@@ -44,7 +50,7 @@ SMP_lag2_FEATURES = [
     'SBPI',
     'SBPB',
     'SBPO',
-    'SMP_lag1'
+    #'SMP_lag1'
 ]
 
 
@@ -58,8 +64,8 @@ SMP_roll5_FEATURES = [
     'SBPI',
     'SBPB',
     'SBPO',
-    'SMP_lag1',
-    'SMP_lag2'
+    ##'SMP_lag1',
+    ##'SMP_lag2'
 ]
 
 SMP_roll10_FEATURES = [
@@ -72,9 +78,9 @@ SMP_roll10_FEATURES = [
     'SBPI',
     'SBPB',
     'SBPO',
-    'SMP_lag1',
-    'SMP_lag2',
-    'SMP_roll5'    
+    ##'SMP_lag1',
+    ##'SMP_lag2',
+    ##'SMP_roll5'    
 ]
 
 SMP_roll20_FEATURES = [
@@ -87,10 +93,10 @@ SMP_roll20_FEATURES = [
     'SBPI',
     'SBPB',
     'SBPO',
-    'SMP_lag1',
-    'SMP_lag2',
-    'SMP_roll5',
-    'SMP_roll10'
+    #'SMP_lag1',
+    #'SMP_lag2',
+    #'SMP_roll5',
+    #'SMP_roll10'
 ]
 
 SMP_FEATURES = [

@@ -22,7 +22,7 @@ from aicast.model_features import (
     SMP_FEATURES
 )
 
-from aicast.get_model_pools import (
+from aicast.model_pools import (
     get_predict_pool
 )
 

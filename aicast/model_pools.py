@@ -102,7 +102,7 @@ async def get_sample_pool(
 
 
 """ """
-async def get_daylight_pool(
+async def get_position_pool(
         time: pd.DatetimeIndex,
         lat: float,
         lon: float,
@@ -112,6 +112,13 @@ async def get_daylight_pool(
 
     sunpos['is_daylight'] = (
         sunpos['elevation'] > 0
+    ).astype(int) if (
+        sunpos is not None
+    ) else None
+
+    sunpos['can_see_sun'] = (
+        (sunpos['azimuth'] > 95) &
+        (sunpos['azimuth'] < 275)
     ).astype(int) if (
         sunpos is not None
     ) else None
@@ -165,10 +172,10 @@ async def get_train_pool(
         return None
     logger.info(f'Have sky pool for "{logday}"')
     
-    daylight_pool = (await get_daylight_pool(
+    position_pool = (await get_position_pool(
         sky_pool.index, lat, lon
     ))  ##['is_daylight']
-    if daylight_pool is None:
+    if position_pool is None:
         logger.error(f'No dayligh pool for "{logday}"')
         return None
     logger.info(f'Have daylight pool for "{logday}"')
@@ -181,7 +188,7 @@ async def get_train_pool(
         return None
     logger.info(f'Have sample pool for "{logday}"')
     
-    pools = [sample_pool, daylight_pool, sky_pool] 
+    pools = [sample_pool, position_pool, sky_pool] 
     
     try:
         day_pool = pd.concat(pools, axis = 1)
@@ -253,10 +260,10 @@ async def get_predict_pool(
         logger.error(f'No sky pool for "{day}"')
         return None
     
-    daylight_pool = (await get_daylight_pool(
+    position_pool = (await get_position_pool(
         sky_pool.index, lat, lon
     ))
-    if daylight_pool is None:
+    if position_pool is None:
         logger.error(f'No dayligh pool for "{day}"')
         return None
     
@@ -273,7 +280,7 @@ async def get_predict_pool(
         }
     ).set_index('TIME')
 
-    pools = [sample_pool, daylight_pool, sky_pool] 
+    pools = [sample_pool, position_pool, sky_pool] 
     
     try:
         day_pool = pd.concat(pools, axis = 1)
