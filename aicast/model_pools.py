@@ -36,6 +36,15 @@ from brightsky import (
     Sky
 )
 
+from aicast.model_features import (
+    SBPI_FEATURES_lags,
+    SBPI_FEATURES_rolls,
+    SBPB_FEATURES_lags,
+    SBPB_FEATURES_rolls,
+    SMP_FEATURES_lags,
+    SMP_FEATURES_rolls,
+)
+
 #import logging
 #logging.disable(logging.CRITICAL)
 
@@ -235,12 +244,23 @@ async def get_train_pools(
         logger.error('Unable to create training pools')
         return None
 
-    pool['SMP_lag1'] = pool['SMP'].shift(1)
-    pool['SMP_lag2'] = pool['SMP'].shift(2)
+    #Extend the SMP base features for time series
+    for lag in SBPI_FEATURES_lags:
+        pool[f'SBPI_lag{lag}'] = pool['SBPI'].shift(lag)
+    for roll in SBPI_FEATURES_rolls:
+        pool[f'SBPI_roll{roll}'] = pool['SBPI'].shift(roll)
 
-    pool['SMP_roll5'] = pool['SMP'].shift(1).rolling(5).mean()
-    pool['SMP_roll10'] = pool['SMP'].shift(1).rolling(10).mean()
-    pool['SMP_roll20'] = pool['SMP'].shift(1).rolling(20).mean()
+    #Extend the SBPB base features for time series
+    for lag in SBPB_FEATURES_lags:
+        pool[f'SBPB_lag{lag}'] = pool['SBPB'].shift(lag)
+    for roll in SBPB_FEATURES_rolls:
+        pool[f'SBPB_roll{roll}'] = pool['SBPB'].shift(roll)
+        
+    #Extend the SMP base features for time series
+    for lag in SMP_FEATURES_lags:
+        pool[f'SMP_lag{lag}'] = pool['SMP'].shift(lag)
+    for roll in SMP_FEATURES_rolls:
+        pool[f'SMP_roll{roll}'] = pool['SMP'].shift(roll)
 
     return pool.dropna() # With above value the oldest 20 Min are dropped!
 

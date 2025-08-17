@@ -38,13 +38,14 @@ from utils.typing import (
 
 from aicast.model_features import (
     SBPI_FEATURES,
+    SBPI_FEATURES_lags,
+    SBPI_FEATURES_rolls,
     SBPB_FEATURES,
-    SMP_lag1_FEATURES,
-    SMP_lag2_FEATURES,
-    SMP_roll5_FEATURES,
-    SMP_roll10_FEATURES,
-    SMP_roll20_FEATURES,
-    SMP_FEATURES
+    SBPB_FEATURES_lags,
+    SBPB_FEATURES_rolls,
+    SMP_FEATURES,
+    SMP_FEATURES_lags,
+    SMP_FEATURES_rolls,
 )
 
 from aicast.model_pools import (
@@ -90,90 +91,82 @@ async def get_model(
     return model
 
 
-async def get_sbpi_model(pools: pd.DataFrame) -> Optional[Any]:
+"""  """
+async def get_target_models(
+        pool: pd.DataFrame,
+        tgt_str: str,
+        base_features: List,
+        lag_periods: List = [],
+        roll_periods: List = []
+) -> Optional[Any]:
 
-    logger.info(f'"SBPI" model')
-    model = await get_model(X=pools[SBPI_FEATURES], y=pools['SBPI'])
-    return model
+    if not (tgt_str in pool):
+        logger.error(f'{tgt_str} is not in the train pool.')
+        return None
+    
+    lags = [f'{tgt_str}_lag{l}' for l in lag_periods]
+    rolls = [f'{tgt_str}_roll{r}' for r in roll_periods]
 
-async def get_sbpb_model(pools: pd.DataFrame) -> Optional[Any]:
+    lrt = lags+rolls+[tgt_str]
+    paras = [(t, lrt[:i]) for i, t in enumerate(lrt)]
+    return [await get_model(
+        X=pool[base_features + f], y=pool[t]
+    ) for t, f in paras]
 
-    logger.info(f'"SBPB" model')
-    model = await get_model(X=pools[SBPB_FEATURES], y=pools['SBPB'])
-    return model
 
-async def get_smp_lag1_model(pools: pd.DataFrame) -> Optional[Any]:
+""" """
+async def get_sbpi_models(pool: pd.DataFrame) -> Optional[Any]:
+    logger.info(f'"==================> SBPI" model')
 
-    logger.info(f'"SMP_lag1" model')
-    model = await get_model(X=pools[SMP_lag1_FEATURES], y=pools['SMP_lag1'])
-    return model
+    return await get_target_models(
+        pool = pool,
+        tgt_str = "SBPI",
+        base_features = SBPI_FEATURES,
+        lag_periods = SBPI_FEATURES_lags,
+        roll_periods = SBPI_FEATURES_rolls,
+    )
 
-async def get_smp_lag2_model(pools: pd.DataFrame) -> Optional[Any]:
 
-    logger.info(f'"SMP_lag2" model')
-    model = await get_model(X=pools[SMP_lag2_FEATURES], y=pools['SMP_lag2'])
-    return model
+""" """
+async def get_sbpb_models(pool: pd.DataFrame) -> Optional[Any]:
+    logger.info(f'"==================> SBPB" model')
 
-async def get_smp_roll5_model(pools: pd.DataFrame) -> Optional[Any]:
+    return await get_target_models(
+        pool = pool,
+        tgt_str = "SBPB",
+        base_features = SBPB_FEATURES,
+        lag_periods = SBPB_FEATURES_lags,
+        roll_periods = SBPB_FEATURES_rolls,
+    )
 
-    logger.info(f'"SMP_roll5" model')
-    model = await get_model(X=pools[SMP_roll5_FEATURES], y=pools['SMP_roll5'])
-    return model
 
-async def get_smp_roll10_model(pools: pd.DataFrame) -> Optional[Any]:
+""" """
+async def get_smp_models(pool: pd.DataFrame) -> Optional[Any]:
+    logger.info(f'==================> "SMP" models')
 
-    logger.info(f'"SMP_roll10" model')
-    model = await get_model(X=pools[SMP_roll10_FEATURES], y=pools['SMP_roll10'])
-    return model
+    return await get_target_models(
+        pool = pool,
+        tgt_str = "SMP",
+        base_features = SMP_FEATURES,
+        lag_periods = SMP_FEATURES_lags,
+        roll_periods = SMP_FEATURES_rolls,
+    )
+    
 
-async def get_smp_roll20_model(pools: pd.DataFrame) -> Optional[Any]:
+""" """
+async def get_models(pool: pd.DataFrame) -> Optional[Dict]:
 
-    logger.info(f'"SMP_roll20" model')
-    model = await get_model(X=pools[SMP_roll20_FEATURES], y=pools['SMP_roll20'])
-    return model
-
-async def get_smp_model(pools: pd.DataFrame) -> Optional[Any]:
-
-    logger.info(f'"SMP" model')
-    model = await get_model(X=pools[SMP_FEATURES], y=pools['SMP'])
-    return model
-
-async def get_models(pools: pd.DataFrame) -> Optional[Any]:
-
-    model_names = ["sbpi_model",
-                   "sbpb_model",
-                   "smp_lag1_model",
-                   "smp_lag2_model",
-                   "smp_roll5_model",
-                   "smp_roll10_model",
-                   "smp_roll20_model",
-                   "smp_model"
-                   ]
+    model_names = ["sbpi_models", "sbpb_models", "smp_models"]
 
     model_tasks = [
         asyncio.create_task(
-            get_sbpi_model(pools)
+            get_sbpi_models(pool)
         ),
         asyncio.create_task(
-            get_sbpb_model(pools)
+            get_sbpb_models(pool)
         ),
         asyncio.create_task(
-            get_smp_lag1_model(pools)
-        ),
-        asyncio.create_task(
-            get_smp_lag2_model(pools)
-        ),
-        asyncio.create_task(
-            get_smp_roll5_model(pools)
-        ),
-        asyncio.create_task(
-            get_smp_roll10_model(pools)
-        ),
-        asyncio.create_task(
-            get_smp_roll20_model(pools)
-        ),
-        asyncio.create_task(
-            get_smp_model(pools)
+            get_smp_models(pool)
         )
     ]
     
@@ -181,6 +174,7 @@ async def get_models(pools: pd.DataFrame) -> Optional[Any]:
     return dict(zip(model_names, models))
 
 
+""" """
 async def train_models(
         logdir: str,
         logprefix: str,
@@ -190,8 +184,8 @@ async def train_models(
         lon: float
 ) -> int:
 
-    pools = await get_train_pools(
+    pool = await get_train_pools(
         logdir, logprefix, logdayformat, tz, lat, lon
     )
 
-    return (await get_models(pools)) if pools is not None else None
+    return (await get_models(pool)) if pool is not None else None

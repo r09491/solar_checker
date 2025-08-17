@@ -1,13 +1,19 @@
-SBPI_FEATURES = [
+TIME_FEATURES = [
     'hour',
     'minute',
     'month',
     'year',
-    'day_of_year',
+    'day_of_year'
+]
+
+POSITION_FEATURES = [
     'azimuth',
     'elevation',
     'is_daylight',
-    'can_see_sun',
+    'can_see_sun'
+]
+
+WEATHER_FEATURES = [
     'sunshine',
     'cloud_cover',
     'temperature',
@@ -15,103 +21,16 @@ SBPI_FEATURES = [
     'visibility'
 ]
 
-SBPB_FEATURES = [
-    'hour',
-    'minute',
-    'month',
-    'year',
-    'day_of_year',
-    'azimuth',
-    'elevation',
-    'is_daylight',
-    'can_see_sun',
-    'SBPI'
-]
+## !!! Add lags and rolls to the train pool manually !!!
 
-SMP_lag1_FEATURES = [
-    'hour',
-    'minute',
-    'month',
-    'year',
-    'day_of_year',
-    'is_daylight',
-    'SBPI',
-    'SBPB',
-    'SBPO'
-]
+SBPI_FEATURES = TIME_FEATURES + POSITION_FEATURES + WEATHER_FEATURES
+SBPI_FEATURES_lags = [1,2]
+SBPI_FEATURES_rolls = []
 
-SMP_lag2_FEATURES = [
-    'hour',
-    'minute',
-    'month',
-    'year',
-    'day_of_year',
-    'is_daylight',
-    'SBPI',
-    'SBPB',
-    'SBPO',
-    #'SMP_lag1'
-]
+SBPB_FEATURES = TIME_FEATURES + WEATHER_FEATURES + ['SBPI']
+SBPB_FEATURES_lags = [1,2]
+SBPB_FEATURES_rolls = []
 
-
-SMP_roll5_FEATURES = [
-    'hour',
-    'minute',
-    'month',
-    'year',
-    'day_of_year',
-    'is_daylight',
-    'SBPI',
-    'SBPB',
-    'SBPO',
-    ##'SMP_lag1',
-    ##'SMP_lag2'
-]
-
-SMP_roll10_FEATURES = [
-    'hour',
-    'minute',
-    'month',
-    'year',
-    'day_of_year',
-    'is_daylight',
-    'SBPI',
-    'SBPB',
-    'SBPO',
-    ##'SMP_lag1',
-    ##'SMP_lag2',
-    ##'SMP_roll5'    
-]
-
-SMP_roll20_FEATURES = [
-    'hour',
-    'minute',
-    'month',
-    'year',
-    'day_of_year',
-    'is_daylight',
-    'SBPI',
-    'SBPB',
-    'SBPO',
-    #'SMP_lag1',
-    #'SMP_lag2',
-    #'SMP_roll5',
-    #'SMP_roll10'
-]
-
-SMP_FEATURES = [
-    'hour',
-    'minute',
-    'month',
-    'year',
-    'day_of_year',
-    'is_daylight',
-    'SBPI',
-    'SBPB',
-    'SBPO',
-    'SMP_lag1',
-    'SMP_lag2',
-    'SMP_roll5',
-    'SMP_roll10',
-    'SMP_roll20'
-]
+SMP_FEATURES = TIME_FEATURES + ['SBPI', 'SBPB', 'SBPO']
+SMP_FEATURES_lags = [1,2]
+SMP_FEATURES_rolls =[5, 10, 30]

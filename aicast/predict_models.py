@@ -10,22 +10,113 @@ import numpy as np
 import pandas as pd
 import joblib
 
+from utils.typing import (
+    Optional, Any, Dict, List
+)
 
 from aicast.model_features import (
     SBPI_FEATURES,
+    SBPI_FEATURES_lags,
+    SBPI_FEATURES_rolls,
     SBPB_FEATURES,
-    SMP_lag1_FEATURES,
-    SMP_lag2_FEATURES,
-    SMP_roll5_FEATURES,
-    SMP_roll10_FEATURES,
-    SMP_roll20_FEATURES,
-    SMP_FEATURES
+    SBPB_FEATURES_lags,
+    SBPB_FEATURES_rolls,
+    SMP_FEATURES,
+    SMP_FEATURES_lags,
+    SMP_FEATURES_rolls,
 )
 
 from aicast.model_pools import (
     get_predict_pool
 )
 
+""" Updates the pool with the results from the predictions """
+async def predict_target_models(
+        pool: pd.DataFrame, # in/out
+        tgt_models: List,
+        tgt_str: str,
+        base_features: List,
+        lag_periods: List = [],
+        roll_periods: List = []
+) -> Optional[None]:
+
+    if (tgt_str in pool):
+        logger.error(f'{tgt_str} is already in the predict pool.')
+        return None
+    
+    lags = [f'{tgt_str}_lag{l}' for l in lag_periods]
+    rolls = [f'{tgt_str}_roll{r}' for r in roll_periods]
+
+    lrt = lags+rolls+[tgt_str]
+    paras = [(t, lrt[:i]) for i, t in enumerate(lrt)]
+    for (t,f), model in zip(paras, tgt_models):
+        pool[t] = model.predict(pool[base_features + f])
+        
+
+""" Updates SBPI in the pool """
+async def predict_sbpi_models(
+        pool: pd.DataFrame, # in/out
+        sbpi_models: List
+) -> Optional[None]:
+
+    await predict_target_models(
+        pool = pool,
+        tgt_models = sbpi_models,
+        tgt_str = "SBPI",
+        base_features = SBPI_FEATURES,
+        lag_periods = SBPI_FEATURES_lags,
+        roll_periods = SBPI_FEATURES_rolls
+    )
+    
+    pool.loc[
+        pool['SBPI']<0, 'SBPI'
+    ] = 0
+    pool.loc[
+        pool['is_daylight']==0, 'SBPI'
+    ] = 0
+
+    
+""" Updates SBPB in the pool """
+async def predict_sbpb_models(
+        pool: pd.DataFrame, # in/out
+        sbpb_models: List
+) -> Optional[None]:
+
+    await predict_target_models(
+        pool = pool,
+        tgt_models = sbpb_models,
+        tgt_str = "SBPB",
+        base_features =SBPB_FEATURES,
+        lag_periods = SBPB_FEATURES_lags,
+        roll_periods = SBPB_FEATURES_rolls
+    )
+
+    pool.loc[
+        (pool['SBPI']>35) &
+        (pool['SBPI']<100), 'SBPB'
+    ] = 0
+    pool.loc[
+        (pool['SBPI']>0) &
+        (pool['SBPB']>0), 'SBPB'
+    ] = 0
+
+
+""" Updates SMP in the pool """    
+async def predict_smp_models(
+        pool: pd.DataFrame, # in/out
+        smp_models: List
+) -> Optional[None]:
+
+    await predict_target_models(
+        pool = pool,
+        tgt_models = smp_models,
+        tgt_str = "SMP",
+        base_features = SMP_FEATURES,
+        lag_periods = SMP_FEATURES_lags,
+        roll_periods = SMP_FEATURES_rolls
+    )
+
+    
 async def predict_models(
     day: str,
     tz: str,
@@ -35,14 +126,9 @@ async def predict_models(
 ) -> pd.DataFrame:
 
     try:
-        sbpi_model = joblib.load(f'{modeldir}/lightgbm_sbpi_model.pkl')
-        sbpb_model = joblib.load(f'{modeldir}/lightgbm_sbpb_model.pkl')
-        smp_lag1_model = joblib.load(f'{modeldir}/lightgbm_smp_lag1_model.pkl')
-        smp_lag2_model = joblib.load(f'{modeldir}/lightgbm_smp_lag2_model.pkl')
-        smp_roll5_model = joblib.load(f'{modeldir}/lightgbm_smp_roll5_model.pkl')
-        smp_roll10_model = joblib.load(f'{modeldir}/lightgbm_smp_roll10_model.pkl')
-        smp_roll20_model = joblib.load(f'{modeldir}/lightgbm_smp_roll20_model.pkl')
-        smp_model = joblib.load(f'{modeldir}/lightgbm_smp_model.pkl')
+        sbpi_models = joblib.load(f'{modeldir}/lightgbm_sbpi_models.pkl')
+        sbpb_models = joblib.load(f'{modeldir}/lightgbm_sbpb_models.pkl')
+        smp_models = joblib.load(f'{modeldir}/lightgbm_smp_models.pkl')            
     except OSError:
         logger.error('Unable to run on this system. Upgrade!')
         return None
@@ -61,25 +147,18 @@ async def predict_models(
     if pool is None or pool.empty:
         logger.error(f'Predict pool is empty for "{day}"')
         return None
-    
-    # Predict with models, sequence is mandatory
-    pool['SBPI'] = sbpi_model.predict(pool[SBPI_FEATURES]) 
-    pool.loc[
-        pool['SBPI']<0, 'SBPI'
-    ] = 0
-    pool.loc[
-        pool['is_daylight']==0, 'SBPI'
-    ] = 0
 
-    pool['SBPB'] = sbpb_model.predict(pool[SBPB_FEATURES]) 
-    pool.loc[
-        (pool['SBPI']>35) &
-        (pool['SBPI']<100), 'SBPB'
-    ] = 0
-    pool.loc[
-        (pool['SBPI']>0) &
-        (pool['SBPB']>0), 'SBPB'
-    ] = 0
+    await predict_sbpi_models(
+        pool = pool, sbpi_models = sbpi_models
+    )
+    
+    # Predict SBPB
+    await predict_sbpb_models(
+        pool = pool, sbpb_models = sbpb_models
+    )
+    
+
+    # Calculate SBPO
     
     pool['SBPO'] = pool['SBPI'] + pool['SBPB']
     pool.loc[
@@ -88,23 +167,9 @@ async def predict_models(
     ] = 0
 
     
-    pool['SMP_lag1'] = smp_lag1_model.predict(
-        pool[SMP_lag1_FEATURES]
-    )
-    pool['SMP_lag2'] = smp_lag2_model.predict(
-        pool[SMP_lag2_FEATURES]
-    )
-    pool['SMP_roll5'] = smp_roll5_model.predict(
-        pool[SMP_roll5_FEATURES]
-    )
-    pool['SMP_roll10'] = smp_roll10_model.predict(
-        pool[SMP_roll10_FEATURES]
-    )
-    pool['SMP_roll20'] = smp_roll20_model.predict(
-        pool[SMP_roll20_FEATURES]
-    )
-    pool['SMP'] = smp_model.predict(
-        pool[SMP_FEATURES]
+    # Predict SMP
+    await predict_smp_models(
+        pool = pool, smp_models = smp_models
     )
 
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]
