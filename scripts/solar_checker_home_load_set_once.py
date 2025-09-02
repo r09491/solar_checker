@@ -198,6 +198,9 @@ if __name__ == '__main__':
     except ClientConnectorError:
         logger.error('cannot connect to solarbank.')
         err = -9
+    except OSError:
+        logger.error('cannot access store file')
+        err = -99        
     except KeyboardInterrupt: 
         err = 99
 
