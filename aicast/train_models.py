@@ -105,9 +105,10 @@ async def get_target_models(
         return None
     
     lags = [f'{tgt_str}_lag{l}' for l in lag_periods]
-    rolls = [f'{tgt_str}_roll{r}' for r in roll_periods]
+    rolls_mean = [f'{tgt_str}_roll{r}_mean' for r in roll_periods]
+    rolls_std = [f'{tgt_str}_roll{r}_std' for r in roll_periods]
 
-    lrt = lags+rolls+[tgt_str]
+    lrt = lags+rolls_mean+rolls_std+[tgt_str]
     paras = [(t, lrt[:i]) for i, t in enumerate(lrt)]
     return [await get_model(
         X=pool[base_features + f], y=pool[t]

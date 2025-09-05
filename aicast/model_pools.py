@@ -248,19 +248,41 @@ async def get_train_pools(
     for lag in SBPI_FEATURES_lags:
         pool[f'SBPI_lag{lag}'] = pool['SBPI'].shift(lag)
     for roll in SBPI_FEATURES_rolls:
-        pool[f'SBPI_roll{roll}'] = pool['SBPI'].shift(roll)
+        pool[f'SBPI_roll{roll}_mean'] = pool['SBPI'].rolling(
+            window=roll,
+            min_periods=1
+        ).mean()
+        pool[f'SBPI_roll{roll}_std'] = pool['SBPI'].rolling(
+            window=roll,
+            min_periods=1
+        ).std()
 
     #Extend the SBPB base features for time series
     for lag in SBPB_FEATURES_lags:
         pool[f'SBPB_lag{lag}'] = pool['SBPB'].shift(lag)
     for roll in SBPB_FEATURES_rolls:
-        pool[f'SBPB_roll{roll}'] = pool['SBPB'].shift(roll)
+        pool[f'SBPB_roll{roll}_mean'] = pool['SBPB'].rolling(
+            window=roll,
+            min_periods=1
+        ).mean()
+        pool[f'SBPB_roll{roll}_std'] = pool['SBPB'].rolling(
+            window=roll,
+            min_periods=1
+        ).std()
+            
         
     #Extend the SMP base features for time series
     for lag in SMP_FEATURES_lags:
         pool[f'SMP_lag{lag}'] = pool['SMP'].shift(lag)
     for roll in SMP_FEATURES_rolls:
-        pool[f'SMP_roll{roll}'] = pool['SMP'].shift(roll)
+        pool[f'SMP_roll{roll}_mean'] = pool['SMP'].rolling(
+            window=roll,
+            min_periods=1
+        ).mean()
+        pool[f'SMP_roll{roll}_std'] = pool['SMP'].rolling(
+            window=roll,
+            min_periods=1
+        ).std()
 
     return pool.dropna() # With above value the oldest 20 Min are dropped!
 
