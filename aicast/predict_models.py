@@ -172,5 +172,5 @@ async def predict_models(
     await predict_smp_models(
         pool = pool, smp_models = smp_models
     )
-
+    
     return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]

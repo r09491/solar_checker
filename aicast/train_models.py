@@ -59,9 +59,13 @@ async def get_model(
 ) -> Any:
 
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.25, random_state=42
+        X, y, test_size=0.25, random_state=42,shuffle=False
     )
 
+    # Negative value get higher weight tom compensate LGNM feature
+    sample_weight = np.where(y_train<0, 2.0, 1.0)
+    
+    """
     model = lgb.LGBMRegressor(
         objective="regression",
         metric="rmse",
@@ -79,8 +83,34 @@ async def get_model(
         #bagging_freq =5,
         force_row_wise=True
     )
+    """
+    model = lgb.LGBMRegressor(
+        objective="regression_l1",
+        metric="mae",
+        boosting_type="gbdt",
+        random_state=42,
+        n_estimators=500,
+        #num_boost_round=2000,
+        early_stopping_round=100,
+        learning_rate=0.05,
+        max_depth=-1,
+        num_leaves=63,         # increase to cover more dependencies 
+        min_data_in_leaf=20,   # increase to decrease overfitting
+        feature_fraction=0.5,   # decrease for more stabiliyt
+        bagging_fraction=0.5,  # decrease for more stabiliyt
+        bagging_freq=1,
+        subsamples=0.9,
+        colsample_bytree=0.9,
+        lambda_l1=0.0,
+        lambda_l2=0.0,
+        force_row_wise=True,
+        n_jobs=4,
+        verbose=-1
+    )
     model.fit(
-        X_train, y_train, eval_set=[(X_val, y_val)]
+        X_train, y_train,
+        eval_set=[(X_val, y_val)],
+        sample_weight=sample_weight
     )
 
     y_pred = model.predict(X_val)

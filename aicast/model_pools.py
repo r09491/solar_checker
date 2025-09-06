@@ -106,7 +106,7 @@ async def get_sample_pool(
             'SMP':smp,
         }
     ).set_index('TIME')
-    
+
     return df[~df.index.duplicated(keep='last')]
 
 
@@ -183,7 +183,7 @@ async def get_train_pool(
     
     position_pool = (await get_position_pool(
         sky_pool.index, lat, lon
-    ))  ##['is_daylight']
+    ))
     if position_pool is None:
         logger.error(f'No dayligh pool for "{logday}"')
         return None
@@ -244,7 +244,12 @@ async def get_train_pools(
         logger.error('Unable to create training pools')
         return None
 
-    #Extend the SMP base features for time series
+    pool_first = pd.to_datetime(
+        pool.index[pool['is_daylight']==1][0]
+    )
+    pool = pool[pool_first:]
+    
+    #Extend the SBPI base features for time series
     for lag in SBPI_FEATURES_lags:
         pool[f'SBPI_lag{lag}'] = pool['SBPI'].shift(lag)
     for roll in SBPI_FEATURES_rolls:
@@ -283,8 +288,8 @@ async def get_train_pools(
             window=roll,
             min_periods=1
         ).std()
-
-    return pool.dropna() # With above value the oldest 20 Min are dropped!
+    
+    return pool.dropna() 
 
 
 """ """
@@ -330,6 +335,10 @@ async def get_predict_pool(
         logger.error (f'Skipped pool for "{day}"')
         return None
 
+    day_pool_first = pd.to_datetime(
+        day_pool.index[day_pool['is_daylight']==1][0]
+    )
+    day_pool = day_pool[day_pool_first:]
     day_pool = day_pool.dropna().tz_convert(tz).reset_index()
     logger.info (f'Have predict pool for "{day}" with "{len(day_pool)}" entries.')
 
