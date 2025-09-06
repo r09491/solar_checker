@@ -45,9 +45,10 @@ async def predict_target_models(
         return None
     
     lags = [f'{tgt_str}_lag{l}' for l in lag_periods]
-    rolls = [f'{tgt_str}_roll{r}' for r in roll_periods]
+    rolls_mean = [f'{tgt_str}_roll{r}_mean' for r in roll_periods]
+    rolls_std = [f'{tgt_str}_roll{r}_std' for r in roll_periods]
 
-    lrt = lags+rolls+[tgt_str]
+    lrt = lags+rolls_mean+rolls_std+[tgt_str]
     paras = [(t, lrt[:i]) for i, t in enumerate(lrt)]
     for (t,f), model in zip(paras, tgt_models):
         pool[t] = model.predict(pool[base_features + f])
