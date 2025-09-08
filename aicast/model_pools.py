@@ -244,10 +244,13 @@ async def get_train_pools(
         logger.error('Unable to create training pools')
         return None
 
+    """
     pool_first = pd.to_datetime(
         pool.index[pool['is_daylight']==1][0]
     )
     pool = pool[pool_first:]
+    """
+    pool = pool[pool['is_daylight']==1]
     
     #Extend the SBPI base features for time series
     for lag in SBPI_FEATURES_lags:
@@ -335,10 +338,14 @@ async def get_predict_pool(
         logger.error (f'Skipped pool for "{day}"')
         return None
 
+    """
     day_pool_first = pd.to_datetime(
         day_pool.index[day_pool['is_daylight']==1][0]
     )
     day_pool = day_pool[day_pool_first:]
+    """
+    
+    day_pool = day_pool[day_pool['is_daylight']==1]
     day_pool = day_pool.dropna().tz_convert(tz).reset_index()
     logger.info (f'Have predict pool for "{day}" with "{len(day_pool)}" entries.')
 
