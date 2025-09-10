@@ -1,5 +1,8 @@
 from aiohttp import web
-from settings import BASE_DIR
+from settings import (
+    HOME,
+    BASE_DIR
+)
 from views import (
     plot_day,
     plot_month,
@@ -22,6 +25,18 @@ def setup_routes(app: web.Application):
     app.router.add_get('/plot_ai_cast/{castday}', plot_ai_cast)
     app.router.add_get('/train_ai_cast', train_ai_cast)
     
-    app.router.add_static('/static/',
-                          path= BASE_DIR / 'main' / 'static',
-                          name='static')
+    app.router.add_static(
+        '/static/',
+        path= BASE_DIR / 'main' / 'static',
+        name='static')
+
+    app.add_routes(
+        [
+            web.static(
+                '/solar_motion/',
+                HOME / 'storage' / 'solar_motion',
+                follow_symlinks=True
+            )
+        ]
+    )
+    

@@ -2,7 +2,10 @@ import pathlib
 import yaml
 from aiohttp import web
 
+HOME = pathlib.Path.home()
 BASE_DIR = pathlib.Path(__file__).parent.parent
+
+
 config_path = BASE_DIR / 'conf' / 'main.yaml'
 
 def get_conf(path):
@@ -11,6 +14,7 @@ def get_conf(path):
     return config
 
 conf = get_conf(config_path)
+
 
 def setup_conf(app: web.Application):
     app['conf'] = conf
