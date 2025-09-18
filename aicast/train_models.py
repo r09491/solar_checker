@@ -84,12 +84,16 @@ async def get_model(
         force_row_wise=True
     )
     """
+    
     model = lgb.LGBMRegressor(
         objective="regression_l1",
         metric="mae",
+        #objective="regression",
+        #metric="rmse",
         boosting_type="gbdt",
         random_state=42,
-        n_estimators=500,
+        #n_estimators=500,
+        n_estimators=1000,
         #num_boost_round=2000,
         early_stopping_round=100,
         learning_rate=0.05,
@@ -107,6 +111,7 @@ async def get_model(
         n_jobs=4,
         verbose=-1
     )
+    
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
