@@ -41,6 +41,8 @@ from aicast.model_features import (
     SBPI_FEATURES_rolls,
     SBPB_FEATURES_lags,
     SBPB_FEATURES_rolls,
+    SBSB_FEATURES_lags,
+    SBSB_FEATURES_rolls,
     SMP_FEATURES_lags,
     SMP_FEATURES_rolls,
 )
@@ -74,6 +76,11 @@ async def get_sample_pool(
         logger.error(f'No SBPB samples for {logday}')
         return None
 
+    sbsb = cols['SBSB']
+    if sbsb is None:
+        logger.error(f'No SBSB samples for {logday}')
+        return None
+    
     sbpo = cols['SBPO']
     if sbpo is None:
         logger.error(f'No SBPO samples for {logday}')
@@ -102,6 +109,7 @@ async def get_sample_pool(
             'date':t.date.astype(str),
             'SBPI':sbpi,
             'SBPB':sbpb,
+            'SBSB':100*sbsb,
             'SBPO':sbpo,
             'SMP':smp,
         }
@@ -277,7 +285,19 @@ async def get_train_pools(
             window=roll,
             min_periods=1
         ).std()
-            
+
+    #Extend the SBSB base features for time series
+    for lag in SBSB_FEATURES_lags:
+        pool[f'SBSB_lag{lag}'] = pool['SBSB'].shift(lag)
+    for roll in SBSB_FEATURES_rolls:
+        pool[f'SBSB_roll{roll}_mean'] = pool['SBSB'].rolling(
+            window=roll,
+            min_periods=1
+        ).mean()
+        pool[f'SBSB_roll{roll}_std'] = pool['SBSB'].rolling(
+            window=roll,
+            min_periods=1
+        ).std()        
         
     #Extend the SMP base features for time series
     for lag in SMP_FEATURES_lags:

@@ -21,6 +21,9 @@ from aicast.model_features import (
     SBPB_FEATURES,
     SBPB_FEATURES_lags,
     SBPB_FEATURES_rolls,
+    SBSB_FEATURES,
+    SBSB_FEATURES_lags,
+    SBSB_FEATURES_rolls,
     SMP_FEATURES,
     SMP_FEATURES_lags,
     SMP_FEATURES_rolls,
@@ -102,6 +105,22 @@ async def predict_sbpb_models(
     ] = 0
 
 
+""" Updates SBSB in the pool """
+async def predict_sbsb_models(
+        pool: pd.DataFrame, # in/out
+        sbsb_models: List
+) -> Optional[None]:
+
+    await predict_target_models(
+        pool = pool,
+        tgt_models = sbsb_models,
+        tgt_str = "SBSB",
+        base_features =SBSB_FEATURES,
+        lag_periods = SBSB_FEATURES_lags,
+        roll_periods = SBSB_FEATURES_rolls
+    )
+
+
 """ Updates SMP in the pool """    
 async def predict_smp_models(
         pool: pd.DataFrame, # in/out
@@ -129,6 +148,7 @@ async def predict_models(
     try:
         sbpi_models = joblib.load(f'{modeldir}/lightgbm_sbpi_models.pkl')
         sbpb_models = joblib.load(f'{modeldir}/lightgbm_sbpb_models.pkl')
+        sbsb_models = joblib.load(f'{modeldir}/lightgbm_sbsb_models.pkl')
         smp_models = joblib.load(f'{modeldir}/lightgbm_smp_models.pkl')            
     except OSError:
         logger.error('Unable to run on this system. Upgrade!')
@@ -157,7 +177,11 @@ async def predict_models(
     await predict_sbpb_models(
         pool = pool, sbpb_models = sbpb_models
     )
-    
+
+    # Predict SBSB
+    await predict_sbsb_models(
+        pool = pool, sbsb_models = sbsb_models
+    )
 
     # Calculate SBPO
     
@@ -173,4 +197,4 @@ async def predict_models(
         pool = pool, smp_models = smp_models
     )
     
-    return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP']]
+    return pool.loc[:, ['TIME', 'SBPI', 'SBPB', 'SBPO', 'SMP', 'SBSB']]

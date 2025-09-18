@@ -43,6 +43,9 @@ from aicast.model_features import (
     SBPB_FEATURES,
     SBPB_FEATURES_lags,
     SBPB_FEATURES_rolls,
+    SBSB_FEATURES,
+    SBSB_FEATURES_lags,
+    SBSB_FEATURES_rolls,
     SMP_FEATURES,
     SMP_FEATURES_lags,
     SMP_FEATURES_rolls,
@@ -177,6 +180,19 @@ async def get_sbpb_models(pool: pd.DataFrame) -> Optional[Any]:
 
 
 """ """
+async def get_sbsb_models(pool: pd.DataFrame) -> Optional[Any]:
+    logger.info(f'"==================> SBSB" model')
+
+    return await get_target_models(
+        pool = pool,
+        tgt_str = "SBSB",
+        base_features = SBSB_FEATURES,
+        lag_periods = SBSB_FEATURES_lags,
+        roll_periods = SBSB_FEATURES_rolls,
+    )
+
+
+""" """
 async def get_smp_models(pool: pd.DataFrame) -> Optional[Any]:
     logger.info(f'==================> "SMP" models')
 
@@ -192,7 +208,7 @@ async def get_smp_models(pool: pd.DataFrame) -> Optional[Any]:
 """ """
 async def get_models(pool: pd.DataFrame) -> Optional[Dict]:
 
-    model_names = ["sbpi_models", "sbpb_models", "smp_models"]
+    model_names = ["sbpi_models", "sbpb_models", "sbsb_models", "smp_models"]
 
     model_tasks = [
         asyncio.create_task(
@@ -200,6 +216,9 @@ async def get_models(pool: pd.DataFrame) -> Optional[Dict]:
         ),
         asyncio.create_task(
             get_sbpb_models(pool)
+        ),
+        asyncio.create_task(
+            get_sbsb_models(pool)
         ),
         asyncio.create_task(
             get_smp_models(pool)

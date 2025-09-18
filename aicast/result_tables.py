@@ -44,6 +44,8 @@ async def get_hourly_cast_watts(
     smp_means_out = smp_means.copy() 
     smp_means_out[smp_means>0] = 0
 
+    sbsb_means =  means.loc[:,'SBSB']
+    
     means_df = pd.DataFrame(
         data = {
             "SBPI":sbpi_means,
@@ -51,27 +53,31 @@ async def get_hourly_cast_watts(
             "SBPB>":sbpb_means_out,
             "SBPO":sbpo_means,
             ">SMP":smp_means_out,
-            "SMP>":smp_means_in
+            "SMP>":smp_means_in,
         }
     )
 
+    sbsb_df =pd.DataFrame({"BAT%":sbsb_means})
+    
     starts = means_df.index.strftime("%H:00")
     stops = means_df.index.strftime("%H:59")
     start_stop_df =pd.DataFrame({"START":starts, "STOP":stops})
 
+    sbsb_df.reset_index(inplace = True, drop=True)
     means_df.reset_index(inplace = True, drop=True)
     
-    return start_stop_df, means_df
+    return start_stop_df, means_df, sbsb_df
 
 
 async def get_predict_tables(
-        pool: pd.DataFrame
+        pool: pd.DataFrame,
+        bat_full_w: float = 1600
 ) -> (pd.DataFrame, pd.DataFrame):
 
-    (start_stop_df, means_df) = await get_hourly_cast_watts(pool)
+    (start_stop_df, means_df, sbsb_df) = await get_hourly_cast_watts(pool)
     if ((start_stop_df is None) or
         (means_df is None)
-        ): 
+    ): 
         logger.error(f'Cannot print hourly pool data')
         return None
 
@@ -79,6 +85,7 @@ async def get_predict_tables(
         
     watts_table = pd.concat([start_stop_df, means_df], axis=1)
 
-    energy_table = pd.concat([start_stop_df, means_df.cumsum()], axis=1)
-
+    energy_table = pd.concat([start_stop_df, means_df.cumsum(), sbsb_df], axis=1)
+    energy_table['>BAT'] -= sbsb_df['BAT%'].iloc[0] / 100 * bat_full_w
+    
     return (watts_table, energy_table)
