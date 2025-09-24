@@ -71,7 +71,7 @@ async def get_hourly_cast_watts(
 
 async def get_predict_tables(
         pool: pd.DataFrame,
-        bat_full_w: float = 1600
+        bat_full_wh: float = 1600
 ) -> (pd.DataFrame, pd.DataFrame):
 
     (start_stop_df, means_df, sbsb_df) = await get_hourly_cast_watts(pool)
@@ -86,6 +86,6 @@ async def get_predict_tables(
     watts_table = pd.concat([start_stop_df, means_df], axis=1)
 
     energy_table = pd.concat([start_stop_df, means_df.cumsum(), sbsb_df], axis=1)
-    energy_table['>BAT'] -= sbsb_df['BAT%'].iloc[0] / 100 * bat_full_w
+    energy_table['>BAT'] -= sbsb_df['BAT%'].iloc[0] / 100 * bat_full_wh
     
     return (watts_table, energy_table)

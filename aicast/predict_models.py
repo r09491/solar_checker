@@ -18,12 +18,12 @@ from aicast.model_features import (
     SBPI_FEATURES,
     SBPI_FEATURES_lags,
     SBPI_FEATURES_rolls,
-    SBPB_FEATURES,
-    SBPB_FEATURES_lags,
-    SBPB_FEATURES_rolls,
     SBSB_FEATURES,
     SBSB_FEATURES_lags,
     SBSB_FEATURES_rolls,
+    SBPB_FEATURES,
+    SBPB_FEATURES_lags,
+    SBPB_FEATURES_rolls,
     SMP_FEATURES,
     SMP_FEATURES_lags,
     SMP_FEATURES_rolls,
@@ -72,14 +72,42 @@ async def predict_sbpi_models(
         roll_periods = SBPI_FEATURES_rolls
     )
     
+    sbpi = pool['SBPI']
+    pool['SBPI_below_40']=(sbpi < 40).astype(int)
+    pool['SBPI_above_100']=(sbpi > 100).astype(int)
+
     pool.loc[
         pool['SBPI']<0, 'SBPI'
     ] = 0
+    """
     pool.loc[
         pool['is_daylight']==0, 'SBPI'
     ] = 0
-
+    """
     
+""" Updates SBSB in the pool """
+async def predict_sbsb_models(
+        pool: pd.DataFrame, # in/out
+        sbsb_models: List,
+        bat_empty: float = 10,
+        bat_full: float = 100
+) -> Optional[None]:
+
+    await predict_target_models(
+        pool = pool,
+        tgt_models = sbsb_models,
+        tgt_str = "SBSB",
+        base_features =SBSB_FEATURES,
+        lag_periods = SBSB_FEATURES_lags,
+        roll_periods = SBSB_FEATURES_rolls
+    )
+
+    sbsb = pool['SBSB']
+    pool['SBSB_is_empty']=(sbsb<=bat_empty).astype(int)
+    pool['SBSB_almost_full']=((sbsb>0.9*bat_full)&(sbsb<bat_full)).astype(int)
+    pool['SBSB_is_full']=(sbsb>=bat_full).astype(int)
+
+
 """ Updates SBPB in the pool """
 async def predict_sbpb_models(
         pool: pd.DataFrame, # in/out
@@ -95,6 +123,9 @@ async def predict_sbpb_models(
         roll_periods = SBPB_FEATURES_rolls
     )
 
+    sbpb = pool['SBPB']
+    pool['SBPB_is_charge']=(sbpb<0).astype(int)
+    
     pool.loc[
         (pool['SBPI']>35) &
         (pool['SBPI']<100), 'SBPB'
@@ -103,22 +134,6 @@ async def predict_sbpb_models(
         (pool['SBPI']>0) &
         (pool['SBPB']>0), 'SBPB'
     ] = 0
-
-
-""" Updates SBSB in the pool """
-async def predict_sbsb_models(
-        pool: pd.DataFrame, # in/out
-        sbsb_models: List
-) -> Optional[None]:
-
-    await predict_target_models(
-        pool = pool,
-        tgt_models = sbsb_models,
-        tgt_str = "SBSB",
-        base_features =SBSB_FEATURES,
-        lag_periods = SBSB_FEATURES_lags,
-        roll_periods = SBSB_FEATURES_rolls
-    )
 
 
 """ Updates SMP in the pool """    
@@ -147,8 +162,8 @@ async def predict_models(
 
     try:
         sbpi_models = joblib.load(f'{modeldir}/lightgbm_sbpi_models.pkl')
-        sbpb_models = joblib.load(f'{modeldir}/lightgbm_sbpb_models.pkl')
         sbsb_models = joblib.load(f'{modeldir}/lightgbm_sbsb_models.pkl')
+        sbpb_models = joblib.load(f'{modeldir}/lightgbm_sbpb_models.pkl')
         smp_models = joblib.load(f'{modeldir}/lightgbm_smp_models.pkl')            
     except OSError:
         logger.error('Unable to run on this system. Upgrade!')
@@ -173,19 +188,19 @@ async def predict_models(
         pool = pool, sbpi_models = sbpi_models
     )
     
-    # Predict SBPB
-    await predict_sbpb_models(
-        pool = pool, sbpb_models = sbpb_models
-    )
-
     # Predict SBSB
     await predict_sbsb_models(
         pool = pool, sbsb_models = sbsb_models
     )
 
+    # Predict SBPB
+    await predict_sbpb_models(
+        pool = pool, sbpb_models = sbpb_models
+    )
+
     # Calculate SBPO
     
-    pool['SBPO'] = pool['SBPI'] + pool['SBPB']
+    pool['SBPO'] = pool['SBPI'] + pool['SBPB'] 
     pool.loc[
         (pool['SBPI']>0) &
         (pool['SBPI']<=35), 'SBPO'

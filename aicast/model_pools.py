@@ -39,10 +39,10 @@ from brightsky import (
 from aicast.model_features import (
     SBPI_FEATURES_lags,
     SBPI_FEATURES_rolls,
-    SBPB_FEATURES_lags,
-    SBPB_FEATURES_rolls,
     SBSB_FEATURES_lags,
     SBSB_FEATURES_rolls,
+    SBPB_FEATURES_lags,
+    SBPB_FEATURES_rolls,
     SMP_FEATURES_lags,
     SMP_FEATURES_rolls,
 )
@@ -56,7 +56,8 @@ async def get_sample_pool(
         logprefix: str,
         logday: str,
         logtz: str,
-        full_wh: float = -1600
+        bat_empty: float = 10,
+        bat_full: float = 100
 ) -> Optional[pd.DataFrame]:
 
     cols = await get_columns_from_csv(
@@ -98,6 +99,8 @@ async def get_sample_pool(
         
     t = pd.DatetimeIndex(t).tz_localize(logtz, ambiguous = 'NaT')
 
+    sbsb *=100
+    
     df = pd.DataFrame(
         data = {
             'TIME':t,
@@ -108,10 +111,22 @@ async def get_sample_pool(
             'day_of_year':t.day_of_year,
             'date':t.date.astype(str),
             'SBPI':sbpi,
+            'SBPI_below_40':(sbpi<40).astype(int), #train
+            'SBPI_above_100':(sbpi>100).astype(int), #train
+            'SBSB':sbsb,
+            'SBSB_is_empty':(sbsb<=bat_empty).astype(int),
+            'SBSB_almost_full':((sbsb>0.9*bat_full)&(sbsb<bat_full)).astype(int),
+            'SBSB_is_full':(sbsb>=bat_full).astype(int),
             'SBPB':sbpb,
-            'SBSB':100*sbsb,
+            'SBPB_is_charge':(sbpb<0).astype(int),
             'SBPO':sbpo,
             'SMP':smp,
+            'SMP_is_export':(smp<0).astype(int), #train
+            'SMP_is_import':(smp>=0).astype(int), #train
+            'SMP_above_3600':(smp>=3600).astype(int), #train
+            'SMP_above_2400':((smp>=2400)&(smp<3600)).astype(int), #train
+            'SMP_above_1600':((smp>=1600)&(smp<2400)).astype(int), #train
+            'SMP_above_800':((smp>=800)&(smp<1600)).astype(int) #train
         }
     ).set_index('TIME')
 
@@ -213,7 +228,7 @@ async def get_train_pool(
         logger.error (f'Skipped pool for "{logday}"')
         return None
 
-    day_pool = day_pool.dropna().tz_convert(tz).resample('1min').bfill()
+    day_pool = day_pool.dropna().tz_convert(tz)  ##.resample('1min').ffill()
     logger.info (f'Have day pool for "{logday}"')
 
     return day_pool
@@ -273,19 +288,6 @@ async def get_train_pools(
             min_periods=1
         ).std()
 
-    #Extend the SBPB base features for time series
-    for lag in SBPB_FEATURES_lags:
-        pool[f'SBPB_lag{lag}'] = pool['SBPB'].shift(lag)
-    for roll in SBPB_FEATURES_rolls:
-        pool[f'SBPB_roll{roll}_mean'] = pool['SBPB'].rolling(
-            window=roll,
-            min_periods=1
-        ).mean()
-        pool[f'SBPB_roll{roll}_std'] = pool['SBPB'].rolling(
-            window=roll,
-            min_periods=1
-        ).std()
-
     #Extend the SBSB base features for time series
     for lag in SBSB_FEATURES_lags:
         pool[f'SBSB_lag{lag}'] = pool['SBSB'].shift(lag)
@@ -299,6 +301,19 @@ async def get_train_pools(
             min_periods=1
         ).std()        
         
+    #Extend the SBPB base features for time series
+    for lag in SBPB_FEATURES_lags:
+        pool[f'SBPB_lag{lag}'] = pool['SBPB'].shift(lag)
+    for roll in SBPB_FEATURES_rolls:
+        pool[f'SBPB_roll{roll}_mean'] = pool['SBPB'].rolling(
+            window=roll,
+            min_periods=1
+        ).mean()
+        pool[f'SBPB_roll{roll}_std'] = pool['SBPB'].rolling(
+            window=roll,
+            min_periods=1
+        ).std()
+
     #Extend the SMP base features for time series
     for lag in SMP_FEATURES_lags:
         pool[f'SMP_lag{lag}'] = pool['SMP'].shift(lag)

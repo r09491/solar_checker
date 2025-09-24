@@ -446,14 +446,18 @@ async def plot_ai_cast(request: web.Request) -> dict:
             "error.html", request,
             {"error" : f'Model files for  "{castday}" not found or not valid'}
         )
-
     
     time = np.array(pool['TIME'])
     sbpi = np.array(pool['SBPI'])
     sbpo = np.array(pool['SBPO'])
     sbpb = np.array(pool['SBPB'])
+    sbsb = np.array(pool['SBSB'])
     smp = np.array(pool['SMP'])
-    
+
+    print(sbsb[0])
+    sbsb = sbsb/100*full_kwh
+    print(sbsb[0])
+        
     smpon = None
     smpoff = None
     if smp is not None:    
@@ -470,7 +474,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
         sbpbcharge[sbpb>0] = 0
         sbpbdischarge[sbpb<0] = 0
 
-    sbeb = sbpb.cumsum()/1000/60 if sbpb is not None else None
+    #sbeb = sbpb.cumsum()/1000/60 if sbpb is not None else None
 
     w, kwh = await asyncio.gather(
         get_w_line(
@@ -495,7 +499,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000/60 if sbpbcharge is not None else None,
             sbpbdischarge.cumsum()/1000/60 if sbpbdischarge is not None else None,
-            (empty_kwh + sbeb.max() - sbeb) if sbeb is not None else None,
+            sbsb, ###(empty_kwh + sbeb.max() - sbeb) if sbeb is not None else None,
             empty_kwh,
             full_kwh,
             price[castday[:2]],
