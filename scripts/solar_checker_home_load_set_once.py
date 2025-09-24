@@ -29,6 +29,8 @@ import sys
 import argparse
 import asyncio
 
+import numpy as np
+
 from pooranker import Solarbank
 from utils.samples import get_columns_from_csv
 
@@ -114,6 +116,13 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f'{sbpo} sbpo')
     logger.info(f'{ivp} ivp')
     logger.info(f'{smp} smp')
+    logger.info(f'{np.diff(sbpi)} sbpi diff')
+    logger.info(f'{np.diff(sbpb)} sbpb diff')
+    logger.info(f'{np.diff(sbpo)} sbpo diff')
+    logger.info(f'{np.diff(ivp)} ivp diff')
+    logger.info(f'{np.diff(smp)} smp diff')
+    logger.info(f'{np.diff(smp)+np.diff(ivp)} diff smp ivp')
+    logger.info(f'{np.diff(smp)+np.diff(sbpi)} diff smp sbpi')
 
     if (int(smp[-1]) > 800): # Only during BYPASS/DISCHARGE
         estimate = 300 if int(sbpb[-1]) > 0 else 800
@@ -126,10 +135,10 @@ async def get_home_load_estimate(samples: int) -> int:
     current since it is local. The solarbank output is late since it
     updated in the cloud. Let a previous trial settle first!
     """
-    if (ivp > 1.1*sbpo).any():
+    if not sbpi.any() and (ivp > sbpo).any():
         logger.error(f"SBPO and IVP samples are not consistend yet!")
         return -19
-    
+
     if sbpb[-1] > 0: 
         logger.info(f'bank in DISCHARGE.')
     elif sbpb[-1] < 0: 
@@ -138,19 +147,31 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.info(f'bank in BYPASS')
     else:
         logger.info(f'bank in STANDBY')
-    
+
     """
-    KP, KI, KD = 0.6, 0.2, 0.3
+    Do not change home load if irradiance changes are too high. The
+    solix may not be able to follow. If irradiance changes the battery
+    charge/discharge should compensate. Home load setting should
+    mainly change if grid power changes.
     """
-    KP, KI, KD = 1.0, 0.0, 0.0
+    if  abs(np.diff(sbpi)[-1]) > 20:
+        logger.error(f"SBPI large! Keep setting!")
+        return -22
+    logger.info(f"SBPI stable!")
+                    
+    if abs(smp[-1])<10:
+        logger.info(f"SMP small! Keep setting!")
+        return -21
+        
+    KP, KI, KD = 0.75, 0.30, 0.35
     logger.info(f"KP={KP}, KI={KI}, KD={KD}")
     P, I, D = KP*smp[-1], KI*smp.sum(), KD*(smp[-1]-smp[0])
-    logger.info(f"P={P:.0f}, I={I:.0f}, D={D:.0f} -> PID={P+I+D:.0f}")
-
-    estimate = sbpo[-1] + P + I + D
+    logger.info(f"P={P:.0f}, I={I:.0f}, D={D:.0f} -> PID={P+I+D:.0f}")    
+        
+    estimate = (ivp[-1] if ivp[-1]>0 else  sbpo[-1]) + P + I + D
     logger.info(f"home load proposal is '{estimate:.0f}W'")
     if estimate < 100:
-        logger.info(f"Connect devices to plug to minimize power export!")
+        logger.info(f"Plug devices to minimize power export!")
 
     """ Limit discharge """
     ubound = 250 if sbpb_mean > 0 else 800
@@ -158,9 +179,9 @@ async def get_home_load_estimate(samples: int) -> int:
     estimate = 10*(int(min(max(estimate,100), ubound)/10))
     logger.info(f"constraint proposal is '{estimate}W'")
 
-    if (estimate>sbpi_mean and sbpb_mean <= 0): #Bypass/Charge
-        logger.warning(f"Cannot comply!")
-        return -20
+    if (sbpi[-1] > 0) and  (estimate > (sbpi[-1]-sbpb[-1])): #Bypass/Charge
+        logger.warning(f"Cannot comply! Go for burst anyhow!")
+        estimate = 800
         
     return  estimate # My solix only uses one channel
 
