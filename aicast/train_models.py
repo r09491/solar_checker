@@ -62,11 +62,11 @@ async def get_model(
 ) -> Any:
 
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.25, random_state=42,shuffle=False
+        X, y, test_size=0.20, random_state=42,shuffle=False
     )
 
     # Negative value get higher weight tom compensate LGNM feature
-    sample_weight = np.where(y_train<0, 2.0, 1.0)
+    ##sample_weight = np.where(y_train<0, 2.0, 1.0)
     
     """
     model = lgb.LGBMRegressor(
@@ -89,45 +89,52 @@ async def get_model(
     """
     
     model = lgb.LGBMRegressor(
-        objective="regression_l1",
+        #objective="quantile",
+        #alpha=0.9,
+        #metric="quantile",
+        #objective="regression_l1",
         metric="mae",
-        #objective="regression",
+        objective="regression",
         #metric="rmse",
         boosting_type="gbdt",
-        random_state=42,
+        #boosting_type="dart",
         #n_estimators=500,
         n_estimators=1000,
         #num_boost_round=2000,
         #early_stopping_round=100,
         early_stopping_round=100,
         #learning_rate=0.05,
-        learning_rate=0.02,
+        learning_rate=0.01,
         max_depth=-1,
         num_leaves=63,         # increase to cover more dependencies 
-        min_data_in_leaf=20,   # increase to decrease overfitting
-        feature_fraction=0.5,   # decrease for more stabiliyt
-        bagging_fraction=0.5,  # decrease for more stabiliyt
-        bagging_freq=1,
-        subsamples=0.9,
-        colsample_bytree=0.9,
-        lambda_l1=0.0,
-        lambda_l2=0.0,
+        #min_data_in_leaf=40,   # increase to decrease overfitting
+        #feature_fraction=0.7,   # decrease for more stabiliyt
+        #bagging_fraction=0.7,  # decrease for more stabiliyt
+        #bagging_freq=2,
+        #subsample=0.9,
+        #colsample_bytree=0.9,
+        #lambda_l1=0.2,
+        #lambda_l2=0.2,
         force_row_wise=True,
         n_jobs=4,
-        verbose=-1
+        verbose=0
     )
     
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
-        sample_weight=sample_weight
+        ##sample_weight=sample_weight
     )
 
     y_pred = model.predict(X_val)
     rmse = np.sqrt(mean_squared_error(y_val, y_pred))
     r2 = r2_score(y_val, y_pred)
     logger.info(f'RMSE "{rmse:.2f}", R² Score "{r2:.3f}"')
-    
+
+    #feature_importance = model.feature_importances_
+    #for col, score in zip(X_train.columns, feature_importance):
+    #    logger.info(f'{col}: {score}')
+   
     return model
 
 
@@ -147,8 +154,10 @@ async def get_target_models(
     lags = [f'{tgt_str}_lag{l}' for l in lag_periods]
     rolls_mean = [f'{tgt_str}_roll{r}_mean' for r in roll_periods]
     rolls_std = [f'{tgt_str}_roll{r}_std' for r in roll_periods]
+    rolls_max = [f'{tgt_str}_roll{r}_max' for r in roll_periods]
+    rolls_min = [f'{tgt_str}_roll{r}_min' for r in roll_periods]
 
-    lrt = lags+rolls_mean+rolls_std+[tgt_str]
+    lrt = lags+rolls_mean+rolls_std+rolls_max+rolls_min+[tgt_str]
     paras = [(t, lrt[:i]) for i, t in enumerate(lrt)]
     return [await get_model(
         X=pool[base_features + f], y=pool[t]

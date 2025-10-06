@@ -6,7 +6,7 @@ modeldir : /home/r09491/storage/solar_checker/aicast/models
 logdir : /home/r09491/storage/solar_checker
 logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
-logpredictformat : '???[890]??'
+logpredictformat : '???[90]??'
 logpredictmaxdays : 180
 logpredictdays : 4
 logpredictcolumns: 'SBPI'

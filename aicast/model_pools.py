@@ -111,22 +111,10 @@ async def get_sample_pool(
             'day_of_year':t.day_of_year,
             'date':t.date.astype(str),
             'SBPI':sbpi,
-            'SBPI_below_40':(sbpi<40).astype(int), #train
-            'SBPI_above_100':(sbpi>100).astype(int), #train
             'SBSB':sbsb,
-            'SBSB_is_empty':(sbsb<=bat_empty).astype(int),
-            'SBSB_almost_full':((sbsb>0.9*bat_full)&(sbsb<bat_full)).astype(int),
-            'SBSB_is_full':(sbsb>=bat_full).astype(int),
             'SBPB':sbpb,
-            'SBPB_is_charge':(sbpb<0).astype(int),
             'SBPO':sbpo,
             'SMP':smp,
-            'SMP_is_export':(smp<0).astype(int), #train
-            'SMP_is_import':(smp>=0).astype(int), #train
-            'SMP_above_3600':(smp>=3600).astype(int), #train
-            'SMP_above_2400':((smp>=2400)&(smp<3600)).astype(int), #train
-            'SMP_above_1600':((smp>=1600)&(smp<2400)).astype(int), #train
-            'SMP_above_800':((smp>=800)&(smp<1600)).astype(int) #train
         }
     ).set_index('TIME')
 
@@ -279,14 +267,22 @@ async def get_train_pools(
     for lag in SBPI_FEATURES_lags:
         pool[f'SBPI_lag{lag}'] = pool['SBPI'].shift(lag)
     for roll in SBPI_FEATURES_rolls:
-        pool[f'SBPI_roll{roll}_mean'] = pool['SBPI'].rolling(
+        pool[f'SBPI_roll{roll}_mean'] = pool['SBPI'].shift(1).rolling(
             window=roll,
             min_periods=1
         ).mean()
-        pool[f'SBPI_roll{roll}_std'] = pool['SBPI'].rolling(
+        pool[f'SBPI_roll{roll}_std'] = pool['SBPI'].shift(1).rolling(
             window=roll,
             min_periods=1
         ).std()
+        pool[f'SBPI_roll{roll}_max'] = pool['SBPI'].shift(1).rolling(
+            window=roll,
+            min_periods=1
+        ).max()
+        pool[f'SBPI_roll{roll}_min'] = pool['SBPI'].shift(1).rolling(
+            window=roll,
+            min_periods=1
+        ).min()
 
     #Extend the SBSB base features for time series
     for lag in SBSB_FEATURES_lags:
@@ -300,32 +296,56 @@ async def get_train_pools(
             window=roll,
             min_periods=1
         ).std()        
+        pool[f'SBSB_roll{roll}_max'] = pool['SBSB'].rolling(
+            window=roll,
+            min_periods=1
+        ).max()        
+        pool[f'SBSB_roll{roll}_min'] = pool['SBSB'].rolling(
+            window=roll,
+            min_periods=1
+        ).min()        
         
     #Extend the SBPB base features for time series
     for lag in SBPB_FEATURES_lags:
         pool[f'SBPB_lag{lag}'] = pool['SBPB'].shift(lag)
     for roll in SBPB_FEATURES_rolls:
-        pool[f'SBPB_roll{roll}_mean'] = pool['SBPB'].rolling(
+        pool[f'SBPB_roll{roll}_mean'] = pool['SBPB'].shift(1).rolling(
             window=roll,
             min_periods=1
         ).mean()
-        pool[f'SBPB_roll{roll}_std'] = pool['SBPB'].rolling(
+        pool[f'SBPB_roll{roll}_std'] = pool['SBPB'].shift(1).rolling(
             window=roll,
             min_periods=1
         ).std()
+        pool[f'SBPB_roll{roll}_max'] = pool['SBPB'].shift(1).rolling(
+            window=roll,
+            min_periods=1
+        ).max()
+        pool[f'SBPB_roll{roll}_min'] = pool['SBPB'].shift(1).rolling(
+            window=roll,
+            min_periods=1
+        ).min()
 
     #Extend the SMP base features for time series
     for lag in SMP_FEATURES_lags:
         pool[f'SMP_lag{lag}'] = pool['SMP'].shift(lag)
     for roll in SMP_FEATURES_rolls:
-        pool[f'SMP_roll{roll}_mean'] = pool['SMP'].rolling(
+        pool[f'SMP_roll{roll}_mean'] = pool['SMP'].shift(1).rolling(
             window=roll,
             min_periods=1
         ).mean()
-        pool[f'SMP_roll{roll}_std'] = pool['SMP'].rolling(
+        pool[f'SMP_roll{roll}_std'] = pool['SMP'].shift(1).rolling(
             window=roll,
             min_periods=1
         ).std()
+        pool[f'SMP_roll{roll}_max'] = pool['SMP'].shift(1).rolling(
+            window=roll,
+            min_periods=1
+        ).max()
+        pool[f'SMP_roll{roll}_min'] = pool['SMP'].shift(1).rolling(
+            window=roll,
+            min_periods=1
+        ).min()
     
     return pool.dropna() 
 

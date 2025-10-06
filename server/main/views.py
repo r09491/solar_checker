@@ -454,9 +454,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
     sbsb = np.array(pool['SBSB'])
     smp = np.array(pool['SMP'])
 
-    print(sbsb[0])
     sbsb = sbsb/100*full_kwh
-    print(sbsb[0])
         
     smpon = None
     smpoff = None
