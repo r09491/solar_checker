@@ -71,11 +71,11 @@ def parse_arguments() -> Script_Arguments:
 if __name__ == '__main__':
     args = parse_arguments()
 
-    if args.load < 100:
+    if args.load < 0:
         logger.error(f'home load "{args.load}" too low (err=-1)')
         sys.exit(-1)
         
-    if args.load > 800:
+    if args.load > 999:
         logger.error(f'home load "{args.load}" too high (err=-2)')
         sys.exit(-2)
 

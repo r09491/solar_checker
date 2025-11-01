@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__doc__="""Sets the power output from 100W to 800W of the anker
+__doc__="""Sets the power output from 100W to 999W of the anker
 solarbank to the home grid. During discharge the solix needs four
 minutes. During charge/bypass it takes one minutes.  There are
 conditions when the solix does not comply with the request without any
@@ -124,8 +124,8 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f'{np.diff(smp)+np.diff(ivp)} diff smp ivp')
     logger.info(f'{np.diff(smp)+np.diff(sbpi)} diff smp sbpi')
 
-    if (int(smp[-1]) > 800): # Only during BYPASS/DISCHARGE
-        estimate = 300 if int(sbpb[-1]) > 0 else 800
+    if (int(smp[-1]) > 999): # Only during BYPASS/DISCHARGE
+        estimate = 300 if int(sbpb[-1]) > 0 else 999
         logger.info(f'Burst required "{estimate}"')
         return estimate
 
@@ -174,14 +174,14 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.info(f"Plug devices to minimize power export!")
 
     """ Limit discharge """
-    ubound = 250 if sbpb_mean > 0 else 800
+    ubound = 250 if sbpb_mean > 0 else 999
     
     estimate = 10*(int(min(max(estimate,100), ubound)/10))
     logger.info(f"constraint proposal is '{estimate}W'")
 
     if (sbpi[-1] > 0) and  (estimate > (sbpi[-1]-sbpb[-1])): #Bypass/Charge
         logger.warning(f"Cannot comply! Go for burst anyhow!")
-        estimate = 800
+        estimate = 999
         
     return  estimate # My solix only uses one channel
 

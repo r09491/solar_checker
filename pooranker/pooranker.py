@@ -159,19 +159,12 @@ class Solarbank():
             site_id = device_data['site_id']    
             logger.debug(f'id of site is "{site_id}"')
 
-            charging_status = SolarbankStatus(device_data['charging_status'])
-            logger.debug(f'charging status is "{charging_status}"')
-            if not ((charging_status == SolarbankStatus.discharge) or
-                    (charging_status == SolarbankStatus.charge) or
-                    (charging_status == SolarbankStatus.bypass)):
-                logger.warning(f'wrong charging status "{charging_status}"')
-                return False
-
             set_output_power = int(device_data['set_output_power'])
-            tolerance = 10 if charging_status ==SolarbankStatus.discharge else 10
-            if home_load-tolerance < set_output_power < home_load+tolerance:
+            TOLERANCE = 10 
+            if home_load-TOLERANCE < set_output_power < home_load+TOLERANCE:
                 logger.info(f'home load is kept "{set_output_power}"')
                 return False
+
             try:
                 is_done= await sapi.set_device_parm(
                     siteId = site_id,                                   
