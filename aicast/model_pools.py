@@ -216,7 +216,7 @@ async def get_train_pool(
         logger.error (f'Skipped pool for "{logday}"')
         return None
 
-    day_pool = day_pool.dropna().tz_convert(tz)  ##.resample('1min').ffill()
+    day_pool = day_pool.dropna() ##.tz_convert(tz)  ##.resample('1min').ffill()
     logger.info (f'Have day pool for "{logday}"')
 
     return day_pool
@@ -267,19 +267,19 @@ async def get_train_pools(
     for lag in SBPI_FEATURES_lags:
         pool[f'SBPI_lag{lag}'] = pool['SBPI'].shift(lag)
     for roll in SBPI_FEATURES_rolls:
-        pool[f'SBPI_roll{roll}_mean'] = pool['SBPI'].shift(1).rolling(
+        pool[f'SBPI_roll{roll}_mean'] = pool['SBPI'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).mean()
-        pool[f'SBPI_roll{roll}_std'] = pool['SBPI'].shift(1).rolling(
+        pool[f'SBPI_roll{roll}_std'] = pool['SBPI'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).std()
-        pool[f'SBPI_roll{roll}_max'] = pool['SBPI'].shift(1).rolling(
+        pool[f'SBPI_roll{roll}_max'] = pool['SBPI'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).max()
-        pool[f'SBPI_roll{roll}_min'] = pool['SBPI'].shift(1).rolling(
+        pool[f'SBPI_roll{roll}_min'] = pool['SBPI'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).min()
@@ -309,19 +309,19 @@ async def get_train_pools(
     for lag in SBPB_FEATURES_lags:
         pool[f'SBPB_lag{lag}'] = pool['SBPB'].shift(lag)
     for roll in SBPB_FEATURES_rolls:
-        pool[f'SBPB_roll{roll}_mean'] = pool['SBPB'].shift(1).rolling(
+        pool[f'SBPB_roll{roll}_mean'] = pool['SBPB'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).mean()
-        pool[f'SBPB_roll{roll}_std'] = pool['SBPB'].shift(1).rolling(
+        pool[f'SBPB_roll{roll}_std'] = pool['SBPB'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).std()
-        pool[f'SBPB_roll{roll}_max'] = pool['SBPB'].shift(1).rolling(
+        pool[f'SBPB_roll{roll}_max'] = pool['SBPB'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).max()
-        pool[f'SBPB_roll{roll}_min'] = pool['SBPB'].shift(1).rolling(
+        pool[f'SBPB_roll{roll}_min'] = pool['SBPB'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).min()
@@ -330,19 +330,19 @@ async def get_train_pools(
     for lag in SMP_FEATURES_lags:
         pool[f'SMP_lag{lag}'] = pool['SMP'].shift(lag)
     for roll in SMP_FEATURES_rolls:
-        pool[f'SMP_roll{roll}_mean'] = pool['SMP'].shift(1).rolling(
+        pool[f'SMP_roll{roll}_mean'] = pool['SMP'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).mean()
-        pool[f'SMP_roll{roll}_std'] = pool['SMP'].shift(1).rolling(
+        pool[f'SMP_roll{roll}_std'] = pool['SMP'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).std()
-        pool[f'SMP_roll{roll}_max'] = pool['SMP'].shift(1).rolling(
+        pool[f'SMP_roll{roll}_max'] = pool['SMP'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).max()
-        pool[f'SMP_roll{roll}_min'] = pool['SMP'].shift(1).rolling(
+        pool[f'SMP_roll{roll}_min'] = pool['SMP'].shift(0).rolling(
             window=roll,
             min_periods=1
         ).min()
