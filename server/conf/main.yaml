@@ -6,15 +6,15 @@ modeldir : /home/r09491/storage/solar_checker/aicast/models
 logdir : /home/r09491/storage/solar_checker
 logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
-logpredictformat : '???[90]??'
+logpredictformat : '???[12]??'
 logpredictmaxdays : 180
 logpredictdays : 4
 logpredictcolumns: 'SBPI'
 
-
 energy_price:
   '24': 0.369
   '25': 0.339
+  '26': 0.287	
 
 battery_full_wh : 1600
 battery_min_percent : 10
