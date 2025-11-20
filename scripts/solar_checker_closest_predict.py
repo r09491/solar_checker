@@ -25,7 +25,7 @@ from utils.typing import (
 )
 from utils.common import (
     PREDICT_NAMES,
-    POWER_NAMES,
+    #POWER_NAMES,
     PARTITION_NAMES
 )
 from utils.common import (
@@ -36,8 +36,10 @@ from utils.weather import (
     get_sky_adapters,
     apply_sky_adapters,
 )
+from utils.csvlog import (
+    get_logs_df
+)
 from utils.predicts import (
-    get_logs_as_dataframe,
     find_closest,
     partition_closest_watts,
     get_predict_table,
@@ -175,9 +177,8 @@ def parse_arguments() -> Script_Arguments:
 async def main( args: Script_Arguments) -> int:
     args = parse_arguments()
 
-    """ Get the dictionary with all the power recordings per logdays """
-    logsdf = await get_logs_as_dataframe(
-        POWER_NAMES,
+    """ Get the power logs as multiindex df """
+    logsdf = await get_logs_df(
         args.logmaxdays,
         args.logdayformat,
         args.logprefix,

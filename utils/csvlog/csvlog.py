@@ -1,4 +1,4 @@
-__doc__="""
+pp__doc__="""
 """
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -15,17 +15,72 @@ import os.path
 import glob
 import asyncio
 
-from ..typing import Dict, List, strings
-
+from ..typing import(
+    f64, t64, Dict, List, strings
+)
+from ..common import(
+    POWER_NAMES,
+    SAMPLE_NAMES,
+    t64_first,
+    ymd_today,
+    ymd_yesterday
+)
 from pandas import(
+    DataFrame,
     read_csv,
-    DataFrame
+    concat
 )
 
 
-def _get_logdays(logprefix: str,
-                 logdir: str,
-                 logdayformat: str = '*') -> strings:
+CACHE = dict()
+
+def cache(f):
+
+    def wrapper(
+            usecols:str,
+            logday: str,
+            logprefix: str,
+            logdir: str
+    ) -> DataFrame:
+
+        if ((logday is None) or
+            (logday == ymd_today())
+        ):
+            logger.info(f'New values without store for "{logday}"')
+            data = f(
+                usecols,
+                logday,
+                logprefix,
+                logdir
+            )
+            return data
+        
+        if ((logday in CACHE) and
+            ((logday != ymd_yesterday(ymd_today())) or
+             (CACHE[logday] is not None))
+        ):
+            logger.info(f'Using values of "{logday}" from cache')
+            data = CACHE[logday] 
+            return data
+        
+        data = f(
+            usecols,
+            logday,
+            logprefix,
+            logdir
+        )
+        logger.info(f'Store and use values of "{logday}" in cache')
+        CACHE[logday] = data
+        return data
+
+    return wrapper
+
+
+def _get_logdays(
+        logprefix: str,
+        logdir: str,
+        logdayformat: str = '*'
+) -> strings:
     pattern = os.path.join(logdir, f'{logprefix}_{logdayformat}.log')
     logpaths = glob.glob(pattern)
     logfiles = [os.path.basename(lp) for lp in logpaths]
@@ -34,61 +89,116 @@ def _get_logdays(logprefix: str,
     logdays.sort()
     return logdays
 
-async def get_logdays(logprefix: str,
-                      logdir: str,
-                      logdayformat: str = '*') -> strings:
+async def get_logdays(
+        logprefix: str,
+        logdir: str,
+        logdayformat: str = '*'
+) -> strings:
     if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(
-            _get_logdays, **vars()) # type: ignore[unused-ignore]
+        return await asyncio.to_thread( _get_logdays, **vars())
     else:
         return _get_logdays(**vars())
 
-
+@cache
 def _get_log(
-        logcols: List,
-        logday: str = None,
-        logprefix: str = None,
-        logdir: str = None) -> Dict:
+        usecols:str,
+        logday: str,
+        logprefix: str,
+        logdir: str
+) -> DataFrame:
 
-    if logday is None and logprefix is None and logdir is None:
+    if (logday is None) or (logprefix is None) or (logdir is None):
         logger.info(f'Reading CSV data from "stdin"')
-        logfile = sys.stdin
-        samples = read_csv(logfile, names = logcols)
+        try:
+            samples = read_csv(
+                sys.stdin,
+                names = SAMPLE_NAMES,
+                usecols = usecols,
+                parse_dates=["TIME"],
+                dtype="float64"
+            )
+        except:
+            logger.error(f'Erroneous CSV data from "stdin"')
+            return None
+        
     else:
         logname = os.path.join(logdir, f'{logprefix}_{logday}.log')
         logger.info(f'Reading CSV data from file "{logname}"')
         if not os.path.isfile(logname):
             logger.warning(f'CSV data file not found "{logname}"')
             return None
-        with open(logname, 'r') as logfile:
-            samples = read_csv(logfile, names = logcols)
+
+        try:
+            with open(logname, 'r') as logfile:
+                samples = read_csv(
+                    logfile,
+                    names = SAMPLE_NAMES,
+                    usecols = usecols,
+                    parse_dates=["TIME"],
+                    dtype="float64"
+                )
+        except:
+            logger.error(f'Erroneous CSV data file "{logname}"')
+            return None
+        
+            
+    samples['TIME'] = samples['TIME'].apply(t64_first)
+    samples.drop_duplicates(inplace = True)
+    samples.fillna(0.0, inplace = True)
+
     return samples
 
+
 async def get_log(
-        logcols: List,
+        usecols: str,
+        logday: str = None,
+        logprefix: str = None,
+        logdir: str = None
+) -> DataFrame:
+
+    if sys.version_info >= (3, 9): 
+        log = await asyncio.to_thread(_get_log, **vars())
+        await asyncio.sleep(0.1)
+    else:
+        log = _get_log(**vars())
+
+    return log
+
+async def get_sample_log(
         logday: str = None,
         logprefix: str = None,
         logdir: str = None) -> Dict:
 
-    if sys.version_info >= (3, 9): 
-        return await asyncio.to_thread(
-            _get_log, **vars())
-    else:
-        return _get_log(**vars())
+    return await get_log(
+        logday = logday,
+        logprefix = logprefix,
+        logdir = logdir,
+        usecols = SAMPLE_NAMES)
+
+async def get_power_log(
+        logday: str = None,
+        logprefix: str = None,
+        logdir: str = None) -> Dict:
+    
+    return await get_log(
+        logday = logday,
+        logprefix = logprefix,
+        logdir = logdir,
+        usecols = POWER_NAMES)
 
 
 """ Get the list of logdays and the list of dictionaries with all the
 recordings """
 async def get_logs(
-        logcols: List,
         logmaxdays: int,
         logdayformat: str,
         logprefix: str,
-        logdir: str) -> List:
+        logdir: str,
+        usecols: str = POWER_NAMES
+) -> (List[str], List[DataFrame]):
 
     """ Get the list of logdays """
     logdays = (await get_logdays(
-        logcols,
         logprefix,
         logdir,
         logdayformat
@@ -96,30 +206,30 @@ async def get_logs(
 
     logtasks = [asyncio.create_task(
         get_log(
-            logcols, ld, logprefix, logdir
+            usecols, ld, logprefix, logdir
         )) for ld in logdays]
     
     """ Get the list of associated columns """
-    logframes = await asyncio.gather(*logtasks)
+    logs = await asyncio.gather(*logtasks)
     
-    return logdays, logframes
+    return logdays, logs
 
 
 """ Get the dataframe with the list of logdays and the list of
 dictionaries with all the recordings """
-async def get_logs_frame(
-        logcols: List,
+async def get_logs_df(
         logmaxdays: int,
         logdayformat: str,
         logprefix: str,
-        logdir: str) -> DataFrame:
-    
-    logdays, logframes = await get_logs(
-        logcols,
+        logdir: str,
+        usecols:str = POWER_NAMES,
+) -> DataFrame:
+
+    days, logs = await get_logs(
         logmaxdays,
         logdayformat,
         logprefix,
-        logdir
+        logdir,
+        usecols
     )
-    
-    return pd.DataFrame(index = logdays, data=logcols)
+    return concat(logs, keys=days)

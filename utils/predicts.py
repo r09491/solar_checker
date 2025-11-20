@@ -23,10 +23,9 @@ from datetime import (
     datetime,
     timedelta
 )
-
 from .typing import (
     f64, t64, Any, Optional, List, Dict
-    )
+)
 from .common import (
     t64_first,
     t64_last,
@@ -42,61 +41,18 @@ from .common import (
 from .common import (
     PARTITION_NAMES
 )
-from .samples import(
-    get_columns_from_csv,
-)
 from .csvlog import(
     get_logdays
 )
 
-""" Get the list of logdays and the list of dictionaries with all the
-recordings """
-async def get_logs_as_lists(
-        logmaxdays: int,
-        logdayformat: str,
-        logprefix: str,
-        logdir: str) -> List:
-
-    """ Get the list of logdays """
-    logdays = (await get_logdays(
-        logprefix, logdir, logdayformat
-    ))[-logmaxdays:]
-
-    logtasks = [asyncio.create_task(
-        get_columns_from_csv(
-            ld, logprefix, logdir
-        )) for ld in logdays]
-    
-    """ Get the list of associated columns """
-    logcolumns = await asyncio.gather(*logtasks)
-    
-    return logdays, logcolumns
-
-
-""" Get the dataframe with the list of logdays and the list of
-dictionaries with all the recordings """
-async def get_logs_as_dataframe(
-        logcols: List,
-        logmaxdays: int,
-        logdayformat: str,
-        logprefix: str,
-        logdir: str) -> pd.DataFrame:
-    
-    logdays, logcolumns = await get_logs_as_lists(
-        logmaxdays, logdayformat, logprefix, logdir
-    )
-    
-    return pd.DataFrame(index = logdays, data=logcolumns)[logcols]
-
-
 """ Get the start and stop of the evaluation slot """
 def get_on_times(log: list) -> Optional[List[t64]]:
-    ison = log.iloc[-1]>0 # The data of the log day are at the very end
+    ison = log.iloc[:,-1]>0 # The data of the log day are at the very end
     if ~ison.any(): # no radiation
         return None, None
     time = log['TIME'] # Ensure time is always present!
-    timeon = time[ison]
-    return timeon[0], timeon[-1]
+    timeon = time[ison].values
+    return timeon[0],timeon[-1]
 
 """ 
 Find the list of closest log days for the requested log day for the
@@ -116,25 +72,16 @@ async def find_closest(
     """ Get the requested input columns """
     incols = ('TIME,' + columns).split(',')
 
-    """ Extract the vector with log days """
-    logdays = list(logsdf.index.values.tolist())
-
-    
     """ All basic input cols without extensions """
     basecols = list(set([c for c in [cc[:-1]
                     if cc[-1] in "+-"
                     else cc for cc in incols[1:]]]))
 
     """ Samples for all log days in full time range synced to the minute """
-    basedfs = [pd.DataFrame(
-        index = logsdf.loc[ld, 'TIME'],
-        data = dict(logsdf.loc[ld, basecols])
-    ) for ld in logdays]
-
+    basedfs = logsdf.loc[:,['TIME'] + basecols].copy()
     
     """ Get the start and stop of the radiation. The times are
     determined from the first input power column after TIME """
-
     startontime, stopontime = get_on_times(
         logsdf.loc[logday, ['TIME', 'SBPI']]
     )
@@ -146,15 +93,15 @@ async def find_closest(
         max(ymd_over_t64(starttime,logday), startontime)
     stoptime = stopontime if stoptime is None else \
         min(ymd_over_t64(stoptime,logday), stopontime)
-
     
     """ All basic samples for all log days for the requested time
     slot. Skip time solt if samples are missing. """
     
     slotdfs = []
     slotdays = []
-    for (ld, bdf) in zip(logdays, basedfs):
+    for ld, bdf in basedfs.groupby(level=0):
         try:
+            bdf.set_index('TIME', inplace=True)
             slot = bdf.loc[ymd_over_t64(starttime,ld):
                            ymd_over_t64(stoptime,ld),:]
         except KeyError:
@@ -162,7 +109,7 @@ async def find_closest(
             continue
         slotdfs.append(slot)
         slotdays.append(ld)
-    
+
     # All samples including extensions for all log days and requested slot
     eslotdfs = []
     for sdf in slotdfs:
@@ -183,12 +130,6 @@ async def find_closest(
 
     """ Create the energy (Wh) dataframe for all logdays """
 
-    """
-    wattsdf = pd.concat(
-        [pd.DataFrame({'LOGDAY':slotdays}),
-         pd.DataFrame([edf.sum()/60 for edf in eslotdfs])], axis=1
-    )
-    """
     wattsdf = pd.concat(
         [pd.DataFrame({'LOGDAY':slotdays}),
          pd.DataFrame([edf.mean()/edf.std() for edf in eslotdfs])], axis=1
@@ -196,7 +137,8 @@ async def find_closest(
 
     """ Use logday as index """
     wattsdf.set_index('LOGDAY', inplace = True)
-
+    wattsdf.dropna(inplace = True)
+    
     """ Remove apriori impossible list entries """
     watts = [wattsdf[d] for d in wattsdf.loc[:,incols[2:]]]
     wattsdrops = [list(w[~((w<0)|(w>0))
@@ -208,7 +150,6 @@ async def find_closest(
     flatdrops = [alldrops for drops in wattsdrops
                  for alldrops in drops]
     wattsdf.drop(flatdrops, inplace = True)
-
         
     """ Calculate the norm vector from the watts (=>1). The
     'TIME'column (0) is not considered! """
@@ -235,8 +176,8 @@ async def partition_closest_watts(
         closestdays: List) -> Any:
 
     # Available days with logs
-    logsdays = list(logsdf.index.values)
-    
+    logsdays = list(logsdf.index.get_level_values(0).unique()) 
+
     # The days of interest
     doi = list(closestdays.index.values)
 
@@ -244,7 +185,7 @@ async def partition_closest_watts(
     today = doi[0]
     # The closest days used for prediction
     todaydays = doi[1:]
-
+    
     # The day for prediction
     tomorrow = ymd_tomorrow(today)
     # The closest days used for prediction
@@ -252,53 +193,43 @@ async def partition_closest_watts(
                     for td in todaydays
                     if ((ymd_tomorrow(td) in logsdays)
                         and (ymd_tomorrow(td) != today))]
-
     
     # Time of the first and last sample
-    logstarttime = logsdf.loc[today, 'TIME'][0]
-    logstoptime = logsdf.loc[today, 'TIME'][-1]
-
+    logstarttime = logsdf.loc[today, 'TIME'].values[0]
+    logstoptime = logsdf.loc[today, 'TIME'].values[-1]
     
     """ The data already recorded without partitioning """
-    realseries = logsdf.loc[today]
-    realdf = pd.DataFrame(index = realseries.iloc[0],
-                           data = dict(realseries.iloc[1:]))
+    realdf = logsdf.loc[today]
+    """ Get rid of the multiindex """
+    realdf.set_index('TIME', inplace=True)
+
     realsoc = realdf.loc[:, 'SBSB'].iloc[-1]
 
-    
     """ The frame with the watts before searching. Can be empty! """
     prewatts = realdf.loc[logstarttime:starttime,:].iloc[:-1]
-
     """ The frame with the watts in the search slot. Never empty! """
     findwatts = realdf.loc[starttime:stoptime,:]
-
     """ The frame with the watts after the search slot. Can be empty! """
     postwatts = realdf.loc[stoptime:logstoptime,:].iloc[1:]
-    
-    """ The predicted data for the day until time of last sample """    
-    todaydfs = [
-        pd.DataFrame(
-            index = [ymd_over_t64(t, today) for t in ps.iloc[0]], 
-            data = dict(ps[1:])
-        ) for ps in [logsdf.loc[pd] for pd in todaydays]]
 
+    
+    """ The predicted watts for today until the last sample in a single inde df"""
+    
+    todaydfs = [logsdf.loc[day].copy().set_index("TIME") for day in todaydays]
+    """ Map the predicted samples to the today times """
+    for df in todaydfs:
+        df.index = [ymd_over_t64(t, today) for t in df.index]
+    """ Use the average of the days for the prediction """
     todaywatts = (reduce(
         lambda x,y: x+y,
-        [pdf.loc[logstoptime:,:] for pdf in todaydfs]
+        [df.loc[logstoptime:,:] for df in todaydfs]
     ) / len(todaydfs))[1:]
 
-    
-    """ The tomorrow data for the day from midnight """    
 
-    tomorrowdfs = [
-        pd.DataFrame(
-            index = [ymd_over_t64(
-                t, tomorrow
-            ) for t in ts.iloc[0]],
-            data = dict(ts[1:])
-        ) for ts in [logsdf.loc[td] for td in tomorrowdays]]
-
-    # Arittmetic middle of days
+    """ The predicted watts for tomorrow 24h in a single index df"""
+    tomorrowdfs = [logsdf.loc[day].copy().set_index("TIME") for day in tomorrowdays]
+    for df in tomorrowdfs:
+        df.index = [ymd_over_t64(t, tomorrow) for t in df.index]
     tomorrowwatts = (reduce(
         lambda x,y: x+y,
         [tdf for tdf in tomorrowdfs]
@@ -318,7 +249,6 @@ async def partition_closest_watts(
     except KeyError:
         tomorrowwatts2  =None
 
-    
     return ([today] + todaydays,
             [tomorrow] + tomorrowdays, realsoc,
             dict({'prewatts' : prewatts,

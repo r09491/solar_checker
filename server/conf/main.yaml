@@ -7,7 +7,7 @@ logdir : /home/r09491/storage/solar_checker
 logprefix : solar_checker_latest
 logdayformat : '%y%m%d'
 logpredictformat : '???[12]??'
-logpredictmaxdays : 180
+logpredictmaxdays : 14
 logpredictdays : 4
 logpredictcolumns: 'SBPI'
 

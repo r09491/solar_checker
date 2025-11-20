@@ -36,6 +36,12 @@ from utils.common import (
     ym_12_month_ago,
     ym_12_month_ahead
 )
+
+from utils.csvlog import (
+    get_logs_df,
+    get_logs
+)
+    
 from utils.samples import (
     get_columns_from_csv, 
     get_kwh_sum_month_unified,
@@ -46,7 +52,7 @@ from utils.weather import(
     apply_sky_adapters,
 )
 from utils.predicts import (
-    get_logs_as_dataframe,
+    #get_logs_as_dataframe,
     find_closest,
     partition_closest_watts,
     concat_today,
@@ -97,7 +103,6 @@ async def plot_day(request: web.Request) -> dict:
             {'error' : f"Samples logfile '{logday}' not found or not valid"})
 
     time, spph = c['TIME'], c['SPPH']
-    sme, ive1, ive2 = c['SME'], c['IVE1'], c['IVE2']
     smp, ivp1, ivp2 = c['SMP'], c['IVP1'], c['IVP2']
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB'] 
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
@@ -244,21 +249,20 @@ async def plot_predict(request: web.Request) -> dict:
         
         
     """ Get the dictionary with all the power recordings for logdays """
-    logsdf = await get_logs_as_dataframe(
-        PREDICT_POWER_NAMES,
+    logsdf = await get_logs_df(
         logpredictmaxdays,
         logpredictformat,
         logprefix,
         logdir
     )
 
-
     """ Preset the start and stop time for the find slot """
     issbpion = logsdf.loc[logday, 'SBPI']>0 # radiation
     timesbpion = logsdf.loc[logday, 'TIME'][issbpion] if (
         issbpion.any()
     ) else None
-    stoptime = pd.to_datetime(timesbpion[-1])  if (
+
+    stoptime = pd.to_datetime(timesbpion.iloc[-1])  if (
         (timesbpion is not None) and
         (castfindhours is not None)
     ) else None
@@ -267,7 +271,7 @@ async def plot_predict(request: web.Request) -> dict:
         (castfindhours is not None)
     ) else None
     
-
+    
     """ Get the list of closest days to the logday. The start and stop
     time may be overriden as per real radiation """
     starttime, stoptime, closestdays = await find_closest(
