@@ -35,7 +35,7 @@ async def get_columns_from_csv(
     )
     
     if df is None:
-        logger.error(f'Undefined LOG file')
+        logger.error(f'Undefined or erroneous LOG file for "{logday}"')
         return None
     
     return {

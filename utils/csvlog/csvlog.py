@@ -36,7 +36,7 @@ CACHE = dict()
 
 def cache(f):
 
-    def wrapper(
+    async def wrapper(
             usecols:str,
             logday: str,
             logprefix: str,
@@ -47,7 +47,7 @@ def cache(f):
             (logday == ymd_today())
         ):
             logger.info(f'New values without store for "{logday}"')
-            data = f(
+            data = await f(
                 usecols,
                 logday,
                 logprefix,
@@ -60,10 +60,11 @@ def cache(f):
              (CACHE[logday] is not None))
         ):
             logger.info(f'Using values of "{logday}" from cache')
-            data = CACHE[logday] 
+            data = CACHE[logday]
+            await asyncio.sleep(0)
             return data
         
-        data = f(
+        data = await f(
             usecols,
             logday,
             logprefix,
@@ -99,7 +100,7 @@ async def get_logdays(
     else:
         return _get_logdays(**vars())
 
-@cache
+
 def _get_log(
         usecols:str,
         logday: str,
@@ -141,14 +142,18 @@ def _get_log(
             logger.error(f'Erroneous CSV data file "{logname}"')
             return None
         
-            
-    samples['TIME'] = samples['TIME'].apply(t64_first)
+    try:        
+        samples['TIME'] = samples['TIME'].apply(t64_first)
+    except:
+        logger.error(f'Problem in TIME column of "{logname}"')
+        return None
+    
     samples.drop_duplicates(inplace = True)
     samples.fillna(0.0, inplace = True)
 
     return samples
 
-
+@cache
 async def get_log(
         usecols: str,
         logday: str = None,
