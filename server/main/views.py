@@ -51,8 +51,7 @@ from utils.weather import(
     get_sky_adapters,
     apply_sky_adapters,
 )
-from utils.predicts import (
-    #get_logs_as_dataframe,
+from utils.predicts.predict_minute import (
     find_closest,
     partition_closest_watts,
     concat_today,

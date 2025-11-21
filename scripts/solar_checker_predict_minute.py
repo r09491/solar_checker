@@ -39,7 +39,7 @@ from utils.weather import (
 from utils.csvlog import (
     get_logs_df
 )
-from utils.predicts import (
+from utils.predicts.predict_minute import (
     find_closest,
     partition_closest_watts,
     get_predict_table,
