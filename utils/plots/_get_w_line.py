@@ -114,39 +114,36 @@ def _get_w_line(time: t64s, smp: f64s,
     
     """ Plot solarbank and smartmeter filled """
     
-    if sbpoon is not None:
-        ax.fill_between(time, 0, sbpo,
-                        color='grey', label='BANK', lw=1, alpha=0.3)
-        ax.fill_between(time, sbpo, sbpo + smpon,
-                        color='b', label='GRID', lw=1, alpha=0.3)
-        
-    elif smpon is not None or smpoff is not None :
-        ax.fill_between(time, 0, smp,
-                        color='b', label='GRID', alpha=0.3)
 
+    ax.fill_between(time, 0, sbpo, where = issbpoon,
+                    color='grey', label='BANK', lw=1, alpha=0.3)
+    ax.fill_between(time, sbpo, sbpo + smpon, where = issbpoon,
+                    color='b', label='GRID', lw=1, alpha=0.3)
+    ax.fill_between(time, 0, ivp, where = ~issbpoon,
+                    color='c', label='INV', lw=1, alpha=0.3)
+    ax.fill_between(time, ivp, ivp + smpon, where = ~issbpoon,
+                    color='b', label='GRID', lw=1, alpha=0.3)
+    #ax.fill_between(time, 0, spph, where = ~issbpoon & ~isivpon,
+    #                color='brown', label='PLUG', lw=1, alpha=0.3)
+    #ax.fill_between(time, spph, spph + smpon, where = ~issbpoon & ~isivpon,
+    #                color='b', label='GRID', lw=1, alpha=0.3)
         
     """ Plot the battery power of the solarbank during charging"""
 
-    if sbpb is not None:
-        """ The solarbank output is used directly inspite of inverter """
-        ax.fill_between(time, 0, sbpb,
-                        color='m', label='-BAT', alpha=0.3)
-        sbpb_stacked = np.minimum(sbpb, [0])
-        ax.fill_between(time, sbpb_stacked, sbpb_stacked + smpoff,
-                        color='b', lw=0, alpha=0.3)
+    ax.fill_between(time, 0, sbpb, where = issbpbon,
+                    color='m', label='-BAT', alpha=0.3)
+    ax.fill_between(time, np.minimum(sbpb,[0]), np.minimum(sbpb,[0]) + smpoff,
+                    where = issbpbon, color='b', lw=0, alpha=0.3)
 
-    else:
-        ax.fill_between(time, 0, smpoff,
-                        color='b', lw=0, alpha=0.3)
+    ax.fill_between(time, 0, smpoff, where = ~issbpbon,
+                    color='b', lw=0, alpha=0.3)
 
     """ Plot amplifying data as lines """
                 
-    if spphon is not None:
-        ax.plot(time, spph,
-                color='brown',label='PLUG', lw=2, ls='-', alpha=0.3)
-    if ivpon is not None:
-        ax.plot(time, ivp1 + ivp2,
-                color='c', label='INV', lw=2, ls='-', alpha=0.3)
+    ax.plot(time, spph,
+            color='brown',label='PLUG', lw=2, ls='-', alpha=0.3)
+    ax.plot(time, ivp,
+            color='c', label='INV', lw=2, ls='-', alpha=0.3)
     if sbpion is not None:
         if time.size<=24*60: #only plot within 24h
             issun = np.where(issbpion)[0]
