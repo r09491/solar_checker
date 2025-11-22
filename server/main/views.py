@@ -352,7 +352,7 @@ async def plot_predict(request: web.Request) -> dict:
                   partitions['tomorrowwatts2'].index[-1]]
 
     time = np.array(list(c.index.values))
-    smp = c['SMP']
+    smp, ivp1, ivp2, spph = c['SMP'], c['IVP1'], c['IVP2'], c['SPPH']
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB']
 
     smpon = np.zeros_like(smp)
@@ -370,9 +370,9 @@ async def plot_predict(request: web.Request) -> dict:
         get_w_line(
             time,
             smp,
-            None,
-            None,
-            None,
+            ivp1,
+            ivp2,
+            spph,
             sbpi,
             sbpo,
             sbpb,
@@ -382,9 +382,9 @@ async def plot_predict(request: web.Request) -> dict:
             time,
             smpon.cumsum()/1000/60 if smpon is not None else None,
             smpoff.cumsum()/1000/60 if smpoff is not None else None,
-            None,
-            None,
-            None, 
+            ivp1.cumsum()/1000/60 if ivp1 is not None else None,
+            ivp2.cumsum()/1000/60 if ivp2 is not None else None,
+            spph.cumsum()/1000/60 if spph is not None else None,
             sbpi.cumsum()/1000/60 if sbpi is not None else None,
             sbpo.cumsum()/1000/60 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000/60 if sbpb is not None else None,
@@ -459,21 +459,15 @@ async def plot_ai_cast(request: web.Request) -> dict:
 
     sbsb = sbsb/100*full_kwh
         
-    smpon = None
-    smpoff = None
-    if smp is not None:    
-        smpon = smp.copy()
-        smpoff = -smp.copy()
-        smpon[smp<0] = 0
-        smpoff[smp>0] = 0
-        
-    sbpbcharge = None
-    sbpbdischarge = None
-    if sbpb is not None:        
-        sbpbcharge = -sbpb.copy()
-        sbpbdischarge = sbpb.copy()
-        sbpbcharge[sbpb>0] = 0
-        sbpbdischarge[sbpb<0] = 0
+    smpon = np.zeros_like(smp)
+    smpon[smp>0] = smp[smp>0]
+    smpoff = np.zeros_like(smp)
+    smpoff[smp<=0] = -smp[smp<=0]
+
+    sbpbcharge = np.zeros_like(sbpb)
+    sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
+    sbpbdischarge = np.zeros_like(sbpb)
+    sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
 
     #sbeb = sbpb.cumsum()/1000/60 if sbpb is not None else None
 
