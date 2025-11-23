@@ -4,7 +4,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='solar_checker',
-      version='1.6.1',
+      version='1.7.0',
       description='Solar checker with Ecoflow Delta Max,APsystems,Anker,Tuya and BrightSky API',
       url='https://github.com/r09491/solar_checker',
       author='r09491',
