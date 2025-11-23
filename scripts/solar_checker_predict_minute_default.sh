@@ -10,7 +10,7 @@ SOLAR_CHECKER_STARTTIME=$(date -d "3 hour ago" +\%H:\%M)
 SOLAR_CHECKER_STOPTIME=$(date +\%H:\%M) 
 solar_checker_predict_minute.py \
     --logday $SOLAR_CHECKER_LOGDAY \
-    --logpredictwindow $SOLAR_CHECKER_LOGPREDICTWIND \
+    --logpredictwindow $SOLAR_CHECKER_PREDICTWINDOW \
     --logprefix $SOLAR_CHECKER_PREFIX \
     --logdir $SOLAR_CHECKER_STORE_DIR \
     --stoptime $SOLAR_CHECKER_STOPTIME \
