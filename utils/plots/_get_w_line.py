@@ -38,17 +38,17 @@ def _get_w_line(time: t64s, smp: f64s,
     logger.info(f'started')
 
     # ?Have data (smartmeter)
-    smpon = np.zeros_like(smp)
-    issmpon = smp>0 if smp is not None else None
-    smpon[issmpon] = smp[issmpon] 
-    smpon_mean = 0 if not issmpon.any() else smpon.mean()
-    smpon_max = 0 if not issmpon.any() else smpon.max()
+    smpin = np.zeros_like(smp)
+    issmpin = smp>0 if smp is not None else None
+    smpin[issmpin] = smp[issmpin] 
+    smpin_mean = 0 if not issmpin.any() else smpin.mean()
+    smpin_max = 0 if not issmpin.any() else smpin.max()
 
-    smpoff = np.zeros_like(smp)
-    issmpoff = smp<0 if smp is not None else None
-    smpoff[issmpoff] = smp[issmpoff] 
-    smpoff_mean = 0 if not issmpoff.any() else smpoff.mean()
-    smpoff_min = 0 if not issmpoff.any() else smpoff.min()
+    smpout = np.zeros_like(smp)
+    issmpout = smp<0 if smp is not None else None
+    smpout[issmpout] = smp[issmpout] 
+    smpout_mean = 0 if not issmpout.any() else smpout.mean()
+    smpout_min = 0 if not issmpout.any() else smpout.min()
 
     # ?Have data (inverter)
     ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else None 
@@ -76,16 +76,16 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpoon_max = sbpoon.max() if sbpoon is not None else 0
 
     # ?Charging (solarbank)
-    issbpbon = sbpb<0 if sbpb is not None else None 
-    sbpbon = sbpb[issbpbon] if issbpbon is not None and issbpbon.any() else None
-    sbpbon_mean = sbpbon.mean() if sbpbon is not None else 0
-    sbpbon_min = sbpbon.min() if sbpbon is not None else 0
+    issbpbin = sbpb<0 if sbpb is not None else None 
+    sbpbin = sbpb[issbpbin] if issbpbin is not None and issbpbin.any() else None
+    sbpbin_mean = sbpbin.mean() if sbpbin is not None else 0
+    sbpbin_min = sbpbin.min() if sbpbin is not None else 0
 
     # ?Discharging (solarbank)
-    issbpboff = sbpb>0 if sbpb is not None else None  
-    sbpboff = sbpb[issbpboff] if issbpboff is not None and issbpboff.any() else None
-    sbpboff_mean = sbpboff.mean() if sbpboff is not None else 0
-    sbpboff_max = sbpboff.max() if sbpboff is not None else 0
+    issbpbout = sbpb>0 if sbpb is not None else None  
+    sbpbout = sbpb[issbpbout] if issbpbout is not None and issbpbout.any() else None
+    sbpbout_mean = sbpbout.mean() if sbpbout is not None else 0
+    sbpbout_max = sbpbout.max() if sbpbout is not None else 0
     
     timesbpion = time[issbpion] if issbpion is not None else None
 
@@ -115,16 +115,18 @@ def _get_w_line(time: t64s, smp: f64s,
     """ Plot solarbank and smartmeter filled """
     
     if sbpoon is not None:
-        ax.fill_between(time, 0, sbpo, where = issbpoon,
+        ax.fill_between(time, 0, sbpo,
+                        where = issbpoon,
                         color='grey', label='BANK', lw=1, alpha=0.3)
-        ax.fill_between(time, sbpo, sbpo + smpon, where = issbpoon,
+        ax.fill_between(time, sbpo, sbpo + smpin,
+                        where = issbpoon,
                         color='b', label='GRID', lw=1, alpha=0.3)
 
     if ivpon is not None:
         ax.fill_between(time, 0, ivp,
                         where = ~issbpoon,
                         color='c', label='INV', lw=1, alpha=0.3)
-        ax.fill_between(time, ivp, ivp + smpon,
+        ax.fill_between(time, ivp, ivp + smpin,
                         where = ~issbpoon,
                         color='b', label='GRID', lw=1, alpha=0.3)
 
@@ -132,22 +134,24 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.fill_between(time, 0, spph,
                         where = ~issbpoon & ~isivpon,
                         color='brown', label='PLUG', lw=1, alpha=0.3)
-        ax.fill_between(time, spph, spph + smpon,
+        ax.fill_between(time, spph, spph + smpin,
                         where = ~issbpoon & ~isivpon,
                         color='b', label='GRID', lw=1, alpha=0.3)
         
         
     """ Plot the battery power of the solarbank during charging"""
 
-    ax.fill_between(time, 0, sbpb,
-                    #where = issbpbon,
-                    color='m', label='BAT', alpha=0.3)
-    ax.fill_between(time, np.minimum(sbpb,[0]), np.minimum(sbpb,[0]) + smpoff,
-                    #where = issbpbon,
-                    color='b', lw=0, alpha=0.3)
+    if sbpbout is not None:
+        ax.fill_between(time, 0, sbpb,
+                        #where = issbpbin,
+                        color='m', label='BAT', alpha=0.3)
+        ax.fill_between(time, np.minimum(sbpb,[0]),
+                        np.minimum(sbpb,[0]) + smpout,
+                        #where = issbpbin,
+                        color='b', lw=0, alpha=0.3)
 
-    ax.fill_between(time, 0, smpoff, where = ~issbpbon,
-                    color='b', lw=0, alpha=0.3)
+    #ax.fill_between(time, 0, smpout, where = ~issbpbin,
+    #                color='b', lw=0, alpha=0.3)
 
     """ Plot amplifying data as lines """
 
@@ -178,16 +182,16 @@ def _get_w_line(time: t64s, smp: f64s,
         title += '' if title[-1] == '\n' else ' | Bank>'
         title += f' {sbpo[-1]:.0f}'
         title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
-        if (sbpboff is not None) or (sbpbon is not None):
+        if (sbpbout is not None) or (sbpbin is not None):
            title += f' + '
-    if (sbpbon is not None) and (sbpbon_min<0):
-        title += f'{-sbpbon[-1] if sbpb[-1]<0 else 0:.0f}'
-        title += f'={-sbpbon_mean:.0f}^{-sbpbon_min:.0f}W>'
-    if (sbpbon is not None) or (sbpboff is not None):
+    if (sbpbin is not None) and (sbpbin_min<0):
+        title += f'{-sbpbin[-1] if sbpb[-1]<0 else 0:.0f}'
+        title += f'={-sbpbin_mean:.0f}^{-sbpbin_min:.0f}W>'
+    if (sbpbin is not None) or (sbpbout is not None):
         title += f'Bat'
-    if (sbpboff is not None) and (sbpboff_max>0):
-        title += f'>{sbpboff[-1] if sbpb[-1]>0 else 0:.0f}'
-        title += f'={sbpboff_mean:.0f}^{sbpboff_max:.0f}W'
+    if (sbpbout is not None) and (sbpbout_max>0):
+        title += f'>{sbpbout[-1] if sbpb[-1]>0 else 0:.0f}'
+        title += f'={sbpbout_mean:.0f}^{sbpbout_max:.0f}W'
 
     title += '' if title[-1] == '\n' else '\n'
         
@@ -200,18 +204,18 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'Plug>{spph[-1]:.0f}'
         title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
 
-    if (smpoff is not None) or (smpon is not None):
+    if (smpout is not None) or (smpin is not None):
         title += '' if title[-1] == '\n' else ' | '
         
-        if (smpoff is not None) and (smpoff_min<0):
+        if (smpout is not None) and (smpout_min<0):
             title += f'{-smp[-1] if smp[-1]<0 else 0:.0f}'
-            title += f'={-smpoff_mean:.0f}^{-smpoff_min:.0f}W>'
+            title += f'={-smpout_mean:.0f}^{-smpout_min:.0f}W>'
 
         title += f'Grid'
 
-        if (smpon is not None) and (smpon_max>0):
+        if (smpin is not None) and (smpin_max>0):
             title += f'>{smp[-1] if smp[-1]>0 else 0:.0f}'
-            title += f'={smpon_mean:.0f}^{smpon_max:.0f}W'
+            title += f'={smpin_mean:.0f}^{smpin_max:.0f}W'
         
     ax.set_title(title)
     
