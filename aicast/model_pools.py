@@ -25,7 +25,7 @@ from utils.typing import (
 )
 
 from utils.csvlog import (
-    get_logdays
+    get_windowed_logdays
 )
 
 from utils.samples import (
@@ -226,19 +226,20 @@ async def get_train_pool(
 async def get_train_pools(
         logdir: str,
         logprefix: str,
-        logdayformat: str,
+        logwindow: int,
         tz: str,
         lat: str,
         lon: str
 ) -> Optional[pd.DataFrame]:
 
     """ Get the list of logdays """
-    logdays = (await get_logdays(
+    logdays = (await get_windowed_logdays(
+        logwindow=logwindow,
         logdir=logdir,
         logprefix=logprefix,
-        logdayformat=logdayformat
     ))
-
+    logger.info(f'Window "{logwindow}" meets "{len(logdays)}" days')
+    
     pool_tasks = [
         asyncio.create_task(
             get_train_pool(

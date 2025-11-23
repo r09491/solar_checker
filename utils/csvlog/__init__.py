@@ -5,5 +5,8 @@ from .csvlog import (
     get_sample_log,
     get_power_log,
     get_logs,
-    get_logs_df
+    get_logs_df,
+    get_windowed_logdays,
+    get_windowed_logs,
+    get_windowed_logs_df
 )

@@ -28,7 +28,7 @@ MODELDIR='/home/r09491/storage/solar_checker/aicast/models'
 
 LOGDIR='/home/r09491/storage/solar_checker'
 LOGPREFIX='solar_checker_latest'
-LOGDAYFORMAT='*'
+LOGAIWINDOW=28
 
 LAT, LON, TZ = 49.04885, 11.78333, 'Europe/Berlin'
 
@@ -37,7 +37,7 @@ class Script_Arguments:
     modeldir:str
     logdir:str
     logprefix:str
-    logdayformat:str
+    logaiwindow:int
     tz:str
     lat:float
     lon:float
@@ -65,7 +65,7 @@ def parse_arguments() -> Script_Arguments:
         help = "The prefix used in log file names"
     )
     parser.add_argument(
-        '--logdayformat', type=str, default=LOGDAYFORMAT,
+        '--logaiwindow', type=int, default=LOGAIWINDOW,
         help = "Days to select files for the pools"
     )
     parser.add_argument(
@@ -87,7 +87,7 @@ def parse_arguments() -> Script_Arguments:
         args.modeldir,
         args.logdir,
         args.logprefix,
-        args.logdayformat,
+        args.logaiwindow,
         args.tz,
         args.lat,
         args.lon)
@@ -97,14 +97,14 @@ async def main(
         modeldir:str,
         logdir:str,
         logprefix:str,
-        logdayformat:str,
+        logaiwindow:int,
         tz:str,
         lat:str,
         lon:str
 ):
 
     models = await train_models(
-        logdir, logprefix, logdayformat, tz, lat, lon
+        logdir, logprefix, logaiwindow, tz, lat, lon
     )
 
     if models is None:
@@ -134,7 +134,7 @@ if __name__ == "__main__":
                 args.modeldir,
                 args.logdir,
                 args.logprefix,
-                args.logdayformat,
+                args.logaiwindow,
                 args.tz,
                 args.lat,
                 args.lon

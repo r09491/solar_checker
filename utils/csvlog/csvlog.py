@@ -100,6 +100,24 @@ async def get_logdays(
     else:
         return _get_logdays(**vars())
 
+""" Return the logdays from the windows in each year relative from
+'today'.  'today' is the last item in the retuned list """
+async def get_windowed_logdays(
+        logwindow:int,
+        logprefix: str,
+        logdir: str
+) -> list[str]:
+    # Get the list of of reversed logdays
+    rlds = (await get_logdays(
+        logprefix = logprefix,
+        logdir = logdir
+    )) [::-1]
+    # Extract the list of periodic windows
+    wlds = [rlds[max(0,d-logwindow):min(len(rlds),d+logwindow)]
+            for d,_ in enumerate(rlds) if d%366 == 0]
+    # Return the flattened list of days
+    return [d for l in wlds for d in l][::-1]    
+
 
 def _get_log(
         usecols:str,
@@ -192,8 +210,8 @@ async def get_power_log(
         usecols = POWER_NAMES)
 
 
-""" Get the list of logdays and the list of dictionaries with all the
-recordings """
+""" Get the list of logdays and the list of dataframes with the
+required recordings """
 async def get_logs(
         logmaxdays: int,
         logdayformat: str,
@@ -220,8 +238,35 @@ async def get_logs(
     return logdays, logs
 
 
+""" Get the list of logdays and the list of dataframes with the
+required recordings """
+async def get_windowed_logs(
+        logwindow: int,
+        logprefix: str,
+        logdir: str,
+        usecols: str = POWER_NAMES
+) -> (List[str], List[DataFrame]):
+
+    """ Get the list of logdays """
+    logdays = await get_windowed_logdays(
+        logwindow,
+        logprefix,
+        logdir,
+    )
+
+    logtasks = [asyncio.create_task(
+        get_log(
+            usecols, ld, logprefix, logdir
+        )) for ld in logdays]
+    
+    """ Get the list of associated columns """
+    logs = await asyncio.gather(*logtasks)
+    
+    return logdays, logs
+
+
 """ Get the dataframe with the list of logdays and the list of
-dictionaries with all the recordings """
+dataframes with the required recordings """
 async def get_logs_df(
         logmaxdays: int,
         logdayformat: str,
@@ -233,6 +278,24 @@ async def get_logs_df(
     days, logs = await get_logs(
         logmaxdays,
         logdayformat,
+        logprefix,
+        logdir,
+        usecols
+    )
+    return concat(logs, keys=days)
+
+
+""" Get the dataframe with the list of windowed logdays and the list
+of dataframes with the required recordings """
+async def get_windowed_logs_df(
+        logwindow: int,
+        logprefix: str,
+        logdir: str,
+        usecols:str = POWER_NAMES,
+) -> DataFrame:
+
+    days, logs = await get_windowed_logs(
+        logwindow,
         logprefix,
         logdir,
         usecols

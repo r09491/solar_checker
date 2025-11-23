@@ -25,7 +25,6 @@ from utils.typing import (
 )
 from utils.common import (
     PREDICT_NAMES,
-    #POWER_NAMES,
     PARTITION_NAMES
 )
 from utils.common import (
@@ -37,7 +36,7 @@ from utils.weather import (
     apply_sky_adapters,
 )
 from utils.csvlog import (
-    get_logs_df
+    get_windowed_logs_df
 )
 from utils.predicts.predict_minute import (
     find_closest,
@@ -77,15 +76,14 @@ TODAY=datetime.today().strftime('%y%m%d')
     
 LOGDIR='/home/r09491/storage/solar_checker'
 LOGPREFIX='solar_checker_latest'
-LOGDAYFORMAT='*'
+LOGPREDICTWINDOW='*'
 
 LAT, LON, TZ = 49.04885, 11.78333, 'Europe/Berlin'
      
 @dataclass
 class Script_Arguments:
     logday: str
-    logmaxdays: int
-    logdayformat: str
+    logpredictwindow: int
     logprefix: str
     logdir: str
     starttime: t64
@@ -110,12 +108,8 @@ def parse_arguments() -> Script_Arguments:
         help = "Day to which to find the closest")
 
     parser.add_argument(
-        '--logmaxdays', type=int, default=50,
-        help = "Days to which to find the closest")
-
-    parser.add_argument(
-        '--logdayformat', type=str, default=LOGDAYFORMAT,
-        help = "Days to which to find the closest")
+        '--logpredictwindow', type=int, default=LOGPREDICTWINDOW,
+        help = "Size of yearly windows")
     
     parser.add_argument(
         '--logprefix', type=str, default=LOGPREFIX,
@@ -159,8 +153,7 @@ def parse_arguments() -> Script_Arguments:
     
     return Script_Arguments(
         args.logday,
-        args.logmaxdays,
-        args.logdayformat,
+        args.logpredictwindow,
         args.logprefix,
         args.logdir,
         args.starttime,
@@ -178,9 +171,8 @@ async def main( args: Script_Arguments) -> int:
     args = parse_arguments()
 
     """ Get the power logs as multiindex df """
-    logsdf = await get_logs_df(
-        args.logmaxdays,
-        args.logdayformat,
+    logsdf = await get_windowed_logs_df(
+        args.logpredictwindow,
         args.logprefix,
         args.logdir
     )

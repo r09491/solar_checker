@@ -24,7 +24,7 @@ from utils.common import (
 )
 
 from utils.csvlog import (
-    get_logs_df,
+    get_windowed_logs_df,
 )
 from utils.weather import(
     get_sky_adapters,
@@ -56,8 +56,7 @@ async def plot_predict(request: web.Request) -> dict:
     
     logdir = conf['logdir']
     logprefix = conf['logprefix']
-    logpredictformat = conf['logpredictformat']
-    logpredictmaxdays = conf['logpredictmaxdays']
+    logpredictwindow = conf['logpredictwindow']
     logpredictdays = conf['logpredictdays']
     logpredictcolumns = conf['logpredictcolumns']
 
@@ -77,9 +76,8 @@ async def plot_predict(request: web.Request) -> dict:
         
         
     """ Get the dictionary with all the power recordings for logdays """
-    logsdf = await get_logs_df(
-        logpredictmaxdays,
-        logpredictformat,
+    logsdf = await get_windowed_logs_df(
+        logpredictwindow,
         logprefix,
         logdir
     )
