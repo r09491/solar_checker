@@ -38,20 +38,20 @@ def _get_w_line(time: t64s, smp: f64s,
     logger.info(f'started')
 
     # ?Have data (smartmeter)
-    smpin = np.zeros_like(smp)
+    smpin = np.zeros_like(smp) if smp is not None else None
     issmpin = smp>0 if smp is not None else None
     smpin[issmpin] = smp[issmpin] 
     smpin_mean = 0 if not issmpin.any() else smpin.mean()
     smpin_max = 0 if not issmpin.any() else smpin.max()
 
-    smpout = np.zeros_like(smp)
+    smpout = np.zeros_like(smp) if smp is not None else None
     issmpout = smp<0 if smp is not None else None
     smpout[issmpout] = smp[issmpout] 
     smpout_mean = 0 if not issmpout.any() else smpout.mean()
     smpout_min = 0 if not issmpout.any() else smpout.min()
 
     # ?Have data (inverter)
-    ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else None 
+    ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else np.zeros_like(smp) 
     isivpon = ivp>0 if ivp is not None else None
     ivpon = ivp[isivpon] if isivpon is not None and isivpon.any() else None
     ivpon_mean = ivpon.mean() if ivpon is not None else 0
@@ -114,54 +114,59 @@ def _get_w_line(time: t64s, smp: f64s,
     
     """ Plot solarbank and smartmeter filled """
     
-    if sbpoon is not None:
+    if sbpoon is not None and np.any(sbpoon):
         ax.fill_between(time, 0, sbpo,
                         where = issbpoon,
                         color='grey', label='BANK', lw=1, alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smpin,
                         where = issbpoon,
-                        color='b', label='GRID', lw=1, alpha=0.3)
-
-    if ivpon is not None:
+                        color='b', lw=1, alpha=0.3)
+        issmpin &= ~issbpoon
+        
+    if ivpon is not None and np.any(ivpon):
         ax.fill_between(time, 0, ivp,
-                        where = ~issbpoon,
+                        where = isivpon & ~issbpoon,
                         color='c', label='INV', lw=1, alpha=0.3)
         ax.fill_between(time, ivp, ivp + smpin,
-                        where = ~issbpoon,
-                        color='b', label='GRID', lw=1, alpha=0.3)
+                        where = isivpon & ~issbpoon,
+                        color='b', lw=1, alpha=0.3)
+        issmpin &= ~isivpon
 
-    if spphon is not None:
+    if spphon is not None and np.any(spphon):
         ax.fill_between(time, 0, spph,
-                        where = ~issbpoon & ~isivpon,
+                        where = isspphon & ~(issbpoon | isivpon),
                         color='brown', label='PLUG', lw=1, alpha=0.3)
         ax.fill_between(time, spph, spph + smpin,
-                        where = ~issbpoon & ~isivpon,
+                        where = isspphon & ~(issbpoon | isivpon),
+                        color='b', lw=1, alpha=0.3)
+        issmpin &= ~isspph
+
+    if smpin is not None:
+        ax.fill_between(time, 0, smpin,
+                        where = issmpin,
                         color='b', label='GRID', lw=1, alpha=0.3)
-        
-        
+
     """ Plot the battery power of the solarbank during charging"""
 
-    if sbpbout is not None:
+    if sbpb is not None and np.any(sbpb):
         ax.fill_between(time, 0, sbpb,
-                        #where = issbpbin,
+                        #where = issbpbout,
                         color='m', label='BAT', alpha=0.3)
         ax.fill_between(time, np.minimum(sbpb,[0]),
                         np.minimum(sbpb,[0]) + smpout,
-                        #where = issbpbin,
+                        where = issbpbout,
                         color='b', lw=0, alpha=0.3)
 
-    #ax.fill_between(time, 0, smpout, where = ~issbpbin,
-    #                color='b', lw=0, alpha=0.3)
 
     """ Plot amplifying data as lines """
 
-    if spph is not None:
+    if spph is not None and np.any(spph):
         ax.plot(time, spph,
                 color='brown',label='PLUG', lw=2, ls='-', alpha=0.3)
-    if ivp is not None:
+    if ivp is not None and np.any(ivp):
         ax.plot(time, ivp,
                 color='c', label='INV', lw=2, ls='-', alpha=0.3)
-    if sbpion is not None:
+    if sbpion is not None and np.any(sbpion):
         if time.size<=24*60: #only plot within 24h
             issun = np.where(issbpion)[0]
             start, stop = issun[0], issun[-1]

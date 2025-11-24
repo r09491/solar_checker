@@ -90,7 +90,7 @@ def _get_kwh_line(
         sbeb = +sbebcharge - sbebdischarge + sbsb[0]
 
         ax.fill_between(time, 0, -sbsb,
-                        color='m', label='-BAT',alpha=0.3)
+                        color='m', label='BAT',alpha=0.3)
 
         ax.fill_between(time, -sbsb, -sbeb,
                         color='black', label='LOSS', alpha=0.3)
