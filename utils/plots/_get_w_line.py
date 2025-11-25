@@ -40,54 +40,59 @@ def _get_w_line(time: t64s, smp: f64s,
     # ?Have data (smartmeter)
     smpin = np.zeros_like(smp) if smp is not None else None
     issmpin = smp>0 if smp is not None else None
-    smpin[issmpin] = smp[issmpin] 
+    smpin[issmpin] = smp[issmpin] if issmpin is not None else None 
     smpin_mean = 0 if not issmpin.any() else smpin.mean()
     smpin_max = 0 if not issmpin.any() else smpin.max()
 
     smpout = np.zeros_like(smp) if smp is not None else None
     issmpout = smp<0 if smp is not None else None
-    smpout[issmpout] = smp[issmpout] 
+    smpout[issmpout] = smp[issmpout] if issmpout is not None else None 
     smpout_mean = 0 if not issmpout.any() else smpout.mean()
     smpout_min = 0 if not issmpout.any() else smpout.min()
 
     # ?Have data (inverter)
     ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else np.zeros_like(smp) 
-    isivpon = ivp>0 if ivp is not None else None
-    ivpon = ivp[isivpon] if isivpon is not None and isivpon.any() else None
-    ivpon_mean = ivpon.mean() if ivpon is not None else 0
-    ivpon_max = ivpon.max() if ivpon is not None else 0
+    isivpon = ivp>0
+    ivpon = ivp[isivpon]
+    ivpon_mean = ivpon.mean() if ivpon.any() else 0
+    ivpon_max = ivpon.max() if ivpon.any() else 0
 
     # ?Have power ( smartplug)
-    isspphon = spph>0 if spph is not None else None
-    spphon = spph[isspphon] if isspphon is not None and isspphon.any() else None
-    spphon_mean = spphon.mean() if spphon is not None else 0
-    spphon_max = spphon.max() if spphon is not None else 0
+    spph = spph if spph is not None else np.zeros_like(smp) 
+    isspphon = spph>0
+    spphon = spph[isspphon]
+    spphon_mean = spphon.mean() if spphon.any() else 0
+    spphon_max = spphon.max() if spphon.any() else 0
 
     # ?Have sun (solarbank)
-    issbpion = sbpi>0  if sbpi is not None else None
-    sbpion = sbpi[issbpion] if issbpion is not None and issbpion.any() else None
-    sbpion_mean = sbpion.mean() if sbpion is not None else 0
-    sbpion_max = sbpion.max() if sbpion is not None else 0
+    sbpi = sbpi if sbpi is not None else np.zeros_like(smp)
+    issbpion = sbpi>0
+    sbpion = sbpi[issbpion]
+    sbpion_mean = sbpion.mean() if sbpion.any() else 0
+    sbpion_max = sbpion.max() if sbpion.any() else 0
 
     # 'Have output (solarbank)
-    issbpoon = sbpo>0 if sbpo is not None else None 
-    sbpoon = sbpo[issbpoon] if issbpoon is not None and issbpoon.any() else None
-    sbpoon_mean = sbpoon.mean() if sbpoon is not None else 0
-    sbpoon_max = sbpoon.max() if sbpoon is not None else 0
+    sbpo = sbpo if sbpo is not None else np.zeros_like(smp)
+    issbpoon = sbpo>0
+    sbpoon = sbpo[issbpoon]
+    sbpoon_mean = sbpoon.mean() if sbpoon.any() else 0
+    sbpoon_max = sbpoon.max()  if sbpoon.any() else 0
 
     # ?Charging (solarbank)
-    issbpbin = sbpb<0 if sbpb is not None else None 
-    sbpbin = sbpb[issbpbin] if issbpbin is not None and issbpbin.any() else None
-    sbpbin_mean = sbpbin.mean() if sbpbin is not None else 0
-    sbpbin_min = sbpbin.min() if sbpbin is not None else 0
+    sbpbin = sbpb if sbpb is not None else np.zeros_like(smp)
+    issbpbin = sbpb<0
+    sbpbin[issbpbin] = sbpb[issbpbin]
+    sbpbin_mean = sbpbin.mean() if sbpbin.any() else 0
+    sbpbin_min = sbpbin.min() if sbpbin.any() else 0
 
     # ?Discharging (solarbank)
-    issbpbout = sbpb>0 if sbpb is not None else None  
-    sbpbout = sbpb[issbpbout] if issbpbout is not None and issbpbout.any() else None
-    sbpbout_mean = sbpbout.mean() if sbpbout is not None else 0
-    sbpbout_max = sbpbout.max() if sbpbout is not None else 0
+    sbpbout = sbpb if sbpb is not None else np.zeros_like(smp)
+    issbpbout = sbpb>0
+    sbpbout[issbpbout] = sbpb[issbpbout]
+    sbpbout_mean = sbpbout.mean() if sbpbout.any() else 0
+    sbpbout_max = sbpbout.max() if sbpbout.any() else 0
     
-    timesbpion = time[issbpion] if issbpion is not None else None
+    timesbpion = time[issbpion]
 
     
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
@@ -148,13 +153,22 @@ def _get_w_line(time: t64s, smp: f64s,
 
     """ Plot the battery power of the solarbank during charging"""
 
-    if sbpb is not None and np.any(sbpb):
-        ax.fill_between(time, 0, sbpb,
-                        #where = issbpbout,
+    if sbpbin is not None and np.any(sbpbin): #charge
+        ax.fill_between(time, sbpbin, 0,
+                        where = issbpbin,
                         color='m', label='BAT', alpha=0.3)
-        ax.fill_between(time, np.minimum(sbpb,[0]),
-                        np.minimum(sbpb,[0]) + smpout,
+        ax.fill_between(time, sbpbin+smpout, sbpbin, 
+                        where = issbpbin,
+                        color='b', lw=0, alpha=0.3)
+        
+    if sbpbout is not None and np.any(sbpbout): #discharge
+        ax.fill_between(time, sbpbout, 0,
                         where = issbpbout,
+                        color='m', alpha=0.3)
+
+    if smpout is not None and np.any(smpout):
+        ax.fill_between(time, 0, smpout,
+                        where = issmpout & ~issbpbin,
                         color='b', lw=0, alpha=0.3)
 
 
