@@ -22,7 +22,7 @@ import pandas as pd
 from dataclasses import dataclass
 
 from utils.typing import(
-    Optional
+    List, Optional
 )
 from utils.common import(
     PREDICT_POWER_NAMES
@@ -60,7 +60,7 @@ class Script_Arguments:
 
 async def predict_hour(
         args: Script_Arguments
-) -> Optional[pd.DataFrame]:
+) -> List:
     
     days = await get_logdays(
         logprefix = args.logprefix,
@@ -73,8 +73,7 @@ async def predict_hour(
     yesterday, today = days[-2:]
     logger.info(f'Predicting "{today}" using "{yesterday}"')
 
-    
-    castlog, todaylog = await asyncio.gather(
+    yesterday, todaylog = await asyncio.gather(
         get_hour_log(
             logday = yesterday,
             logprefix = args.logprefix,
@@ -88,7 +87,7 @@ async def predict_hour(
     )
 
     # Adapt the cast indices
-    castlog.index = pd.date_range(
+    yesterday.index = pd.date_range(
         todaylog.index[0].date(),
         periods=24,
         freq="h"
@@ -98,40 +97,46 @@ async def predict_hour(
     realsoc = todaylog["SBSB"].iloc[0]
     
     # Calc prediction data
-    realstop = castlog.index[len(todaylog.index)-1]
-    caststart = castlog.index[len(todaylog.index)]
+    realstop = yesterday.index[len(todaylog.index)-1]
+    caststart = yesterday.index[len(todaylog.index)]
     reallast = todaylog.loc[realstop ,"SBPI"]
-    castlast = castlog.loc[realstop ,"SBPI"]
+    castlast = yesterday.loc[realstop ,"SBPI"]
     adaptratio = reallast/castlast if castlast >0.0 else 0.0
 
-    logger.info(f'Current cast ratio is "{adaptratio}"')
-    
-    # Cast irridiance by scalling using last hour
-    castlog["SBPI"] *= adaptratio
+    logger.info(f'Last real stop is "{realstop}"')
+    logger.info(f'Last real irridiance is "{reallast}"')
+    logger.info(f'Last cast irridiance is "{castlast}"')
+    logger.info(f'Last real/cast ratio is "{adaptratio}"')
 
+    # The restlog needs adaptation
+    restlog = yesterday.loc[caststart:,:]
+    if adaptratio >0.0:
+        """ Try the cast with latest ratio """
+        # Cast irridiance by scalling using last hour
+        restlog["SBPI"] *= adaptratio
 
-    # Simultate low irradiance
-    issbpi = castlog["SBPI"] <35 
-    castlog.loc[issbpi, "SBPB"] = castlog.loc[issbpi, "SBPI"]
-    castlog.loc[issbpi, "SBPO"] = 0
+        # Simultate low irradiance
+        issbpi = restlog["SBPI"] <35 
+        restlog.loc[issbpi, "SBPB"] = -restlog.loc[issbpi, "SBPI"]
+        restlog.loc[issbpi, "SBPO"] = 0
 
-    # Simultate medium irradiance
-    issbpi = (castlog["SBPI"] >=35) & (castlog["SBPI"] <100)
-    castlog.loc[issbpi,"SBPB"] = 0
-    castlog.loc[issbpi,"SBPO"] = castlog.loc[issbpi, "SBPI"]
+        # Simultate grey irradiance
+        issbpi = (restlog["SBPI"] >=35) & (restlog["SBPI"] <100)
+        restlog.loc[issbpi,"SBPB"] = 0
+        restlog.loc[issbpi,"SBPO"] = restlog.loc[issbpi, "SBPI"]
 
-    # Simultate medium irradiance
-    issbpi = (castlog["SBPI"] >=100) & (castlog["SBPI"] <800)
-    castlog.loc[issbpi,"SBPB"] = castlog.loc[issbpi,"SBPI"] - 100
-    castlog.loc[issbpi,"SBPO"] = 100
+        # Simultate bright irradiance
+        issbpi = (restlog["SBPI"] >=100) & (restlog["SBPI"] <800)
+        restlog.loc[issbpi,"SBPB"] = -restlog.loc[issbpi,"SBPI"] + 100
+        restlog.loc[issbpi,"SBPO"] = 100
 
-    # Simultate high irradiance
-    issbpi = (castlog["SBPI"] >=800)
-    castlog.loc[issbpi,"SBPB"] = 600
-    castlog.loc[issbpi,"SBPO"] =  castlog.loc[issbpi,"SBPI"] - 600
-    
+        # Simultate high irradiance
+        issbpi = (restlog["SBPI"] >=800)
+        restlog.loc[issbpi,"SBPB"] = -600
+        restlog.loc[issbpi,"SBPO"] =  restlog.loc[issbpi,"SBPI"] - 600
+
     #Best cast is real data
-    castlog.loc[:realstop,:] = todaylog
+    castlog = pd.concat([todaylog,restlog])
 
     # Simulate battery full
     isfull = castlog["SBPB"].cumsum() <-1600
@@ -143,26 +148,26 @@ async def predict_hour(
     castlog.loc[isempty,"SBPB"] = 0
     castlog.loc[isempty,"SBPO"] = 0
     
-
     castlog["SBSB"] = realsoc - castlog["SBPB"].cumsum()/1600
 
-    return castlog
+    return castlog, caststart
 
 
 """ 
 Print the prediction data frames. 
 """
 async def output_hour(
-        predicttable: pd.DataFrame
+        predicttable: pd.DataFrame,
+        caststart: pd.Timestamp
 ) -> None:
     
     pd.options.display.float_format = '{:,.1f}'.format
 
     w = predicttable[predicttable.columns[:-1]]
-    print("\nRelative Watts")
+    print(f"\nRelative Watts @ {caststart}")
     print(w)
 
-    print("\nAbsolute Watts")
+    print(f"\nAbsolute Watts @ {caststart}")
     wh =  w.cumsum()
     sbsb = predicttable["SBSB"]
     print(pd.concat([wh, sbsb], axis=1))
@@ -198,12 +203,12 @@ if __name__ == '__main__':
 
     async def main(args: Script_Arguments) -> int:
 
-        w = await predict_hour(args)
+        w, caststart = await predict_hour(args)
         if w is None:
             logger.error(f'Hour Predict failed')
             return -1
 
-        await output_hour(w)
+        await output_hour(w, caststart)
         
         return 0
 
