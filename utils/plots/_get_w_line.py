@@ -73,7 +73,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
     # 'Have output (solarbank)
     sbpo = sbpo if sbpo is not None else np.zeros_like(smp)
-    issbpoon = sbpo>0
+    issbpoon = sbpo>=0 # = a must
     sbpoon = sbpo[issbpoon]
     sbpoon_mean = sbpoon.mean() if sbpoon.any() else 0
     sbpoon_max = sbpoon.max()  if sbpoon.any() else 0
@@ -92,9 +92,8 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpbout_mean = sbpbout.mean() if sbpbout.any() else 0
     sbpbout_max = sbpbout.max() if sbpbout.any() else 0
     
-    timesbpion = time[issbpion]
+    #timesbpion = time[issbpion]
 
-    
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
@@ -116,7 +115,6 @@ def _get_w_line(time: t64s, smp: f64s,
                 alpha = 0.6
             )        
 
-    
     """ Plot solarbank and smartmeter filled """
     
     if np.any(sbpoon):

@@ -1,41 +1,35 @@
-#!/usr/bin/env python3
-
 __doc__="""
-Writes a prediction table for the rest of today estimating the irridance and using a solarbank model dependent on the irridiance.
 """
 
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%H:%M:%S',)
+logger = logging.getLogger(__name__)
+
 import os
 import sys
-import argparse
 import asyncio
-
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 import numpy as np
 import pandas as pd
 
 from dataclasses import dataclass
 
-from utils.typing import(
+from ..typing import(
     List, Optional
 )
-from utils.common import(
+from ..common import(
     PREDICT_POWER_NAMES
 )
-
-from utils.csvlog import(
+from ..csvlog import(
     get_logdays,
     get_log
 )
-
-
-LOGDIR='/home/r09491/storage/solar_checker'
-LOGPREFIX='solar_checker_latest'
 
 async def get_hour_log(
         logday: str,
@@ -52,13 +46,33 @@ async def get_hour_log(
     return log.set_index('TIME').resample('h').mean()
 
 
+async def get_predict_tables(
+        casthours: pd.DataFrame
+) -> (pd.DataFrame, pd.DataFrame):
+
+    starts = casthours.index.strftime("%H:00")
+    stops = casthours.index.strftime("%H:59")
+    start_stop_df = pd.DataFrame({"START":starts, "STOP":stops})
+
+    sbsb_df = casthours["SBSB"]
+    sbsb_df.reset_index(inplace=True, drop=True)
+    
+    casthours.drop("SBSB", inplace=True, axis=1)
+    casthours.reset_index(inplace=True, drop=True)
+    
+    watts_table = pd.concat([start_stop_df, casthours], axis=1)
+    energy_table = pd.concat([start_stop_df, casthours.cumsum(), 100*sbsb_df], axis=1)
+    
+    return (watts_table, energy_table)
+
+
 @dataclass
 class Script_Arguments:
     logprefix: str
     logdir: str
 
 
-async def predict_hour(
+async def predict_primitive(
         args: Script_Arguments
 ) -> List:
     
@@ -103,13 +117,13 @@ async def predict_hour(
     castlast = yesterday.loc[realstop ,"SBPI"]
     adaptratio = reallast/castlast if castlast >0.0 else 0.0
 
-    logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last real irridiance is "{reallast}"')
     logger.info(f'Last cast irridiance is "{castlast}"')
     logger.info(f'Last real/cast ratio is "{adaptratio}"')
-
+    logger.info(f'Last cast start is "{caststart}"')
+    
     # The restlog needs adaptation
-    restlog = yesterday.loc[caststart:,:]
+    restlog = yesterday.copy().loc[caststart:,:]
     if adaptratio >0.0:
         """ Try the cast with latest ratio """
         # Cast irridiance by scalling using last hour
@@ -152,70 +166,3 @@ async def predict_hour(
 
     return castlog, caststart
 
-
-""" 
-Print the prediction data frames. 
-"""
-async def output_hour(
-        predicttable: pd.DataFrame,
-        caststart: pd.Timestamp
-) -> None:
-    
-    pd.options.display.float_format = '{:,.1f}'.format
-
-    w = predicttable[predicttable.columns[:-1]]
-    print(f"\nRelative Watts @ {caststart}")
-    print(w)
-
-    print(f"\nAbsolute Watts @ {caststart}")
-    wh =  w.cumsum()
-    sbsb = predicttable["SBSB"]
-    print(pd.concat([wh, sbsb], axis=1))
-    
-    print()
-
-
-if __name__ == '__main__':
-    def parse_arguments() -> Script_Arguments:
-        """Parse command line arguments"""
-
-        parser = argparse.ArgumentParser(
-            prog=os.path.basename(sys.argv[0]),
-            description='Get the latest weather forecast',
-            epilog=__doc__)
-
-        parser.add_argument('--version', action = 'version', version = __version__)
-
-        parser.add_argument(
-            '--logprefix', type=str, default=LOGPREFIX,
-            help = "The prefix used in log file names")
-
-        parser.add_argument(
-            '--logdir', type=str, default=LOGDIR,
-            help = "The directory the logfiles are stored")
-       
-        args = parser.parse_args()
-
-        return Script_Arguments(
-            args.logprefix,
-            args.logdir)
-
-
-    async def main(args: Script_Arguments) -> int:
-
-        w, caststart = await predict_hour(args)
-        if w is None:
-            logger.error(f'Hour Predict failed')
-            return -1
-
-        await output_hour(w, caststart)
-        
-        return 0
-
-        
-    try:
-        err = asyncio.run(main(parse_arguments()))
-    except KeyboardInterrupt: 
-        err = 99
-       
-    sys.exit(err)
