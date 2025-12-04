@@ -69,7 +69,7 @@ class Script_Arguments:
 
 async def predict_primitive(
         args: Script_Arguments
-) -> (pd.DataFrame, pd.Timestamp):
+) -> (pd.DataFrame, pd.Timestamp, pd.Timestamp):
     
     days = await get_logdays(
         logprefix = args.logprefix,
@@ -159,4 +159,4 @@ async def predict_primitive(
     
     castlog["SBSB"] = realsoc - castlog["SBPB"].cumsum()/1600
 
-    return castlog, caststart
+    return castlog, realstop, caststart

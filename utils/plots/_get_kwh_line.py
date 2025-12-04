@@ -67,8 +67,8 @@ def _get_kwh_line(
             ax.axvspan(
                 mdates.date2num(tphases[2]),
                 mdates.date2num(tphases[3]), 
-                color ='white',
-                alpha = 0.6
+                color ='olive',
+                alpha = 0.1
             )        
 
     

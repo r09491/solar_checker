@@ -111,8 +111,8 @@ def _get_w_line(time: t64s, smp: f64s,
             ax.axvspan(
                 mdates.date2num(tphases[2]),
                 mdates.date2num(tphases[3]), 
-                color ='white',
-                alpha = 0.6
+                color ='olive',
+                alpha = 0.1
             )        
 
     """ Plot solarbank and smartmeter filled """

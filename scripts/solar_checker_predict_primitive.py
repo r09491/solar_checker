@@ -87,7 +87,7 @@ if __name__ == '__main__':
             logger.error(f'Hour Predict failed')
             return -1
 
-        casthours, caststart = cast
+        casthours, realstop, caststart = cast
         
         await output_hour(casthours, caststart)
         

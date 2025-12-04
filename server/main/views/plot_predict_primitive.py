@@ -38,9 +38,7 @@ async def plot_predict_primitive(request: web.Request) -> dict:
     full_wh = conf['battery_full_wh']
     full_kwh = full_wh / 1000
     empty_kwh = conf['battery_min_percent'] /100 * full_kwh
-
-    tz = conf['tz']
-
+    
     logdir = conf['logdir']
     logprefix = conf['logprefix']
     logdayformat = conf['logdayformat']
@@ -61,12 +59,13 @@ async def plot_predict_primitive(request: web.Request) -> dict:
             {"error" : f'Log files for  "{castday}" not found or not valid'}
         )
 
-    casthours, caststart = cast
+    casthours, realstop, caststart = cast
     
     time = np.array(casthours.index)
     sbpi = np.array(casthours['SBPI'])
     sbpo = np.array(casthours['SBPO'])
     sbpb = np.array(casthours['SBPB'])
+    sbsb = np.array(casthours['SBSB'])
     smp = np.array(casthours['SMP'])
 
     smpon = np.zeros_like(smp)
@@ -79,9 +78,8 @@ async def plot_predict_primitive(request: web.Request) -> dict:
     sbpbdischarge = np.zeros_like(sbpb)
     sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
 
-    sbeb = sbpb.cumsum()/1000 if sbpb is not None else None
-    sbeb = (empty_kwh + sbeb.max() - sbeb) if sbeb is not None else None
-    
+    tphases = [realstop, caststart, caststart, time[-1]]
+
     w, kwh = await asyncio.gather(
         get_w_line(
             time,
@@ -92,7 +90,7 @@ async def plot_predict_primitive(request: web.Request) -> dict:
             sbpi,
             sbpo,
             sbpb,
-            tz=tz
+            tphases = tphases
         ),
         get_kwh_line(
             time,
@@ -105,11 +103,11 @@ async def plot_predict_primitive(request: web.Request) -> dict:
             sbpo.cumsum()/1000 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000 if sbpbcharge is not None else None,
             sbpbdischarge.cumsum()/1000 if sbpbdischarge is not None else None,
-            sbeb if sbeb is not None else None,
+            sbsb*full_kwh,
             empty_kwh,
             full_kwh,
             price[castday[:2]],
-            tz=tz
+            tphases = tphases
         )
     )
 
