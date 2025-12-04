@@ -23,24 +23,20 @@ from dataclasses import dataclass
 from ..typing import(
     List, Optional
 )
-from ..common import(
-    PREDICT_POWER_NAMES
-)
 from ..csvlog import(
     get_logdays,
-    get_log
+    get_predict_power_log
 )
 
 async def get_hour_log(
         logday: str,
         logprefix: str,
         logdir: str
-):
-    log = await get_log(
+) -> pd.DataFrame:
+    log = await get_predict_power_log(
         logday = logday,
         logprefix = logprefix,
-        logdir = logdir,
-        usecols = PREDICT_POWER_NAMES
+        logdir = logdir
     )
 
     return log.set_index('TIME').resample('h').mean()
@@ -71,10 +67,9 @@ class Script_Arguments:
     logprefix: str
     logdir: str
 
-
 async def predict_primitive(
         args: Script_Arguments
-) -> List:
+) -> (pd.DataFrame, pd.Timestamp):
     
     days = await get_logdays(
         logprefix = args.logprefix,
@@ -165,4 +160,3 @@ async def predict_primitive(
     castlog["SBSB"] = realsoc - castlog["SBPB"].cumsum()/1600
 
     return castlog, caststart
-

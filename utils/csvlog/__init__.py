@@ -4,6 +4,7 @@ from .csvlog import (
     get_log,
     get_sample_log,
     get_power_log,
+    get_predict_power_log,
     get_logs,
     get_logs_df,
     get_windowed_logdays,

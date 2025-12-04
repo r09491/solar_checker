@@ -20,6 +20,7 @@ from ..typing import(
 )
 from ..common import(
     POWER_NAMES,
+    PREDICT_POWER_NAMES,
     SAMPLE_NAMES,
     t64_first,
     ymd_today,
@@ -37,7 +38,6 @@ CACHE = dict()
 def cache(f):
 
     async def wrapper(
-            usecols:str,
             logday: str,
             logprefix: str,
             logdir: str
@@ -48,7 +48,6 @@ def cache(f):
         ):
             logger.info(f'New values without store for "{logday}"')
             data = await f(
-                usecols,
                 logday,
                 logprefix,
                 logdir
@@ -65,7 +64,6 @@ def cache(f):
             return data
         
         data = await f(
-            usecols,
             logday,
             logprefix,
             logdir
@@ -120,7 +118,6 @@ async def get_windowed_logdays(
 
 
 def _get_log(
-        usecols:str,
         logday: str,
         logprefix: str,
         logdir: str
@@ -132,7 +129,7 @@ def _get_log(
             samples = read_csv(
                 sys.stdin,
                 names = SAMPLE_NAMES,
-                usecols = usecols,
+                #usecols = usecols,
                 parse_dates=["TIME"],
                 dtype="float64"
             )
@@ -152,7 +149,7 @@ def _get_log(
                 samples = read_csv(
                     logfile,
                     names = SAMPLE_NAMES,
-                    usecols = usecols,
+                    #usecols = usecols,
                     parse_dates=["TIME"],
                     dtype="float64"
                 )
@@ -173,7 +170,6 @@ def _get_log(
 
 @cache
 async def get_log(
-        usecols: str,
         logday: str = None,
         logprefix: str = None,
         logdir: str = None
@@ -192,22 +188,36 @@ async def get_sample_log(
         logprefix: str = None,
         logdir: str = None) -> Dict:
 
-    return await get_log(
+    log = await get_log(
         logday = logday,
         logprefix = logprefix,
-        logdir = logdir,
-        usecols = SAMPLE_NAMES)
+        logdir = logdir)
+    
+    return log[SAMPLE_NAMES] if log is not None else None
 
 async def get_power_log(
         logday: str = None,
         logprefix: str = None,
         logdir: str = None) -> Dict:
-    
-    return await get_log(
+
+    log = await get_log(
         logday = logday,
         logprefix = logprefix,
-        logdir = logdir,
-        usecols = POWER_NAMES)
+        logdir = logdir)
+    
+    return log[POWER_NAMES] if log is not None else None
+
+async def get_predict_power_log(
+        logday: str = None,
+        logprefix: str = None,
+        logdir: str = None) -> Dict:
+    
+    log = await get_log(
+        logday = logday,
+        logprefix = logprefix,
+        logdir = logdir)
+    
+    return log[PREDICT_POWER_NAMES] if log is not None else None
 
 
 """ Get the list of logdays and the list of dataframes with the
@@ -229,13 +239,13 @@ async def get_logs(
 
     logtasks = [asyncio.create_task(
         get_log(
-            usecols, ld, logprefix, logdir
+            ld, logprefix, logdir
         )) for ld in logdays]
     
     """ Get the list of associated columns """
     logs = await asyncio.gather(*logtasks)
     
-    return logdays, logs
+    return logdays, [log[usecols] for log in logs if log is not None]
 
 
 """ Get the list of logdays and the list of dataframes with the
@@ -256,13 +266,13 @@ async def get_windowed_logs(
 
     logtasks = [asyncio.create_task(
         get_log(
-            usecols, ld, logprefix, logdir
+            ld, logprefix, logdir
         )) for ld in logdays]
     
     """ Get the list of associated columns """
     logs = await asyncio.gather(*logtasks)
     
-    return logdays, logs
+    return logdays, [log[usecols] for log in logs if log is not None]
 
 
 """ Get the dataframe with the list of logdays and the list of
