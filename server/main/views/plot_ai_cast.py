@@ -107,8 +107,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
             None,
             sbpi,
             sbpo,
-            sbpb,
-            tz='Europe/Berlin'
+            sbpb
         ),
         get_kwh_line(
             time,
@@ -124,8 +123,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
             sbeb if sbeb is not None else None,
             empty_kwh,
             full_kwh,
-            price[castday[:2]],
-            tz='Europe/Berlin'
+            price[castday[:2]]
         )
     )
 

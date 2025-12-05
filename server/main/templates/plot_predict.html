@@ -17,7 +17,7 @@
 
 {% if what == 'Tomorrow' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_ai_cast/{{ logday }}'>AI Today Cast</a>&nbsp;&nbsp
+  <a href='/plot_ai_cast/{{ logday }}'>AI Cast</a>&nbsp;&nbsp
   <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
   <a href='/plot_predict/{{ logday }}/total'>Total Cast</a>
 </div>
@@ -27,7 +27,7 @@
 
 {% if what == 'Total' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_ai_cast/{{ logday }}'>AI Today Cast</a>&nbsp;&nbsp
+  <a href='/plot_ai_cast/{{ logday }}'>AI Cast</a>&nbsp;&nbsp
   <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
   <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>
 </div>
@@ -36,7 +36,7 @@
 {% endif %}
 
 
-<div style='display:flex;justify-content:center;margin:4px;''>
+<div style='display:flex;justify-content:center;margin:4px;'>
   Using&nbsp;closest&nbsp;days
   {% for pd in predictdays %}
   <a href='/plot_day/{{pd}}'>&nbsp;{{pd}}</a>
@@ -56,6 +56,7 @@
 </div>  
 <div style='display:flex;justify-content:center;' >
   {{ predicttables[0].to_html(
+  index=False,
   border=0,
   col_space=70,
   justify='center',
@@ -68,6 +69,7 @@
 </div>  
 <div style='display:flex;justify-content:center;' >
   {{ predicttables[1].to_html(
+  index=False,
   border=0,
   col_space=70,
   justify='center',
