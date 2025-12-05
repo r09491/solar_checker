@@ -1,7 +1,7 @@
 from .predict_minute import *
-from .predict_primitive import (
+from .predict_naive import (
     Script_Arguments,
-    predict_primitive,
+    predict_naive,
     get_predict_tables
 )
 

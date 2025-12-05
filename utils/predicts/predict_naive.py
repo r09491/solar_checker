@@ -46,8 +46,10 @@ async def get_predict_tables(
         casthours: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
 
+    casthours = casthours.resample('3h').mean()
+
     starts = casthours.index.strftime("%H:00")
-    stops = casthours.index.strftime("%H:59")
+    stops = casthours.index.shift(1).strftime("%H:00")
     start_stop_df = pd.DataFrame({"START":starts, "STOP":stops})
 
     sbsb_df = casthours["SBSB"]
@@ -67,7 +69,7 @@ class Script_Arguments:
     logprefix: str
     logdir: str
 
-async def predict_primitive(
+async def predict_naive(
         args: Script_Arguments
 ) -> (pd.DataFrame, pd.Timestamp, pd.Timestamp):
     

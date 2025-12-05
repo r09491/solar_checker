@@ -24,13 +24,13 @@ from utils.plots import (
 )
 from utils.predicts import (
     Script_Arguments,
-    predict_primitive,
+    predict_naive,
     get_predict_tables
 )
 
 
-@aiohttp_jinja2.template('plot_predict_primitive.html')
-async def plot_predict_primitive(request: web.Request) -> dict:
+@aiohttp_jinja2.template('plot_predict_naive.html')
+async def plot_predict_naive(request: web.Request) -> dict:
 
     conf = request.app['conf']
 
@@ -50,7 +50,7 @@ async def plot_predict_primitive(request: web.Request) -> dict:
     except KeyError:
         castday = ymd_tomorrow(today)
 
-    cast = await predict_primitive(
+    cast = await predict_naive(
         Script_Arguments(logprefix, logdir)
     )
     if cast is None:

@@ -8,7 +8,7 @@ from views import (
     plot_month,
     plot_year,
     plot_predict,
-    plot_predict_primitive,
+    plot_predict_naive,
     plot_ai_cast,
     train_ai_cast,
 )
@@ -22,8 +22,8 @@ def setup_routes(app: web.Application):
     app.router.add_get('/plot_year', plot_year)
     app.router.add_get('/plot_year/{logyear}', plot_year)
     app.router.add_get('/plot_predict/{logday}/{what}', plot_predict)
-    app.router.add_get('/plot_predict_primitive', plot_predict_primitive)
-    app.router.add_get('/plot_predict_primitive/{castday}', plot_predict_primitive)
+    app.router.add_get('/plot_predict_naive', plot_predict_naive)
+    app.router.add_get('/plot_predict_naive/{castday}', plot_predict_naive)
     app.router.add_get('/plot_ai_cast', plot_ai_cast)
     app.router.add_get('/plot_ai_cast/{castday}', plot_ai_cast)
     app.router.add_get('/train_ai_cast', train_ai_cast)
