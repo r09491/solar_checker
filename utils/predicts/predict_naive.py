@@ -58,8 +58,14 @@ async def get_predict_tables(
     casthours.drop("SBSB", inplace=True, axis=1)
     casthours.reset_index(inplace=True, drop=True)
     
-    watts_table = pd.concat([start_stop_df, casthours], axis=1)
-    energy_table = pd.concat([start_stop_df, casthours.cumsum(), 100*sbsb_df], axis=1)
+    watts_table = pd.concat(
+        [start_stop_df, casthours],
+        axis=1
+    )
+    energy_table = pd.concat(
+        [start_stop_df, 3*casthours.cumsum(), 100*sbsb_df],
+        axis=1
+    )
     
     return (watts_table, energy_table)
 

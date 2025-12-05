@@ -179,15 +179,15 @@ def _get_w_line(time: t64s, smp: f64s,
         ax.plot(time, ivp,
                 color='c', label='INV', lw=2, ls='-', alpha=0.3)
     if np.any(sbpion):
+        issun = np.where(issbpion)[0]
+        start, stop = max(0, issun[0]-1), issun[-1]+2
+        ax.plot(time[start:stop], sbpi[start:stop],
+                color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
         if time.size<=24*60: #only plot within 24h
-            issun = np.where(issbpion)[0]
-            start, stop = issun[0], issun[-1]
-            ax.plot(time[start:stop], sbpi[start:stop],
-                    color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
             ax.fill_between(time[issbpion],
                             np.full_like(sbpi[issbpion], 600),
                             np.full_like(sbpi[issbpion], 800),
-                            color='black', label='LIMITS', alpha=0.2)
+                            color='black', label='LIMITS', alpha=0.1)
 
     """ Generate title """
             

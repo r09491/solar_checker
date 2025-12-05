@@ -82,7 +82,6 @@ async def plot_ai_cast(request: web.Request) -> dict:
     sbpb = np.array(pool['SBPB'])
     smp = np.array(pool['SMP'])
 
-    
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
@@ -107,7 +106,8 @@ async def plot_ai_cast(request: web.Request) -> dict:
             None,
             sbpi,
             sbpo,
-            sbpb
+            sbpb,
+            tz=tz
         ),
         get_kwh_line(
             time,
@@ -123,7 +123,8 @@ async def plot_ai_cast(request: web.Request) -> dict:
             sbeb if sbeb is not None else None,
             empty_kwh,
             full_kwh,
-            price[castday[:2]]
+            price[castday[:2]],
+            tz=tz
         )
     )
 
