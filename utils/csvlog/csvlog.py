@@ -104,16 +104,15 @@ async def get_windowed_logdays(
         logwindow:int,
         logprefix: str,
         logdir: str
-) -> list[str]:
+) -> strings:
     # Get the list of of reversed logdays
     rlds = (await get_logdays(
         logprefix = logprefix,
-        logdir = logdir
+        logdir = logdir,
     )) [::-1]
     # Extract the list of periodic windows
-    wlds = [rlds[max(0,d-logwindow):min(len(rlds),d+logwindow)]
-            for d,_ in enumerate(rlds) if d%366 == 0]
-    # Return the flattened list of days
+    wlds = [rlds[max(0,d-logwindow):min(len(rlds),d+logwindow+1)]
+            for d,rld in enumerate(rlds) if rld[2:] == rlds[0][2:]]
     return [d for l in wlds for d in l][::-1]    
 
 
