@@ -21,7 +21,7 @@ import pandas as pd
 from dataclasses import dataclass
 
 from ..typing import(
-    List, Optional
+    List, Optional, f64
 )
 from ..csvlog import(
     get_logdays,
@@ -70,6 +70,63 @@ async def get_predict_tables(
     return (watts_table, energy_table)
 
 
+"""
+Simulates the Anker Solix generation 1 power part
+"""
+async def simulate_solix_1_w(
+        log: pd.DataFrame,
+        ratio: f64
+) -> None:
+
+    # Cast irridiance samples by scaling
+    issbpi = log["SBPI"] >0
+    log.loc[issbpi, "SBPI"] *= ratio
+
+    # Simultate low irradiance
+    issbpi = log["SBPI"] <35 
+    log.loc[issbpi, "SBPB"] = -log.loc[issbpi, "SBPI"]
+    log.loc[issbpi, "SBPO"] = 0
+
+    # Simultate grey irradiance
+    issbpi = (log["SBPI"] >=35) & (log["SBPI"] <100)
+    log.loc[issbpi,"SBPB"] = 0
+    log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]
+
+    # constrain high irradiance
+    issbpi = (log["SBPI"] > 800)
+    log.loc[issbpi,"SBPI"] = 800
+
+    # Simultate bright irradiance
+    issbpi = (log["SBPI"] >=100) & (log["SBPI"] <=800)
+    log.loc[issbpi,"SBPB"] = -log.loc[issbpi,"SBPI"] + 100
+    log.loc[issbpi,"SBPO"] = log.loc[issbpi,"SBPI"] + log.loc[issbpi,"SBPB"]
+
+
+"""
+Simulates the Anker Solix generation 1 energy part
+"""
+async def simulate_solix_1_wh(
+        log: pd.DataFrame,
+        realsoc: f64
+) -> None:
+
+    # Current SOC of the power bank
+    log_wh = (log["SBPB"].cumsum()-realsoc*1600)
+
+    # Simulate battery full
+    isfull = log_wh < -1600
+    log.loc[isfull,"SBPB"] = 0
+    log.loc[isfull,"SBPO"] = log.loc[isfull, "SBPI"]
+
+    # Simulate battery empty
+    isempty = log_wh >-160
+    log.loc[isempty,"SBPB"] = 0
+    log.loc[isempty,"SBPO"] = 0
+
+    # Update SOC
+    log["SBSB"] = -log_wh/1600
+    
+    
 @dataclass
 class Script_Arguments:
     logprefix: str
@@ -87,12 +144,12 @@ async def predict_naive(
         logger.error("Failed to get logdays")
         return None
 
-    yesterday, today = days[-2:]
-    logger.info(f'Predicting "{today}" using "{yesterday}"')
+    pastday, today = days[-2:]
+    logger.info(f'Predicting "{today}" using "{pastday}"')
 
-    yesterday, todaylog = await asyncio.gather(
+    pastday, todaylog = await asyncio.gather(
         get_hour_log(
-            logday = yesterday,
+            logday = pastday,
             logprefix = args.logprefix,
             logdir = args.logdir
         ),
@@ -103,68 +160,50 @@ async def predict_naive(
         )
     )
 
+    # Abort if a cast is not possible
+    if len(todaylog.index) >= len(pastday.index):
+        # No cast is possible at the end of today
+        return todaylog, None, None
+
+    
+    # Do the cast
+
+    # Keep SOC
+    realsoc = todaylog["SBSB"].iloc[0]
+    
     # Adapt the cast indices
-    yesterday.index = pd.date_range(
+    pastday.index = pd.date_range(
         todaylog.index[0].date(),
         periods=24,
         freq="h"
     )
 
-    # Keep SOC
-    realsoc = todaylog["SBSB"].iloc[0]
-    
     # Calc prediction data
-    realstop = yesterday.index[len(todaylog.index)-1]
-    caststart = yesterday.index[len(todaylog.index)]
+    realstop = pastday.index[len(todaylog.index)-1]
+    caststart = pastday.index[len(todaylog.index)]
     reallast = todaylog.loc[realstop ,"SBPI"]
-    castlast = yesterday.loc[realstop ,"SBPI"]
+    castlast = pastday.loc[realstop ,"SBPI"]
     adaptratio = reallast/castlast if castlast >0.0 else 0.0
-
+    
+    logger.info(f'Last real stop is "{realstop}"')
+    logger.info(f'Last cast start is "{caststart}"')
     logger.info(f'Last real irridiance is "{reallast}"')
     logger.info(f'Last cast irridiance is "{castlast}"')
     logger.info(f'Last real/cast ratio is "{adaptratio}"')
-    logger.info(f'Last cast start is "{caststart}"')
     
     # The restlog needs adaptation
-    restlog = yesterday.copy().loc[caststart:,:]
+    restlog = pastday.copy().loc[caststart:,:]
+    # Adapt the restlog to the current irridiance
     if adaptratio >0.0:
-        """ Try the cast with latest ratio """
-        # Cast irridiance by scalling using last hour
-        restlog["SBPI"] *= adaptratio
-
-        # Simultate low irradiance
-        issbpi = restlog["SBPI"] <35 
-        restlog.loc[issbpi, "SBPB"] = -restlog.loc[issbpi, "SBPI"]
-        restlog.loc[issbpi, "SBPO"] = 0
-
-        # Simultate grey irradiance
-        issbpi = (restlog["SBPI"] >=35) & (restlog["SBPI"] <100)
-        restlog.loc[issbpi,"SBPB"] = 0
-        restlog.loc[issbpi,"SBPO"] = restlog.loc[issbpi, "SBPI"]
-
-        # Simultate bright irradiance
-        issbpi = (restlog["SBPI"] >=100) & (restlog["SBPI"] <800)
-        restlog.loc[issbpi,"SBPB"] = -restlog.loc[issbpi,"SBPI"] + 100
-        restlog.loc[issbpi,"SBPO"] = 100
-
-        # Simultate high irradiance
-        issbpi = (restlog["SBPI"] >=800)
-        restlog.loc[issbpi,"SBPB"] = -600
-        restlog.loc[issbpi,"SBPO"] =  restlog.loc[issbpi,"SBPI"] - 600
-
-    #Best cast is real data
-    castlog = pd.concat([todaylog,restlog])
-
-    # Simulate battery full
-    isfull = castlog["SBPB"].cumsum() <-1600
-    castlog.loc[isfull,"SBPB"] = 0
-    castlog.loc[isfull,"SBPO"] = castlog.loc[isfull, "SBPI"]
-
-    # Simulate battery empty
-    isempty = castlog["SBPB"].cumsum() >0
-    castlog.loc[isempty,"SBPB"] = 0
-    castlog.loc[isempty,"SBPO"] = 0
+        await simulate_solix_1_w(
+            restlog, adaptratio
+        )
     
-    castlog["SBSB"] = realsoc - castlog["SBPB"].cumsum()/1600
+    #Join the current real data with the cast data
+    castlog = pd.concat([todaylog,restlog])
+    #Ensure the plausibility of cast
+    await simulate_solix_1_wh(
+        castlog, realsoc
+    )
 
     return castlog, realstop, caststart
