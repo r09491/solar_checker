@@ -26,24 +26,49 @@ from dataclasses import dataclass
 from ..typing import(
     List, Optional, f64
 )
+from ..common import(
+    PREDICT_POWER_NAMES
+)
 from ..csvlog import(
-    get_logdays,
-    get_predict_power_log
+    get_windowed_logs
 )
 
-async def get_hour_log(
-        logday: str,
+LOGWINDOWSIZE = 2
+async def get_hour_logs(
         logprefix: str,
-        logdir: str
-) -> pd.DataFrame:
-    log = await get_predict_power_log(
-        logday = logday,
+        logdir: str,
+        logwindow: int = LOGWINDOWSIZE
+) -> (pd.DataFrame, pd.DataFrame):
+
+    # Get the logs close to the forecast day
+    _, logs = await get_windowed_logs(
+        logwindow = logwindow,
         logprefix = logprefix,
-        logdir = logdir
+        logdir = logdir,
+        usecols = PREDICT_POWER_NAMES
     )
 
-    return log.set_index('TIME').resample('h').mean()
+    # Make hour logs from the the minute logs
+    logs = [l.set_index('TIME').resample('h').mean() for l in logs]
 
+    # The forcastday is at the end of the list
+    todaylog = logs[-1]
+
+    # Make a single log from the many passed logs
+    
+    pastlogs = pd.concat(
+        [l.reset_index(drop=True) for l in logs[:-1]]
+    )
+    
+    pastlog = pastlogs.groupby(pastlogs.index).mean()
+
+    pastlog.index = pd.date_range(
+        todaylog.index[0].date(),
+        periods=24,
+        freq="h"
+    ).set_names('TIME')
+
+    return pastlog, todaylog
 
 async def get_predict_tables(
         casthours: pd.DataFrame
@@ -138,54 +163,25 @@ class Script_Arguments:
 async def predict_naive(
         args: Script_Arguments
 ) -> (pd.DataFrame, pd.Timestamp, pd.Timestamp):
-    
-    days = await get_logdays(
+
+    pastlog, todaylog = await get_hour_logs(
         logprefix = args.logprefix,
         logdir = args.logdir
     )
-    if days is None:
-        logger.error("Failed to get logdays")
-        return None
-
-    pastday, today = days[-2:]
-    logger.info(f'Predicting "{today}" using "{pastday}"')
-
-    pastday, todaylog = await asyncio.gather(
-        get_hour_log(
-            logday = pastday,
-            logprefix = args.logprefix,
-            logdir = args.logdir
-        ),
-        get_hour_log(
-            logday = today,
-            logprefix = args.logprefix,
-            logdir = args.logdir
-        )
-    )
 
     # Abort if a cast is not possible
-    if len(todaylog.index) >= len(pastday.index):
+    if len(todaylog.index) >= len(pastlog.index):
         # No cast is possible at the end of today
         return todaylog, None, None
 
-    
-    # Do the cast
-
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1]
-    
-    # Adapt the cast indices
-    pastday.index = pd.date_range(
-        todaylog.index[0].date(),
-        periods=24,
-        freq="h"
-    )
 
     # Calc prediction data
-    realstop = pastday.index[len(todaylog.index)-1]
-    caststart = pastday.index[len(todaylog.index)]
+    realstop = pastlog.index[len(todaylog.index)-1]
+    caststart = pastlog.index[len(todaylog.index)]
     reallast = todaylog.loc[realstop ,"SBPI"]
-    castlast = pastday.loc[realstop ,"SBPI"]
+    castlast = pastlog.loc[realstop ,"SBPI"]
     adaptratio = reallast/castlast if castlast >0.0 else 0.0
     
     logger.info(f'Last real stop is "{realstop}"')
@@ -195,7 +191,7 @@ async def predict_naive(
     logger.info(f'Last real/cast ratio is "{adaptratio}"')
     
     # The restlog needs adaptation
-    restlog = pastday.copy().loc[caststart:,:]
+    restlog = pastlog.copy().loc[caststart:,:]
     # Adapt the restlog to the current irridiance
     if adaptratio >0.0:
         #Prdict the samples
