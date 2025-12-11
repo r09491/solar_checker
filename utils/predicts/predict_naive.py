@@ -1,5 +1,8 @@
-__doc__="""
-"""
+__doc__=""" Predicts the samples of an Anker Solix 1 powerbank for the
+rest of today assuming they are similar to those of the passed
+days. Changes in the hourly irridances for the rest of today are
+calculated from ratio of the latest irridiance of today to that of the
+passed days """
 
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -73,7 +76,7 @@ async def get_predict_tables(
 """
 Simulates the Anker Solix generation 1 power part
 """
-async def simulate_solix_1_w(
+async def simulate_solix_1_power_w(
         log: pd.DataFrame,
         ratio: f64
 ) -> None:
@@ -105,7 +108,7 @@ async def simulate_solix_1_w(
 """
 Simulates the Anker Solix generation 1 energy part
 """
-async def simulate_solix_1_wh(
+async def simulate_solix_1_energy_wh(
         log: pd.DataFrame,
         realsoc: f64
 ) -> None:
@@ -169,7 +172,7 @@ async def predict_naive(
     # Do the cast
 
     # Keep SOC
-    realsoc = todaylog["SBSB"].iloc[0]
+    realsoc = todaylog["SBSB"].iloc[-1]
     
     # Adapt the cast indices
     pastday.index = pd.date_range(
@@ -195,15 +198,17 @@ async def predict_naive(
     restlog = pastday.copy().loc[caststart:,:]
     # Adapt the restlog to the current irridiance
     if adaptratio >0.0:
-        await simulate_solix_1_w(
+        #Prdict the samples
+        await simulate_solix_1_power_w(
             restlog, adaptratio
         )
+
+    #Ensure the plausibility of cast
+    await simulate_solix_1_energy_wh(
+        restlog, realsoc
+    )
     
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog,restlog])
-    #Ensure the plausibility of cast
-    await simulate_solix_1_wh(
-        castlog, realsoc
-    )
 
     return castlog, realstop, caststart
