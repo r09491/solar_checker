@@ -104,19 +104,22 @@ Simulates the Anker Solix generation 1 power part
 async def simulate_solix_1_power_w(
         log: pd.DataFrame,
         ratio: f64
-) -> None:
+):
 
+    if ratio <=0:
+        return
+    
     # Cast irridiance samples by scaling
     issbpi = log["SBPI"] >0
     log.loc[issbpi, "SBPI"] *= ratio
 
     # Simultate low irradiance
-    issbpi = log["SBPI"] <35 
+    issbpi = (log["SBPI"] >0) & (log["SBPI"] <=35) 
     log.loc[issbpi, "SBPB"] = -log.loc[issbpi, "SBPI"]
     log.loc[issbpi, "SBPO"] = 0
 
     # Simultate grey irradiance
-    issbpi = (log["SBPI"] >=35) & (log["SBPI"] <100)
+    issbpi = (log["SBPI"] >35) & (log["SBPI"] <=100)
     log.loc[issbpi,"SBPB"] = 0
     log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]
 
@@ -125,7 +128,7 @@ async def simulate_solix_1_power_w(
     log.loc[issbpi,"SBPI"] = 800
 
     # Simultate bright irradiance
-    issbpi = (log["SBPI"] >=100) & (log["SBPI"] <=800)
+    issbpi = (log["SBPI"] >100) & (log["SBPI"] <=800)
     log.loc[issbpi,"SBPB"] = -log.loc[issbpi,"SBPI"] + 100
     log.loc[issbpi,"SBPO"] = log.loc[issbpi,"SBPI"] + log.loc[issbpi,"SBPB"]
 
@@ -135,24 +138,26 @@ Simulates the Anker Solix generation 1 energy part
 """
 async def simulate_solix_1_energy_wh(
         log: pd.DataFrame,
-        realsoc: f64
-) -> None:
+        realsoc: f64,
+        full_wh: f64 = -1600,
+        empty_wh: f64 = -160
+):
 
     # Current SOC of the power bank
-    log_wh = (log["SBPB"].cumsum()-realsoc*1600)
+    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
 
     # Simulate battery full
-    isfull = log_wh < -1600
+    isfull = log_wh <full_wh
     log.loc[isfull,"SBPB"] = 0
     log.loc[isfull,"SBPO"] = log.loc[isfull, "SBPI"]
 
     # Simulate battery empty
-    isempty = log_wh >-160
+    isempty = log_wh >empty_wh
     log.loc[isempty,"SBPB"] = 0
     log.loc[isempty,"SBPO"] = 0
 
     # Update SOC
-    log["SBSB"] = -log_wh/1600
+    log["SBSB"] = log_wh/full_wh
     
     
 @dataclass
@@ -193,11 +198,11 @@ async def predict_naive(
     # The restlog needs adaptation
     restlog = pastlog.copy().loc[caststart:,:]
     # Adapt the restlog to the current irridiance
-    if adaptratio >0.0:
-        #Prdict the samples
-        await simulate_solix_1_power_w(
-            restlog, adaptratio
-        )
+    #if adaptratio >0.0:
+    #Predict the samples
+    await simulate_solix_1_power_w(
+        restlog, adaptratio
+    )
 
     #Ensure the plausibility of cast
     await simulate_solix_1_energy_wh(
