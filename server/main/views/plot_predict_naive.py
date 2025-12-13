@@ -17,14 +17,17 @@ import pandas as pd
 from datetime import(
     datetime,
 )
-
+from utils.common import (
+    ymd_tomorrow,
+    ymd_yesterday
+)
 from utils.plots import (
     get_w_line,
     get_kwh_line,
 )
 from utils.predicts import (
-    Script_Arguments,
     predict_naive_today,
+    predict_naive_castday,
     get_predict_tables
 )
 
@@ -41,22 +44,32 @@ async def plot_predict_naive(request: web.Request) -> dict:
     
     logdir = conf['logdir']
     logprefix = conf['logprefix']
-    #logdayformat = conf['logdayformat']
-    
-    #today = datetime.strftime(datetime.now(), logdayformat)
-    
-    #try:
-    #    castday = request.match_info['castday']
-    #except KeyError:
-    #    castday = ymd_tomorrow(today)
+    logdayformat = conf['logdayformat']
 
-    cast = await predict_naive_today(
-        Script_Arguments(logprefix, logdir)
-    )
+    lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
+
+    today = datetime.strftime(datetime.now(), logdayformat)
+    
+    try:
+        castday = request.match_info['castday']
+    except KeyError:
+        castday = today
+
+    castday = today if castday < today else castday
+    
+    if castday == today:
+        cast = await predict_naive_today(
+            logprefix, logdir
+        )
+    else:
+        cast = await predict_naive_castday(
+            castday, lat, lon, logprefix, logdir
+        )
+        
     if cast is None:
         return aiohttp_jinja2.render_template(
             "error.html", request,
-            {"error" : f'Log files for  "{castday}" not found or not valid'}
+            {"error" : f'Log files for "{castday}" not found or not valid'}
         )
 
     castday, casthours, realstop, caststart = cast
@@ -119,6 +132,8 @@ async def plot_predict_naive(request: web.Request) -> dict:
         )
 
     return {'castday': castday,
+            'casttomorrow': ymd_tomorrow(castday),
+            'castyesterday': ymd_yesterday(castday),
             'w': w,
             'kwh': kwh,
             'predicttables': predicttables}

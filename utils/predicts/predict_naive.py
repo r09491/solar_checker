@@ -23,6 +23,9 @@ import pandas as pd
 
 from dataclasses import dataclass
 
+from datetime import(
+    datetime
+)
 from ..typing import(
     List, Optional, f64
 )
@@ -31,6 +34,9 @@ from ..common import(
 )
 from ..csvlog import(
     get_windowed_logs
+)
+from brightsky import (
+    Sky
 )
 
 LOGWINDOWSIZE = 2
@@ -155,16 +161,20 @@ async def simulate_solix_1_energy_wh(
     
 @dataclass
 class Script_Arguments:
+    castday: str
+    lat: f64
+    lon: f64
     logprefix: str
     logdir: str
 
 async def predict_naive_today(
-        args: Script_Arguments
-) -> (pd.DataFrame, pd.Timestamp, pd.Timestamp):
+        logprefix: str,
+        logdir: str
+) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
 
     today, pastlog, todaylog = await get_hour_logs(
-        logprefix = args.logprefix,
-        logdir = args.logdir
+        logprefix = logprefix,
+        logdir = logdir
     )
 
     # Abort if a cast is not possible
@@ -206,3 +216,119 @@ async def predict_naive_today(
     castlog = pd.concat([todaylog,restlog])
 
     return today, castlog, realstop, caststart
+
+
+SUNSHINE_TZ='Europe/Berlin'
+
+"""
+Returns the sunshine minute for each hour in the castday
+"""
+async def get_sunshine_pool(
+        castday: str,
+        lat: float,
+        lon: float,
+        tz: str = SUNSHINE_TZ 
+) -> Optional[pd.DataFrame]:
+    
+    sky = Sky(lat, lon, castday, tz)
+    df = (await sky.get_sky_info())['sunshine']
+    if df is None:
+        logger.error(f'No sky features for {castday}')
+        return None
+    if df.isnull().any().any():
+        logger.error(f'At least one undefined column for {castday}')
+        return None
+
+    return df
+
+
+""" Return the ratio of sunshine minutes for each hour from the
+castday to today """
+async def get_sunshine_ratios(
+        castdays: List[str],
+        lat: f64,
+        lon: f64,
+        tz: str = SUNSHINE_TZ
+)  -> Optional[np.ndarray]:
+
+    if len(castdays) >2:
+        logger.error(f'Only two castdays allowed')
+        return None
+
+    if castdays[-1] >= castdays[0]:
+        logger.error(f'Castday to be in the future')
+        return None
+
+    pooltasks = [asyncio.create_task(
+        get_sunshine_pool(
+            cd, lat, lon, tz
+        )
+    ) for cd in castdays]
+    
+    """ Get the list of associated columns """
+    pools = await asyncio.gather(*pooltasks)
+    if pools is None:
+        logger.error(f'Unable to retrieve sunshine pools')
+        return None
+
+    # No div by zero!
+    ratios = (pools[0].values + 1) / (pools[-1].values + 1)
+    
+    return ratios[:-1]
+
+
+""" """
+async def predict_naive_castday(
+        castday: str,
+        lat: f64,
+        lon: f64,
+        logprefix: str,
+        logdir: str,
+) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
+
+    cast = await predict_naive_today(
+        logprefix,
+        logdir
+    )
+    if cast is None:
+        logger.error(f'Today Hour Predict failed')
+        return None
+
+    today, casthours, realstop, caststart = cast
+
+    if castday <= today:
+        logger.error(f'Predict day is in the past')
+        return None
+
+    
+    sunratios = await get_sunshine_ratios(
+        [castday, today], lat, lon
+    )
+    if sunratios is None:
+        logger.error(f'Sunratios not available')
+        return None
+
+    
+    # Keep SOC
+    castsoc = casthours.iloc[0]["SBSB"]
+
+    casthours.index = pd.date_range(
+        datetime.strptime(castday, "%y%m%d"),
+        periods=24,
+        freq="h"
+    )
+
+    #Cast radiation
+    casthours.loc[:, "SBPI"] *= sunratios
+
+    #Predict the samples
+    await simulate_solix_1_power_w(
+        casthours
+    )
+
+    #Ensure the plausibility of cast
+    await simulate_solix_1_energy_wh(
+        casthours, castsoc
+    )
+
+    return castday, casthours, None, casthours.index[0]

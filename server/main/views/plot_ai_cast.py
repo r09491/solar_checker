@@ -65,8 +65,10 @@ async def plot_ai_cast(request: web.Request) -> dict:
     try:
         castday = request.match_info['castday']
     except KeyError:
-        castday = ymd_tomorrow(today)
-        
+        castday = today
+
+    castday = today if castday < today else castday
+    
     pool = await predict_models(
         castday, tz, lat, lon, modeldir
     )

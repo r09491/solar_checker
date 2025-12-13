@@ -27,6 +27,7 @@ from utils.typing import(
 from utils.predicts import (
     Script_Arguments,
     predict_naive_today,
+    predict_naive_castday,
     get_predict_tables
 )
 
@@ -35,6 +36,7 @@ LOGDIR='/home/r09491/storage/solar_checker'
 LOGPREFIX='solar_checker_latest'
 
 async def output_hour(
+        castday:str,
         casthours: pd.DataFrame,
         caststart: pd.Timestamp
 ) -> None:
@@ -44,10 +46,10 @@ async def output_hour(
     predicttables = await get_predict_tables(casthours)
 
     w = predicttables[0]
-    print(f"\nRelative Watts Cast @ {caststart}")
+    print(f"\nRelative Watts [W] Cast @ {caststart} for {castday}")
     print(w)
 
-    print(f"\nAbsolute Watts Cast @ {caststart}")
+    print(f"\nAbsolute Watts [Wh] Cast @ {caststart} for {castday}")
     wh =  predicttables[1]
     print(wh)
     
@@ -66,6 +68,18 @@ if __name__ == '__main__':
         parser.add_argument('--version', action = 'version', version = __version__)
 
         parser.add_argument(
+            '--castday', type=str, default=None,
+            help = "The day to predict. If 'None' then today!")
+
+        parser.add_argument(
+            '--lat', type = float, default = 49.04885,
+            help = "latitude for predict [-90 - +90]")
+
+        parser.add_argument(
+            '--lon', type = float, default = 11.78333,
+            help = "longitude for predict [-180 - +180]")
+
+        parser.add_argument(
             '--logprefix', type=str, default=LOGPREFIX,
             help = "The prefix used in log file names")
 
@@ -76,21 +90,42 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
         return Script_Arguments(
+            args.castday,
+            args.lat,
+            args.lon,
             args.logprefix,
             args.logdir)
 
 
     async def main(args: Script_Arguments) -> int:
 
-        cast = await predict_naive_today(args)
-        if cast is None:
-            logger.error(f'Hour Predict failed')
-            return -1
+        if args.castday is None:
+            cast = await predict_naive_today(
+                args.logprefix,
+                args.logdir
+            )
+            if cast is None:
+                logger.error(f'Today Predict failed')
+                return -1
 
-        today, casthours, realstop, caststart = cast
+            castday, casthours, _, caststart = cast
         
-        await output_hour(casthours, caststart)
+        else:
+            cast = await predict_naive_castday(
+                args.castday,
+                args.lat,
+                args.lon,
+                args.logprefix,
+                args.logdir
+            )
+            if cast is None:
+                logger.error(f'Castday predict failed')
+                return -2
+
+            castday, casthours, _, caststart = cast
         
+        await output_hour(castday, casthours, caststart)
+
         return 0
 
         

@@ -56,6 +56,7 @@ async def plot_predict(request: web.Request) -> dict:
     
     logdir = conf['logdir']
     logprefix = conf['logprefix']
+    logdayformat = conf['logdayformat']
     logpredictwindow = conf['logpredictwindow']
     logpredictdays = conf['logpredictdays']
     logpredictcolumns = conf['logpredictcolumns']
@@ -63,11 +64,15 @@ async def plot_predict(request: web.Request) -> dict:
     lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
 
     castfindhours = conf['castfindhours']
+
+    today = datetime.strftime(datetime.now(), logdayformat)
     
     try:
         logday = request.match_info['logday']
     except KeyError:
-        logday = datetime.strftime(datetime.now(), logdayformat)
+        logday = today
+    
+    logday = today if logday > today else logday
 
     try:
         what = request.match_info['what'].capitalize()

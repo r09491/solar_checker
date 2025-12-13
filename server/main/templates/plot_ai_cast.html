@@ -5,8 +5,15 @@
 {% block content %}
 
 <div style='display:flex;justify-content:center;'>
+  <a href='/plot_predict_naive'>Today Naive</a>&nbsp;&nbsp
+  <a href='/plot_predict/{{ castday }}/today'>Today Cast</a>&nbsp;&nbsp
+  <a href='/plot_predict/{{ castday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ castday }}/total'>Total Cast</a>
+</div>
+
+<div style='display:flex;justify-content:center;'>
   <div style='margin:30px;width:90px;text-align:center;'>
-    <a href='/plot_ai_cast/{{castyesterday}}'>{{castyesterday}}</a>
+    <a href='/plot_ai_cast/{{castyesterday}}'><1</a>
   </div>
 
   <div style='display:flex;justify-content:center;'>
@@ -15,7 +22,7 @@
   </div>
 
   <div style='margin:30px;width:90px;text-align:center;'> 
-    <a href='/plot_ai_cast/{{casttomorrow}}'>{{casttomorrow}}</a>
+    <a href='/plot_ai_cast/{{casttomorrow}}'>1></a>
   </div>
 </div>
 
