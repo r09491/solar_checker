@@ -1,7 +1,7 @@
 from .predict_minute import *
 from .predict_naive import (
     Script_Arguments,
-    predict_naive,
+    predict_naive_today,
     get_predict_tables
 )
 

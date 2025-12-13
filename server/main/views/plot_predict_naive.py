@@ -24,7 +24,7 @@ from utils.plots import (
 )
 from utils.predicts import (
     Script_Arguments,
-    predict_naive,
+    predict_naive_today,
     get_predict_tables
 )
 
@@ -41,16 +41,16 @@ async def plot_predict_naive(request: web.Request) -> dict:
     
     logdir = conf['logdir']
     logprefix = conf['logprefix']
-    logdayformat = conf['logdayformat']
+    #logdayformat = conf['logdayformat']
     
-    today = datetime.strftime(datetime.now(), logdayformat)
+    #today = datetime.strftime(datetime.now(), logdayformat)
     
-    try:
-        castday = request.match_info['castday']
-    except KeyError:
-        castday = ymd_tomorrow(today)
+    #try:
+    #    castday = request.match_info['castday']
+    #except KeyError:
+    #    castday = ymd_tomorrow(today)
 
-    cast = await predict_naive(
+    cast = await predict_naive_today(
         Script_Arguments(logprefix, logdir)
     )
     if cast is None:
@@ -59,7 +59,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
             {"error" : f'Log files for  "{castday}" not found or not valid'}
         )
 
-    casthours, realstop, caststart = cast
+    castday, casthours, realstop, caststart = cast
     
     time = np.array(casthours.index)
     sbpi = np.array(casthours['SBPI'])

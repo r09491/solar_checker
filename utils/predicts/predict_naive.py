@@ -41,7 +41,7 @@ async def get_hour_logs(
 ) -> (pd.DataFrame, pd.DataFrame):
 
     # Get the logs close to the forecast day
-    _, logs = await get_windowed_logs(
+    logdays, logs = await get_windowed_logs(
         logwindow = logwindow,
         logprefix = logprefix,
         logdir = logdir,
@@ -68,7 +68,7 @@ async def get_hour_logs(
         freq="h"
     ).set_names('TIME')
 
-    return pastlog, todaylog
+    return logdays[-1], pastlog, todaylog
 
 async def get_predict_tables(
         casthours: pd.DataFrame
@@ -102,16 +102,9 @@ async def get_predict_tables(
 Simulates the Anker Solix generation 1 power part
 """
 async def simulate_solix_1_power_w(
-        log: pd.DataFrame,
-        ratio: f64
+        log: pd.DataFrame
 ):
 
-    if ratio <=0:
-        return
-    
-    # Cast irridiance samples by scaling
-    issbpi = log["SBPI"] >0
-    log.loc[issbpi, "SBPI"] *= ratio
 
     # Simultate low irradiance
     issbpi = (log["SBPI"] >0) & (log["SBPI"] <=35) 
@@ -165,11 +158,11 @@ class Script_Arguments:
     logprefix: str
     logdir: str
 
-async def predict_naive(
+async def predict_naive_today(
         args: Script_Arguments
 ) -> (pd.DataFrame, pd.Timestamp, pd.Timestamp):
 
-    pastlog, todaylog = await get_hour_logs(
+    today, pastlog, todaylog = await get_hour_logs(
         logprefix = args.logprefix,
         logdir = args.logdir
     )
@@ -187,7 +180,7 @@ async def predict_naive(
     caststart = pastlog.index[len(todaylog.index)]
     reallast = todaylog.loc[realstop ,"SBPI"]
     castlast = pastlog.loc[realstop ,"SBPI"]
-    adaptratio = reallast/castlast if castlast >0.0 else 0.0
+    adaptratio = (reallast+1)/(castlast+1) # no div by zero
     
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
@@ -197,11 +190,11 @@ async def predict_naive(
     
     # The restlog needs adaptation
     restlog = pastlog.copy().loc[caststart:,:]
-    # Adapt the restlog to the current irridiance
-    #if adaptratio >0.0:
+    restlog.loc[:,"SBPI"] *= adaptratio
+
     #Predict the samples
     await simulate_solix_1_power_w(
-        restlog, adaptratio
+        restlog
     )
 
     #Ensure the plausibility of cast
@@ -212,4 +205,4 @@ async def predict_naive(
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog,restlog])
 
-    return castlog, realstop, caststart
+    return today, castlog, realstop, caststart

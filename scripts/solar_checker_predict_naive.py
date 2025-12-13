@@ -26,7 +26,7 @@ from utils.typing import(
 )
 from utils.predicts import (
     Script_Arguments,
-    predict_naive,
+    predict_naive_today,
     get_predict_tables
 )
 
@@ -82,12 +82,12 @@ if __name__ == '__main__':
 
     async def main(args: Script_Arguments) -> int:
 
-        cast = await predict_naive(args)
+        cast = await predict_naive_today(args)
         if cast is None:
             logger.error(f'Hour Predict failed')
             return -1
 
-        casthours, realstop, caststart = cast
+        today, casthours, realstop, caststart = cast
         
         await output_hour(casthours, caststart)
         
