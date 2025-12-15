@@ -101,6 +101,8 @@ if __name__ == '__main__':
 
         if args.castday is None:
             cast = await predict_naive_today(
+                args.lat,
+                args.lon,
                 args.logprefix,
                 args.logdir
             )
@@ -109,7 +111,7 @@ if __name__ == '__main__':
                 return -1
 
             castday, casthours, _, caststart = cast
-        
+            
         else:
             cast = await predict_naive_castday(
                 args.castday,

@@ -59,7 +59,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
     
     if castday == today:
         cast = await predict_naive_today(
-            logprefix, logdir
+            lat, lon, logprefix, logdir
         )
     else:
         cast = await predict_naive_castday(
