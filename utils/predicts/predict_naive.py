@@ -40,8 +40,7 @@ from brightsky import (
 )
 
 SUNSHINE_TZ='Europe/Berlin'
-
-""" Returns the sunshine minute for each hour in the castday """
+""" Returns the sunshine minutes for each hour in the castday """
 async def get_hour_sunshine_pool(
         castday: str,
         lat: float,
@@ -204,20 +203,26 @@ async def simulate_solix_1_energy_wh(
         empty_wh: f64 = -160
 ):
 
-    # Current SOC of the power bank
+    # Simulate battery full
     log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
+    isprefull = (log_wh > full_wh) & (log_wh < 0.9*full_wh)
+    log.loc[isprefull,"SBPB"] = 0.1*full_wh
+    log.loc[isprefull,"SBPO"] = log.loc[isprefull, "SBPI"] + 0.1*full_wh
 
     # Simulate battery full
+    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
     isfull = log_wh <full_wh
     log.loc[isfull,"SBPB"] = 0
     log.loc[isfull,"SBPO"] = log.loc[isfull, "SBPI"]
 
     # Simulate battery empty
+    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
     isempty = log_wh >empty_wh
     log.loc[isempty,"SBPB"] = 0
     log.loc[isempty,"SBPO"] = 0
 
     # Update SOC
+    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
     log["SBSB"] = log_wh/full_wh
     
     
