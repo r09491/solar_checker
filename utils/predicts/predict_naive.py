@@ -313,7 +313,7 @@ async def predict_naive_today(
     return today, castlog, realstop, caststart
 
 
-""" """
+""" Predict the radiation for the castday soley on the set of the pastdays """
 async def predict_naive_castday(
         castday: str,
         lat: f64,
@@ -322,52 +322,44 @@ async def predict_naive_castday(
         logdir: str,
 ) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
 
-    cast = await predict_naive_today(
-        lat,
-        lon,
-        logprefix,
-        logdir
+    # Read the 24 predicted samples for the model day. The later are
+    # calculated from the window selected logs. The logs have hour
+    # resolution. Today samples are ignored.
+    days, pastlog, _ = await get_hour_sample_logs(
+        logprefix = logprefix,
+        logdir = logdir
     )
-    if cast is None:
-        logger.error(f'Today Hour Predict failed')
-        return None
 
-    today, casthours, realstop, caststart = cast
-
-    if castday <= today:
-        logger.error(f'Predict day is in the past')
+    today = days[-1]
+    if castday < today:
+        logger.error(f'"{castday}" is in the past')
         return None
     
+
+    # Read the sun minute ratios from the pastlog to the castday
     sunratios = await get_hour_sunshine_ratios(
-        [castday, today], lat, lon
+        days[:-1] + [castday], lat, lon
     )
     if sunratios is None:
-        logger.error(f'Sunratios not available')
+        logger.error(f'Sunratios are not available')
         return None
 
     sunperf = sunratios.mean()
-    logger.info(f'Expected sun performance for castday: "{100*sunperf:.0f}%"')
+    logger.info(f'Expected sun performance by forecast: "{100*sunperf:.0f}%"')
 
-    # Keep SOC
-    castsoc = casthours.iloc[0]["SBSB"]
-
-    casthours.index = pd.date_range(
-        datetime.strptime(castday, "%y%m%d"),
-        periods=len(sunratios),
-        freq="h"
-    )
-
-    #Cast radiation
-    casthours.loc[:, "SBPI"] /= sunratios
+    pastsoc = pastlog["SBSB"].iloc[0]
+    
+    # Update the irridiance past day average to expected aky conditions
+    pastlog.loc[:,"SBPI"] *= sunratios 
 
     #Predict the samples
     await simulate_solix_1_power_w(
-        casthours
+        pastlog
     )
 
     #Ensure the plausibility of cast
     await simulate_solix_1_energy_wh(
-        casthours, castsoc
+        pastlog, pastsoc
     )
 
-    return castday, casthours, None, casthours.index[0]
+    return castday, pastlog, None, pastlog.index[0]
