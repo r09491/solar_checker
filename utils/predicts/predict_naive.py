@@ -91,7 +91,7 @@ async def get_hour_sunshine_ratios(
 
     # No div by zero!
     ratios = (todaysun.values + 1) / (pastsun.values + 1) 
-    return ratios[:-1]
+    return ratios
 
 
 LOGWINDOWSIZE = 2
@@ -110,7 +110,9 @@ async def get_hour_sample_logs(
     )
 
     # Make hour logs from the the minute logs
-    logs = [l.set_index('TIME').resample('h').mean() for l in logs]
+    logs = [l.set_index('TIME').resample(
+        'h', label='right', closed='right'
+    ).mean() for l in logs]
 
     # The forcastday is at the end of the list
     todaylog = logs[-1]
@@ -125,7 +127,7 @@ async def get_hour_sample_logs(
 
     pastlog.index = pd.date_range(
         todaylog.index[0].date(),
-        periods=24,
+        periods=25,
         freq="h"
     ).set_names('TIME')
 
@@ -136,7 +138,9 @@ async def get_predict_tables(
         casthours: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
 
-    casthours = casthours.resample('3h').mean()
+    casthours = casthours.iloc[:-1,:].resample(
+        '3h', label='left', closed='left'
+    ).mean()
 
     starts = casthours.index.strftime("%H:00")
     stops = casthours.index.shift(1).strftime("%H:00")
@@ -275,23 +279,23 @@ async def predict_naive_today(
     realsoc = todaylog["SBSB"].iloc[-1]
 
     # Calc prediction data
-    realstop = pastlog.index[len(todaylog.index)-1]
-    caststart = pastlog.index[len(todaylog.index)]
-    reallast = todaylog.loc[realstop ,"SBPI"]
-    castlast = pastlog.loc[realstop ,"SBPI"]
-    adaptratio = (reallast+1)/(castlast+1) # no div by zero
+    realstop = pastlog.index[len(todaylog.index)-2]
+    caststart = pastlog.index[len(todaylog.index)-1]
+    realsbpi = todaylog.loc[caststart ,"SBPI"]
+    castsbpi = pastlog.loc[caststart ,"SBPI"]
+    ratiosbpi = (realsbpi+1)/(castsbpi+1) # no div by zero
         
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
-    logger.info(f'Last real irridiance is "{reallast:.0f}"')
-    logger.info(f'Last cast irridiance is "{castlast:.0f}"')
-    logger.info(f'Last real/cast ratio is "{adaptratio:.2f}"')
+    logger.info(f'Last real irridiance is "{realsbpi:.0f}"')
+    logger.info(f'Last cast irridiance is "{castsbpi:.0f}"')
+    logger.info(f'Last real/cast ratio is "{ratiosbpi:.2f}"')
 
-    logger.info(f'Expected sun performance for today: "{100*adaptratio*sunperf:.0f}%"')
+    logger.info(f'Expected sun performance for today: "{100*ratiosbpi*sunperf:.0f}%"')
         
     # The restlog needs adaptation
     restlog = pastlog.loc[caststart:,:].copy()
-    restlog.loc[:,"SBPI"] *= adaptratio
+    restlog.loc[:,"SBPI"] *= ratiosbpi
     
     #Predict the samples
     await simulate_solix_1_power_w(
@@ -304,7 +308,7 @@ async def predict_naive_today(
     )
     
     #Join the current real data with the cast data
-    castlog = pd.concat([todaylog,restlog])
+    castlog = pd.concat([todaylog[:realstop],restlog])
 
     return today, castlog, realstop, caststart
 
@@ -349,7 +353,7 @@ async def predict_naive_castday(
 
     casthours.index = pd.date_range(
         datetime.strptime(castday, "%y%m%d"),
-        periods=24,
+        periods=len(sunratios),
         freq="h"
     )
 
