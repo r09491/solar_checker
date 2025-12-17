@@ -1,8 +1,8 @@
 __doc__=""" Predicts the samples of an Anker Solix 1 powerbank for the
-rest of today assuming they are similar to those of the passed
-days. Changes in the hourly irridances for the rest of today are
-calculated from ratio of the latest irridiance of today to that of the
-passed days """
+rest of today or a complete given castday assuming they behave similar
+than some passed days. Changes for the rest of today are calculated
+from ratio of the latest irridiance of today or suntime duration to
+that of the passed days """
 
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -91,7 +91,7 @@ async def get_hour_sunshine_ratios(
 
     # No div by zero!
     ratios = (todaysun.values + 1) / (pastsun.values + 1) 
-    return ratios
+    return ratios[:-1]
 
 
 LOGWINDOWSIZE = 2
@@ -111,7 +111,7 @@ async def get_hour_sample_logs(
 
     # Make hour logs from the the minute logs
     logs = [l.set_index('TIME').resample(
-        'h', label='right', closed='right'
+        'h', label='left', closed='left'
     ).mean() for l in logs]
 
     # The forcastday is at the end of the list
@@ -127,7 +127,7 @@ async def get_hour_sample_logs(
 
     pastlog.index = pd.date_range(
         todaylog.index[0].date(),
-        periods=25,
+        periods=len(pastlog),
         freq="h"
     ).set_names('TIME')
 
@@ -138,7 +138,7 @@ async def get_predict_tables(
         casthours: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
 
-    casthours = casthours.iloc[:-1,:].resample(
+    casthours = casthours.resample(
         '3h', label='left', closed='left'
     ).mean()
 
@@ -170,7 +170,6 @@ Simulates the Anker Solix generation 1 power part
 async def simulate_solix_1_power_w(
         log: pd.DataFrame
 ):
-
 
     # Simultate low irradiance
     issbpi = (log["SBPI"] >0) & (log["SBPI"] <=35) 
@@ -270,7 +269,7 @@ async def predict_naive_today(
         return None
 
     sunperf = sunratios.mean()
-    logger.info(f'Expected sun performance by forecast: "{100*sunperf:.0f}%"')
+    logger.info(f'Expected sun performance by suntime: "{100*sunperf:.0f}%"')
     
     # Update the irridiance past day average to expected aky conditions
     pastlog.loc[:,"SBPI"] *= sunratios 
@@ -279,10 +278,10 @@ async def predict_naive_today(
     realsoc = todaylog["SBSB"].iloc[-1]
 
     # Calc prediction data
-    realstop = pastlog.index[len(todaylog.index)-2]
-    caststart = pastlog.index[len(todaylog.index)-1]
-    realsbpi = todaylog.loc[caststart ,"SBPI"]
-    castsbpi = pastlog.loc[caststart ,"SBPI"]
+    realstop = pastlog.index[len(todaylog.index)-1]
+    caststart = pastlog.index[len(todaylog.index)]
+    realsbpi = todaylog.loc[realstop ,"SBPI"]
+    castsbpi = pastlog.loc[realstop ,"SBPI"]
     ratiosbpi = (realsbpi+1)/(castsbpi+1) # no div by zero
         
     logger.info(f'Last real stop is "{realstop}"')
@@ -291,7 +290,7 @@ async def predict_naive_today(
     logger.info(f'Last cast irridiance is "{castsbpi:.0f}"')
     logger.info(f'Last real/cast ratio is "{ratiosbpi:.2f}"')
 
-    logger.info(f'Expected sun performance for today: "{100*ratiosbpi*sunperf:.0f}%"')
+    logger.info(f'Expected sun performance by observation: "{100*ratiosbpi*sunperf:.0f}%"')
         
     # The restlog needs adaptation
     restlog = pastlog.loc[caststart:,:].copy()

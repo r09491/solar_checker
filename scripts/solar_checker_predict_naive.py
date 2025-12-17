@@ -110,7 +110,7 @@ if __name__ == '__main__':
                 logger.error(f'Today Predict failed')
                 return -1
 
-            castday, casthours, _, caststart = cast
+            castday, casthours, realstop, _ = cast
             
         else:
             cast = await predict_naive_castday(
@@ -124,9 +124,9 @@ if __name__ == '__main__':
                 logger.error(f'Castday predict failed')
                 return -2
 
-            castday, casthours, _, caststart = cast
+            castday, casthours, realstop, _ = cast
         
-        await output_hour(castday, casthours, caststart)
+        await output_hour(castday, casthours, realstop)
 
         return 0
 
