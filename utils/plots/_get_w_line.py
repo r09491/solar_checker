@@ -73,7 +73,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
     # 'Have output (solarbank)
     sbpo = sbpo if sbpo is not None else np.zeros_like(smp)
-    issbpoon = sbpo>=0 # = a must
+    issbpoon = sbpo>0
     sbpoon = sbpo[issbpoon]
     sbpoon_mean = sbpoon.mean() if sbpoon.any() else 0
     sbpoon_max = sbpoon.max()  if sbpoon.any() else 0
@@ -116,7 +116,6 @@ def _get_w_line(time: t64s, smp: f64s,
             )        
 
     """ Plot solarbank and smartmeter filled """
-    
     if np.any(sbpoon):
         ax.fill_between(time, 0, sbpo,
                         where = issbpoon,
@@ -125,24 +124,34 @@ def _get_w_line(time: t64s, smp: f64s,
                         where = issbpoon,
                         color='b', lw=1, alpha=0.3)
         issmpin &= ~issbpoon
-        
+        isivpon &= ~issbpoon
+        isspphon &= ~issbpoon
+
     if np.any(ivpon):
         ax.fill_between(time, 0, ivp,
-                        where = isivpon & ~issbpoon,
+                        where = isivpon,
                         color='c', label='INV', lw=1, alpha=0.3)
         ax.fill_between(time, ivp, ivp + smpin,
-                        where = isivpon & ~issbpoon,
+                        where = isivpon,
                         color='b', lw=1, alpha=0.3)
         issmpin &= ~isivpon
+        isspphon &= ~isivpon
 
     if np.any(spphon):
         ax.fill_between(time, 0, spph,
-                        where = isspphon & ~(issbpoon | isivpon),
+                        where = isspphon,
                         color='brown', label='PLUG', lw=1, alpha=0.3)
         ax.fill_between(time, spph, spph + smpin,
-                        where = isspphon & ~(issbpoon | isivpon),
+                        where = isspphon,
                         color='b', lw=1, alpha=0.3)
         issmpin &= ~isspph
+   
+    if np.any(sbpion):
+        # Flags at start and end of SPBI are to be set at interval
+        # boundaries.
+        issun = np.where(issbpion)[0]
+        start, stop = issun[0], issun[-1]
+        issmpin[start], issmpin[stop] = True, True
 
     if np.any(smpin): #import
         ax.fill_between(time, 0, smpin,
@@ -175,13 +184,11 @@ def _get_w_line(time: t64s, smp: f64s,
     if np.any(spph):
         ax.plot(time, spph,
                 color='brown',label='PLUG', lw=2, ls='-', alpha=0.3)
-    if np.any(ivp):
+    if np.any(ivpon):
         ax.plot(time, ivp,
                 color='c', label='INV', lw=2, ls='-', alpha=0.3)
     if np.any(sbpion):
-        issun = np.where(issbpion)[0]
-        start, stop = issun[0], issun[-1]+1
-        ax.plot(time[start:stop], sbpi[start:stop],
+        ax.plot(time[start:stop+1], sbpi[start:stop+1],
                 color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
         if time.size<=24*60: #only plot within 24h
             ax.fill_between(time[issbpion],
