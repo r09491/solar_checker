@@ -117,83 +117,86 @@ def _get_w_line(time: t64s, smp: f64s,
 
     """ Plot solarbank and smartmeter filled """
     if np.any(sbpoon):
+        isfill = issbpoon|np.roll(issbpoon,1)|np.roll(issbpoon,-1)
         ax.fill_between(time, 0, sbpo,
-                        where = issbpoon,
+                        where = isfill,
                         color='grey', label='BANK', lw=1, alpha=0.3)
         ax.fill_between(time, sbpo, sbpo + smpin,
-                        where = issbpoon,
+                        where = isfill,
                         color='b', lw=1, alpha=0.3)
-        issmpin &= ~issbpoon
-        isivpon &= ~issbpoon
-        isspphon &= ~issbpoon
+        issmpin &= ~isfill 
+        isivpon &= ~isfill
+        isspphon &= ~isfill
 
     if np.any(ivpon):
+        isfill = isivpon|np.roll(isivpon,1)|np.roll(isivpon,-1)
         ax.fill_between(time, 0, ivp,
-                        where = isivpon,
+                        where = isfill,
                         color='c', label='INV', lw=1, alpha=0.3)
         ax.fill_between(time, ivp, ivp + smpin,
-                        where = isivpon,
+                        where = isfill,
                         color='b', lw=1, alpha=0.3)
-        issmpin &= ~isivpon
-        isspphon &= ~isivpon
+        issmpin &= ~isfill
+        isspphon &= ~isfill
 
     if np.any(spphon):
+        isfill = isspphon|np.roll(isspphon,1)|np.roll(isspphon,-1)
         ax.fill_between(time, 0, spph,
-                        where = isspphon,
+                        where = isfill,
                         color='brown', label='PLUG', lw=1, alpha=0.3)
         ax.fill_between(time, spph, spph + smpin,
-                        where = isspphon,
+                        where = isfill,
                         color='b', lw=1, alpha=0.3)
-        issmpin &= ~isspph
+        issmpin &= ~isfill
    
-    if np.any(sbpion):
-        # Flags at start and end of SPBI are to be set at interval
-        # boundaries.
-        issun = np.where(issbpion)[0]
-        start, stop = issun[0], issun[-1]
-        issmpin[start], issmpin[stop] = True, True
 
     if np.any(smpin): #import
+        isfill = issmpin|np.roll(issmpin,1)|np.roll(issmpin,-1)
         ax.fill_between(time, 0, smpin,
-                        where = issmpin,
+                        where = isfill,
                         color='b', label='GRID', lw=1, alpha=0.3)
-
+        issmpout &= ~isfill
+        
     """ Plot the battery power of the solarbank during charging"""
 
     if np.any(sbpbin): #charge
+        isfill = issbpbin|np.roll(issbpbin,1)|np.roll(issbpbin,-1)
         ax.fill_between(time, sbpbin, 0,
-                        where = issbpbin,
+                        where = isfill,
                         color='m', label='BAT', alpha=0.3)
         ax.fill_between(time, sbpbin+smpout, sbpbin, 
-                        where = issbpbin,
+                        where = isfill,
                         color='b', lw=0, alpha=0.3)
-        
-    if np.any(sbpbout): #discharge
-        ax.fill_between(time, sbpbout, 0,
-                        where = issbpbout,
-                        color='m', alpha=0.3)
+        issmpout &= ~isfill
 
     if np.any(smpout): #export
+        isfill = issmpin|np.roll(issmpin,1)|np.roll(issmpin,-1)
         ax.fill_between(time, 0, smpout,
-                        where = issmpout & ~issbpbin,
+                        where = isfill,
                         color='b', lw=0, alpha=0.3)
 
-
+    if np.any(sbpbout): #discharge
+        isfill = issbpbout|np.roll(issbpbout,1)|np.roll(issbpbout,-1)
+        ax.fill_between(time, sbpbout, 0,
+                        where = isfill,
+                        color='m', alpha=0.3)
+        
+    
     """ Plot amplifying data as lines """
 
-    if np.any(spph):
+    if np.any(spphon):
         ax.plot(time, spph,
                 color='brown',label='PLUG', lw=2, ls='-', alpha=0.3)
     if np.any(ivpon):
         ax.plot(time, ivp,
                 color='c', label='INV', lw=2, ls='-', alpha=0.3)
     if np.any(sbpion):
-        ax.plot(time[start:stop+1], sbpi[start:stop+1],
+        ax.plot(time[issbpion], sbpi[issbpion],
                 color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
         if time.size<=24*60: #only plot within 24h
             ax.fill_between(time[issbpion],
-                            np.full_like(sbpi[issbpion], 600),
-                            np.full_like(sbpi[issbpion], 800),
+                            np.full_like(sbpion, 600),
+                            np.full_like(sbpion, 800),
                             color='black', label='LIMITS', alpha=0.1)
 
     """ Generate title """
