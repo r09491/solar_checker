@@ -268,21 +268,23 @@ async def predict_naive_today(
         logger.error(f'Sunratios not available')
         return None
 
-    sunperf = sunratios.mean()
-    logger.info(f'Expected sun performance by suntime: "{100*sunperf:.0f}%"')
-    
     # Update the irridiance past day average to expected aky conditions
+    pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
     pastlog.loc[:,"SBPI"] *= sunratios 
+    pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
 
+    pastlog_perf = (pastlog_pre_sum / pastlog_post_sum)
+    logger.info(f'Expected sun performance by weather: "{100*pastlog_perf:.0f}%"')
+    
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1]
 
     # Calc prediction data
     realstop = pastlog.index[len(todaylog.index)-1]
     caststart = pastlog.index[len(todaylog.index)]
-    realsbpi = todaylog.loc[realstop ,"SBPI"]
-    castsbpi = pastlog.loc[realstop ,"SBPI"]
-    ratiosbpi = (realsbpi+1)/(castsbpi+1) # no div by zero
+    realsbpi = todaylog.loc[:realstop ,"SBPI"].sum()
+    castsbpi = pastlog.loc[:realstop ,"SBPI"].sum()
+    ratiosbpi = np.sqrt((realsbpi+1)/(castsbpi+1)) # no div by zero
         
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
@@ -290,7 +292,7 @@ async def predict_naive_today(
     logger.info(f'Last cast irridiance is "{castsbpi:.0f}"')
     logger.info(f'Last real/cast ratio is "{ratiosbpi:.2f}"')
 
-    logger.info(f'Expected sun performance by observation: "{100*ratiosbpi*sunperf:.0f}%"')
+    logger.info(f'Expected sun performance by observation: "{100*ratiosbpi:.0f}%"')
         
     # The restlog needs adaptation
     restlog = pastlog.loc[caststart:,:].copy()
