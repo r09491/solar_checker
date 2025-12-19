@@ -206,7 +206,12 @@ async def simulate_solix_1_energy_wh(
         empty_wh: f64 = -160
 ):
 
-    # Simulate battery full
+    # Avoid discharge below 100
+    isnodischarge = (log["SBPB"] >0) & (log["SBPB"]<100)
+    log.loc[isnodischarge,"SBPB"] = 0
+    log.loc[isnodischarge,"SBPO"] = 0
+    
+    # Simulate battery almostfull
     log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
     isprefull = (log_wh > full_wh) & (log_wh < 0.9*full_wh)
     log.loc[isprefull,"SBPB"] = 0.1*full_wh
