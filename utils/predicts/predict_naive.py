@@ -233,7 +233,18 @@ async def simulate_solix_1_energy_wh(
     log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
     log["SBSB"] = log_wh/full_wh
     
-    
+
+"""
+Simulates the grid power part
+"""
+async def simulate_grid_power_w(
+        log: pd.DataFrame
+):
+
+    # Simultate the smartmeter
+    log["SMP"] -= log["SBPO"]
+
+
 @dataclass
 class Script_Arguments:
     castday: str
@@ -312,7 +323,12 @@ async def predict_naive_today(
     await simulate_solix_1_energy_wh(
         restlog, realsoc
     )
-    
+
+    #Update grid power
+    await simulate_grid_power_w(
+        restlog
+    )
+
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog[:realstop],restlog])
 
@@ -366,6 +382,11 @@ async def predict_naive_castday(
     #Ensure the plausibility of cast
     await simulate_solix_1_energy_wh(
         pastlog, pastsoc
+    )
+
+    #Update grid power
+    await simulate_grid_power_w(
+        pastlog
     )
 
     return castday, pastlog, None, pastlog.index[0]
