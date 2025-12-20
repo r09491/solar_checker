@@ -38,13 +38,13 @@ def _get_w_line(time: t64s, smp: f64s,
     logger.info(f'started')
 
     # ?Have data (smartmeter)
-    smpin = np.zeros_like(smp)
+    smpin = np.zeros_like(smp) if smp is not None else None
     issmpin = smp>0 if smp is not None else None
     smpin[issmpin] = smp[issmpin] if issmpin is not None else None 
     smpin_mean = 0 if not issmpin.any() else smpin.mean()
     smpin_max = 0 if not issmpin.any() else smpin.max()
 
-    smpout = np.zeros_like(smp) 
+    smpout = np.zeros_like(smp) if smp is not None else None
     issmpout = smp<0 if smp is not None else None
     smpout[issmpout] = smp[issmpout] if issmpout is not None else None 
     smpout_mean = 0 if not issmpout.any() else smpout.mean()
@@ -79,20 +79,18 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpoon_max = sbpoon.max()  if sbpoon.any() else 0
 
     # ?Charging (solarbank)
-    sbpbin = sbpb if sbpb is not None else np.zeros_like(smp)
-    issbpbin = sbpb<0
-    sbpbin[issbpbin] = sbpb[issbpbin]
-    sbpbin_mean = sbpbin.mean() if sbpbin.any() else 0
-    sbpbin_min = sbpbin.min() if sbpbin.any() else 0
+    sbpbin = np.zeros_like(sbpb) if sbpb is not None else None
+    issbpbin = sbpb<0 if sbpb is not None else None
+    sbpbin[issbpbin] = sbpb[issbpbin] if issbpbin is not None else None 
+    sbpbin_mean = 0 if not issbpbin.any() else sbpbin.mean()
+    sbpbin_min = 0 if not issbpbin.any() else sbpbin.min()
 
     # ?Discharging (solarbank)
-    sbpbout = sbpb if sbpb is not None else np.zeros_like(smp)
-    issbpbout = sbpb>0
-    sbpbout[issbpbout] = sbpb[issbpbout]
-    sbpbout_mean = sbpbout.mean() if sbpbout.any() else 0
-    sbpbout_max = sbpbout.max() if sbpbout.any() else 0
-    
-    #timesbpion = time[issbpion]
+    sbpbout = np.zeros_like(sbpb) if sbpb is not None else None
+    issbpbout = sbpb>0 if sbpb is not None else None
+    sbpbout[issbpbout] = sbpb[issbpbout] if issbpbout is not None else None 
+    sbpbout_mean = 0 if not issbpbout.any() else sbpbout.mean()
+    sbpbout_max = 0 if not issbpbout.any() else sbpbout.max()
 
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
