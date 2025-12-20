@@ -201,7 +201,7 @@ Simulates the Anker Solix generation 1 energy part
 """
 async def simulate_solix_1_energy_wh(
         log: pd.DataFrame,
-        realsoc: f64,
+        soc: f64,
         full_wh: f64 = -1600,
         empty_wh: f64 = -160
 ):
@@ -212,25 +212,26 @@ async def simulate_solix_1_energy_wh(
     log.loc[isnodischarge,"SBPO"] = 0
     
     # Simulate battery almostfull
-    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
+    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
     isprefull = (log_wh > full_wh) & (log_wh < 0.9*full_wh)
-    log.loc[isprefull,"SBPB"] = 0.1*full_wh
-    log.loc[isprefull,"SBPO"] = log.loc[isprefull, "SBPI"] + 0.1*full_wh
+    log.loc[isprefull,"SBPB"] = 0.05*full_wh
+    log.loc[isprefull,"SBPO"] = log.loc[isprefull, "SBPI"] - log.loc[isprefull,"SBPB"]
 
     # Simulate battery full
-    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
+    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
     isfull = log_wh <full_wh
     log.loc[isfull,"SBPB"] = 0
     log.loc[isfull,"SBPO"] = log.loc[isfull, "SBPI"]
 
+
     # Simulate battery empty
-    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
+    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
     isempty = log_wh >empty_wh
     log.loc[isempty,"SBPB"] = 0
     log.loc[isempty,"SBPO"] = 0
 
     # Update SOC
-    log_wh = (log["SBPB"].cumsum()+realsoc*full_wh)
+    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
     log["SBSB"] = log_wh/full_wh
     
 
@@ -245,6 +246,29 @@ async def simulate_grid_power_w(
     log["SMP"] -= log["SBPO"]
 
 
+"""
+Simulates the system
+"""
+async def simulate_system(
+        log: pd.DataFrame,
+        soc: f64
+):
+    #Predict the samples
+    await simulate_solix_1_power_w(
+        log
+    )
+
+    #Ensure the plausibility of cast
+    await simulate_solix_1_energy_wh(
+        log, soc
+    )
+
+    #Update grid power
+    await simulate_grid_power_w(
+        log
+    )
+    
+
 @dataclass
 class Script_Arguments:
     castday: str
@@ -252,6 +276,9 @@ class Script_Arguments:
     lon: f64
     logprefix: str
     logdir: str
+
+
+K = 1.1
 
 async def predict_naive_today(
         lat: f64,
@@ -286,7 +313,7 @@ async def predict_naive_today(
 
     # Update the irridiance past day average to expected aky conditions
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= sunratios 
+    pastlog.loc[:,"SBPI"] *= (1 + K*np.log10(sunratios)) 
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
 
     pastlog_perf = (pastlog_pre_sum / pastlog_post_sum)
@@ -300,8 +327,8 @@ async def predict_naive_today(
     caststart = pastlog.index[len(todaylog.index)]
     realsbpi = todaylog.loc[:realstop ,"SBPI"].sum()
     castsbpi = pastlog.loc[:realstop ,"SBPI"].sum()
-    ratiosbpi = np.sqrt((realsbpi+1)/(castsbpi+1)) # no div by zero
-        
+    ratiosbpi = 1 + K*np.log10((realsbpi+1)/(castsbpi+1)) # no div by zero
+    
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
     logger.info(f'Last real irridiance is "{realsbpi:.0f}"')
@@ -314,19 +341,9 @@ async def predict_naive_today(
     restlog = pastlog.loc[caststart:,:].copy()
     restlog.loc[:,"SBPI"] *= ratiosbpi
     
-    #Predict the samples
-    await simulate_solix_1_power_w(
-        restlog
-    )
-
-    #Ensure the plausibility of cast
-    await simulate_solix_1_energy_wh(
+    #Predict the system
+    await simulate_system(
         restlog, realsoc
-    )
-
-    #Update grid power
-    await simulate_grid_power_w(
-        restlog
     )
 
     #Join the current real data with the cast data
@@ -366,27 +383,19 @@ async def predict_naive_castday(
         logger.error(f'Sunratios are not available')
         return None
 
-    sunperf = sunratios.mean()
-    logger.info(f'Expected sun performance by forecast: "{100*sunperf:.0f}%"')
-
-    pastsoc = pastlog["SBSB"].iloc[0]
-    
     # Update the irridiance past day average to expected aky conditions
-    pastlog.loc[:,"SBPI"] *= sunratios 
+    pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
+    pastlog.loc[:,"SBPI"] *= (1 + K*np.log10(sunratios)) 
+    pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
 
-    #Predict the samples
-    await simulate_solix_1_power_w(
-        pastlog
-    )
+    pastlog_perf = (pastlog_pre_sum / pastlog_post_sum)
+    logger.info(f'Expected sun performance by weather: "{100*pastlog_perf:.0f}%"')
 
-    #Ensure the plausibility of cast
-    await simulate_solix_1_energy_wh(
+    # Keep SOC
+    pastsoc = pastlog["SBSB"].iloc[0]
+            
+    await simulate_system(
         pastlog, pastsoc
-    )
-
-    #Update grid power
-    await simulate_grid_power_w(
-        pastlog
     )
 
     return castday, pastlog, None, pastlog.index[0]
