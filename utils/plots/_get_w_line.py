@@ -38,56 +38,72 @@ def _get_w_line(time: t64s, smp: f64s,
     logger.info(f'started')
 
     # ?Have data (smartmeter)
-    smpin = np.zeros_like(smp) if smp is not None else None
     issmpin = smp>0 if smp is not None else None
+    smpin = np.zeros_like(smp) if issmpin is not None else None
     smpin[issmpin] = smp[issmpin] if issmpin is not None else None 
-    smpin_mean = 0 if not issmpin.any() else smpin.mean()
-    smpin_max = 0 if not issmpin.any() else smpin.max()
+    smpin_mean = 0 if (smpin is None or
+                       not issmpin.any()) else smpin.mean()
+    smpin_max = 0 if (smpin is None or
+                      not issmpin.any()) else smpin.max()
 
-    smpout = np.zeros_like(smp) if smp is not None else None
     issmpout = smp<0 if smp is not None else None
+    smpout = np.zeros_like(smp) if issmpout is not None else None
     smpout[issmpout] = smp[issmpout] if issmpout is not None else None 
-    smpout_mean = 0 if not issmpout.any() else smpout.mean()
-    smpout_min = 0 if not issmpout.any() else smpout.min()
+    smpout_mean = 0 if (smpout is None or
+                        not issmpout.any()) else smpout.mean()
+    smpout_min = 0 if (smpout is None or
+                       not issmpout.any()) else smpout.min()
 
     # ?Have data (inverter)
     ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else None
     isivpon = ivp>0 if ivp is not None else None 
-    ivpon = ivp[isivpon] if ivp is not None else None 
-    ivpon_mean = 0 if ivpon is None else ivpon.mean()
-    ivpon_max = 0 if ivpon is None else ivpon.max()
+    ivpon = ivp if isivpon is not None else None 
+    ivpon_mean = 0 if (ivpon is None or
+                       not isivpon.any()) else ivpon.mean()
+    ivpon_max = 0 if (ivpon is None or
+                      not isivpon.any()) else ivpon.max()
 
     # ?Have power ( smartplug)
     isspphon = spph>0 if spph is not None else None
-    spphon = spph[isspphon] if spph is not None else None
-    spphon_mean = 0 if spphon is None else spphon.mean()
-    #spphon_max = 0 if spphon is None else spphon.max()
+    spphon = spph if isspphon is not None else None
+    spphon_mean = 0 if (spphon is None or
+                        not isspphon.any()) else spphon.mean()
+    spphon_max = 0 if (spphon is None or
+                       not isspphon.any()) else spphon.max()
 
     # ?Have sun (solarbank)
     issbpion = sbpi>0 if sbpi is not None else None
-    sbpion = sbpi[issbpion] if sbpi is not None else None
-    sbpion_mean = sbpion.mean() if sbpion.any() else 0
-    sbpion_max = sbpion.max() if sbpion.any() else 0
+    sbpion = sbpi[issbpion] if issbpion is not None else None
+    sbpion_mean = sbpion.mean() if (sbpion is not None and
+                                    issbpion.any()) else 0
+    sbpion_max = sbpion.max() if (sbpion is not None and
+                                  issbpion.any()) else 0
 
     # 'Have output (solarbank)
     issbpoon = sbpo>0 if sbpo is not None else None
-    sbpoon = sbpo[issbpoon] if sbpo is not None else None
-    sbpoon_mean = sbpoon.mean() if sbpoon.any() else 0
-    sbpoon_max = sbpoon.max()  if sbpoon.any() else 0
+    sbpoon = sbpo if issbpoon is not None else None
+    sbpoon_mean = sbpoon.mean() if (sbpoon is not None and
+                                    issbpoon.any()) else 0
+    sbpoon_max = sbpoon.max() if (sbpoon is not None and
+                                  issbpoon.any()) else 0
 
     # ?Charging (solarbank)
-    sbpbin = np.zeros_like(sbpb) if sbpb is not None else None
     issbpbin = sbpb<0 if sbpb is not None else None
+    sbpbin = np.zeros_like(sbpb) if issbpbin is not None else None
     sbpbin[issbpbin] = sbpb[issbpbin] if issbpbin is not None else None 
-    sbpbin_mean = 0 if not issbpbin.any() else sbpbin.mean()
-    sbpbin_min = 0 if not issbpbin.any() else sbpbin.min()
+    sbpbin_mean = 0 if (sbpbin is None or
+                        not issbpbin.any()) else sbpbin.mean()
+    sbpbin_min = 0 if (sbpbin is None or
+                       not issbpbin.any()) else sbpbin.min()
 
     # ?Discharging (solarbank)
-    sbpbout = np.zeros_like(sbpb) if sbpb is not None else None
     issbpbout = sbpb>0 if sbpb is not None else None
+    sbpbout = np.zeros_like(sbpb) if issbpbout is not None else None
     sbpbout[issbpbout] = sbpb[issbpbout] if issbpbout is not None else None 
-    sbpbout_mean = 0 if not issbpbout.any() else sbpbout.mean()
-    sbpbout_max = 0 if not issbpbout.any() else sbpbout.max()
+    sbpbout_mean = 0 if (sbpbout is None or
+                         not issbpbout.any()) else sbpbout.mean()
+    sbpbout_max = 0 if (sbpbout is None or
+                        not issbpbout.any()) else sbpbout.max()
 
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     

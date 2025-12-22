@@ -170,15 +170,22 @@ Simulates the Anker Solix generation 1 power part
 async def simulate_solix_1_power_w(
         log: pd.DataFrame
 ):
-
+    #Reset
+    log["SBPB"] = 0.0
+    log["SBPO"] = 0.0
+    
+    # Avoid negative radiation
+    isnosbpi = (log["SBPI"] <0) 
+    log.loc[isnosbpi, "SBPI"] = 0
+    
     # Simultate low irradiance
     issbpi = (log["SBPI"] >0) & (log["SBPI"] <=35) 
     log.loc[issbpi, "SBPB"] = -log.loc[issbpi, "SBPI"]
-    log.loc[issbpi, "SBPO"] = 0
+    #log.loc[issbpi, "SBPO"] = 0
 
     # Simultate grey irradiance
     issbpi = (log["SBPI"] >35) & (log["SBPI"] <=100)
-    log.loc[issbpi,"SBPB"] = 0
+    #log.loc[issbpi,"SBPB"] = 0
     log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]
 
     # constrain high irradiance
@@ -277,9 +284,6 @@ class Script_Arguments:
     logprefix: str
     logdir: str
 
-
-K = 1.1
-
 async def predict_naive_today(
         lat: f64,
         lon: f64,
@@ -310,13 +314,13 @@ async def predict_naive_today(
     if sunratios is None:
         logger.error(f'Sunratios not available')
         return None
-
+    
     # Update the irridiance past day average to expected aky conditions
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= (1 + K*np.log10(sunratios)) 
+    pastlog.loc[:,"SBPI"] *= np.sqrt(sunratios)
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
 
-    pastlog_perf = (pastlog_pre_sum / pastlog_post_sum)
+    pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
     logger.info(f'Expected sun performance by weather: "{100*pastlog_perf:.0f}%"')
     
     # Keep SOC
@@ -327,7 +331,8 @@ async def predict_naive_today(
     caststart = pastlog.index[len(todaylog.index)]
     realsbpi = todaylog.loc[:realstop ,"SBPI"].sum()
     castsbpi = pastlog.loc[:realstop ,"SBPI"].sum()
-    ratiosbpi = 1 + K*np.log10((realsbpi+1)/(castsbpi+1)) # no div by zero
+    #ratiosbpi = K0 + K1*np.log10((realsbpi+1)/(castsbpi+1)) # no div by zero
+    ratiosbpi = np.sqrt((realsbpi+1)/(castsbpi+1)) # no div by zero
     
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
@@ -335,12 +340,12 @@ async def predict_naive_today(
     logger.info(f'Last cast irridiance is "{castsbpi:.0f}"')
     logger.info(f'Last real/cast ratio is "{ratiosbpi:.2f}"')
 
-    logger.info(f'Expected sun performance by observation: "{100*ratiosbpi:.0f}%"')
+    logger.info(f'Expected sun performance after observation: "{100*pastlog_perf*ratiosbpi:.0f}%"')
         
     # The restlog needs adaptation
     restlog = pastlog.loc[caststart:,:].copy()
     restlog.loc[:,"SBPI"] *= ratiosbpi
-    
+
     #Predict the system
     await simulate_system(
         restlog, realsoc
@@ -385,10 +390,9 @@ async def predict_naive_castday(
 
     # Update the irridiance past day average to expected aky conditions
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= (1 + K*np.log10(sunratios)) 
+    pastlog.loc[:,"SBPI"] *= np.sqrt(sunratios) 
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
-
-    pastlog_perf = (pastlog_pre_sum / pastlog_post_sum)
+    pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
     logger.info(f'Expected sun performance by weather: "{100*pastlog_perf:.0f}%"')
 
     # Keep SOC
