@@ -85,7 +85,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]
     smpoff = np.zeros_like(smp)
-    smpoff[smp<=0] = -smp[smp<0]
+    smpoff[smp<0] = -smp[smp<0]
 
     sbpbcharge = np.zeros_like(sbpb)
     sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
