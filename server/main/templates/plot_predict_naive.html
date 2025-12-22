@@ -1,27 +1,54 @@
-{% set title = 'P12 Cast Naive' + ' . ' + castday %}
+{% if castday is none %}
+{% set title = 'P12 Cast Obs Naive' + ' . ' + today %}
+{% else %}
+{% set title = 'P12 Cast Sun Naive' + ' . ' + castday %}
+{% endif %}
 
 {% extends 'base.html' %}
 
 {% block content %}
 
 <div style='display:flex;justify-content:center;'>
+  {% if castday is none %}
+  <a href='/plot_predict_naive/{{ today }}'>Today Sun Naive</a>&nbsp;&nbsp
+  {% else %}
+  <a href='/plot_predict_naive'>Today Obs Naive</a>&nbsp;&nbsp
+  {% endif %}
   <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp
+  {% if castday is none %}
+  <a href='/plot_predict/{{ today }}/today'>Today Cast</a>&nbsp;&nbsp
+  <a href='/plot_predict/{{ today }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict/{{ today }}/total'>Total Cast</a>
+  {% else %}
   <a href='/plot_predict/{{ castday }}/today'>Today Cast</a>&nbsp;&nbsp
   <a href='/plot_predict/{{ castday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
   <a href='/plot_predict/{{ castday }}/total'>Total Cast</a>
+  {% endif %}
 </div>
 
 <div style='display:flex;justify-content:center;'>
   <div style='margin:30px;width:90px;text-align:center;'>
+    {% if castday is none or castday == today%}
+    &nbsp;&nbsp
+    {% else %}
     <a href='/plot_predict_naive/{{castyesterday}}'><1</a>
+    {% endif %}
   </div>
 
   <div style='display:flex;justify-content:center;'>
-    <h1 style='margin:4px;'>Cast Naive {{castday}}</h1>
+    {% if castday is none %}
+    <h1 style='margin:4px;'>Cast Obs Naive {{today}}</h1>
+    {% else %}
+    <h1 style='margin:4px;'>Cast Sun Naive {{castday}}</h1>
+    {% endif %}
   </div>
 
   <div style='margin:30px;width:90px;text-align:center;'> 
+    {% if castday is none %}
+    &nbsp;&nbsp
+    {% else %}
     <a href='/plot_predict_naive/{{casttomorrow}}'>1></a>
+    {% endif %}
   </div>
 </div>
 
