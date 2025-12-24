@@ -201,13 +201,13 @@ def _get_w_line(time: t64s, smp: f64s,
     
     """ Plot amplifying data as lines """
 
-    if spph is not None:
+    if spphon is not None and spphon.any():
         ax.plot(time, spph,
-                color='brown',label='PLUG', lw=2, ls='-', alpha=0.3)
-    if ivpon is not None:
+                color='brown', lw=2, ls='-', alpha=0.3)
+    if ivpon is not None and ivpon.any():
         ax.plot(time, ivp,
-                color='c', label='INV', lw=2, ls='-', alpha=0.3)
-    if sbpion is not None:
+                color='c', lw=2, ls='-', alpha=0.3)
+    if sbpion is not None and sbpion.any():
         ax.plot(time[issbpion], sbpi[issbpion],
                 color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
         if time.size<=24*60: #only plot within 24h
