@@ -331,15 +331,18 @@ async def predict_naive_today(
     # Calc prediction data
     realstop = pastlog.index[len(todaylog.index)-1]
     caststart = pastlog.index[len(todaylog.index)]
-    realsbpi = todaylog.loc[:realstop,"SBPI"].iloc[:-1].sum()
-    castsbpi = pastlog.loc[:realstop,"SBPI"].iloc[:-1].sum()
-    ratiosbpi = np.sqrt((realsbpi+1)/(castsbpi+1)) # no div by zero
+    realsbpi = todaylog.loc[:realstop,"SBPI"]
+    realsbpisum = realsbpi.sum()
+    castsbpi = pastlog.loc[:realstop,"SBPI"]
+    castsbpisum = castsbpi.sum()
+
+    ratiosbpi = np.sqrt(realsbpisum/(castsbpisum+1)) # no div by zero
     
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
-    logger.info(f'Previous real irridiance is "{realsbpi:.0f}"')
-    logger.info(f'Previous cast irridiance is "{castsbpi:.0f}"')
-    logger.info(f'Previous real/cast ratio is "{ratiosbpi:.2f}"')
+    logger.info(f'Real irridiance is "{realsbpisum:.0f}"')
+    logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
+    logger.info(f'Real/Cast ratio is "{ratiosbpi:.2f}"')
 
     logger.info(f'Expected live performance: "{100*pastlog_perf*ratiosbpi:.0f}%"')
         
