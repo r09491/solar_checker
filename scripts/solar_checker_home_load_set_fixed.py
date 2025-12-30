@@ -25,22 +25,18 @@ from dataclasses import dataclass
 
 
 async def anker_home_load_set(home_load: int) -> bool:
-    logger.info(f'anker_home_load_set begin"')
-
     try:
         is_done = await Solarbank().set_home_load(home_load)
     except:
         is_done = False
-
-    logger.info(f"anker_home_load_set end")        
     return is_done
 
 
 async def main(home_load: int) -> int:
     
-    logger.info(f'home load goal is "{home_load:.0f}"')
+    logger.info(f'Going for home load goal "{home_load:.0f}"')
     is_done = await anker_home_load_set(home_load)
-    logger.info(f"home load goal is {'set' if is_done else 'kept'}")
+    logger.info(f"Achieved home load goal is {'set' if is_done else 'kept'}")
 
     return 0 if is_done else 1
 

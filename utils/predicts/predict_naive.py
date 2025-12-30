@@ -1,8 +1,8 @@
 __doc__=""" Predicts the samples of an Anker Solix 1 powerbank for the
-rest of today or a complete given castday assuming they behave similar
-than some passed days. Changes for the rest of today are calculated
-from ratio of the latest irridiance of today or suntime duration to
-that of the passed days """
+rest of today or a complete given future castday assuming they behave
+similar than some passed days. Changes for the rest of today are
+calculated from ratio of the latest irridiance of today or cloud
+coverage of the passed days """
 
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -39,58 +39,58 @@ from brightsky import (
     Sky
 )
 
-SUNSHINE_TZ='Europe/Berlin'
-""" Returns the sunshine minutes for each hour in the castday """
-async def get_hour_sunshine_pool(
+SKY_TZ='Europe/Berlin'
+""" Returns the sky for each hour in the castday """
+async def get_hour_sky_pool(
         castday: str,
         lat: float,
         lon: float,
-        tz: str = SUNSHINE_TZ 
+        tz: str = SKY_TZ 
 ) -> Optional[pd.DataFrame]:
     
     sky = Sky(lat, lon, castday, tz)
-    df = (await sky.get_sky_info())['sunshine'].fillna(0.0)
+    df = (await sky.get_sky_info())['cloud_cover'].fillna(0.0)
     if df is None:
-        logger.error(f'No sunshine features for {castday}')
+        logger.error(f'No sky features for {castday}')
         return None
     return df
 
 
-""" Return the ratio of sunshine minutes for each hour from the
+""" Return the ratio of sky% for each hour from the
 castday to today """
-async def get_hour_sunshine_ratios(
+async def get_hour_sky_ratios(
         castdays: List[str],
         lat: f64,
         lon: f64,
-        tz: str = SUNSHINE_TZ
+        tz: str = SKY_TZ
 )  -> Optional[np.ndarray]:
 
-    suntasks = [asyncio.create_task(
-        get_hour_sunshine_pool(
+    skytasks = [asyncio.create_task(
+        get_hour_sky_pool(
             cd, lat, lon, tz
         )
     ) for cd in castdays]
     
     """ Get the list of associated columns """
-    suns = await asyncio.gather(*suntasks)
-    if suns is None:
-        logger.error(f'Unable to retrieve sunshine pools')
+    skys = await asyncio.gather(*skytasks)
+    if skys is None:
+        logger.error(f'Unable to retrieve sky pools')
         return None
 
     # Reduce past days
-    pastsuns = pd.concat(
-        [s.reset_index(drop=True) for s in suns[:-1] if s is not None]
+    pastskys = pd.concat(
+        [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
     )
-    pastsun = pastsuns.groupby(pastsuns.index).mean()
+    pastsky = pastskys.groupby(pastskys.index).mean()
 
     # Todays always the last in the list
-    todaysun = suns[-1].reset_index(drop=True) if suns[-1] is not None else None
-    if todaysun is None:
-        logger.error(f'Unable to retrieve sunshine for "{castday}"')
+    todaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
+    if todaysky is None:
+        logger.error(f'Unable to retrieve sky for "{castday}"')
         return None
 
     # No div by zero!
-    ratios = (todaysun.values + 1) / (pastsun.values + 1) 
+    ratios = ((100 - todaysky.values) + 1) / ((100-pastsky.values) + 1) 
     return ratios[:-1]
 
 
@@ -189,8 +189,8 @@ async def simulate_solix_1_power_w(
     log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]
 
     # constrain high irradiance
-    issbpi = (log["SBPI"] > 880)
-    log.loc[issbpi,"SBPI"] = 880
+    issbpi = (log["SBPI"] > 800)
+    log.loc[issbpi,"SBPI"] = 800
 
     # Simultate grey irradiance
     issbpi = (log["SBPI"] >600)
@@ -217,13 +217,14 @@ async def simulate_solix_1_energy_wh(
     isnodischarge = (log["SBPB"] >0) & (log["SBPB"]<100)
     log.loc[isnodischarge,"SBPB"] = 0
     log.loc[isnodischarge,"SBPO"] = 0
+
     
     # Simulate battery almostfull
     log_wh = (log["SBPB"].cumsum()+soc*full_wh)
-    isprefull = (log_wh > full_wh) & (log_wh < 0.9*full_wh)
+    isprefull = (log_wh > full_wh) & (log_wh < 0.9*full_wh) & (log["SBPI"] >0) 
     log.loc[isprefull,"SBPB"] = 0.05*full_wh
-    log.loc[isprefull,"SBPO"] = log.loc[isprefull, "SBPI"] - log.loc[isprefull,"SBPB"]
-
+    log.loc[isprefull,"SBPO"] = log.loc[isprefull, "SBPI"] - 0.05*full_wh
+    
     # Simulate battery full
     log_wh = (log["SBPB"].cumsum()+soc*full_wh)
     isfull = log_wh <full_wh
@@ -236,7 +237,8 @@ async def simulate_solix_1_energy_wh(
     isempty = log_wh >empty_wh
     log.loc[isempty,"SBPB"] = 0
     log.loc[isempty,"SBPO"] = 0
-
+    
+    
     # Update SOC
     log_wh = (log["SBPB"].cumsum()+soc*full_wh)
     log["SBSB"] = log_wh/full_wh
@@ -307,21 +309,21 @@ async def predict_naive_today(
         # No cast is possible at the end of today
         return today, todaylog, None, None
 
-    # Read the sun minute ratios from the pastlog to today
-    sunratios = await get_hour_sunshine_ratios(
+    # Read the sky ratios from the pastlog to today
+    skyratios = await get_hour_sky_ratios(
         days, lat, lon
     )
-    if sunratios is None:
-        logger.error(f'Sunratios not available')
+    if skyratios is None:
+        logger.error(f'Skyratios not available')
         return None
     
     # Update the irridiance past day average to expected aky conditions
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= np.sqrt(sunratios)
+    pastlog.loc[:,"SBPI"] *= np.sqrt(skyratios)
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
 
     pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
-    logger.info(f'Expected sun performance by weather: "{100*pastlog_perf:.0f}%"')
+    logger.info(f'Expected sky performance: "{100*pastlog_perf:.0f}%"')
     
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1]
@@ -329,18 +331,17 @@ async def predict_naive_today(
     # Calc prediction data
     realstop = pastlog.index[len(todaylog.index)-1]
     caststart = pastlog.index[len(todaylog.index)]
-    realsbpi = todaylog.loc[:realstop ,"SBPI"].sum()
-    castsbpi = pastlog.loc[:realstop ,"SBPI"].sum()
-    #ratiosbpi = K0 + K1*np.log10((realsbpi+1)/(castsbpi+1)) # no div by zero
+    realsbpi = todaylog.loc[:realstop,"SBPI"].iloc[:-1].sum()
+    castsbpi = pastlog.loc[:realstop,"SBPI"].iloc[:-1].sum()
     ratiosbpi = np.sqrt((realsbpi+1)/(castsbpi+1)) # no div by zero
     
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
-    logger.info(f'Last real irridiance is "{realsbpi:.0f}"')
-    logger.info(f'Last cast irridiance is "{castsbpi:.0f}"')
-    logger.info(f'Last real/cast ratio is "{ratiosbpi:.2f}"')
+    logger.info(f'Previous real irridiance is "{realsbpi:.0f}"')
+    logger.info(f'Previous cast irridiance is "{castsbpi:.0f}"')
+    logger.info(f'Previous real/cast ratio is "{ratiosbpi:.2f}"')
 
-    logger.info(f'Expected sun performance after observation: "{100*pastlog_perf*ratiosbpi:.0f}%"')
+    logger.info(f'Expected live performance: "{100*pastlog_perf*ratiosbpi:.0f}%"')
         
     # The restlog needs adaptation
     restlog = pastlog.loc[caststart:,:].copy()
@@ -380,20 +381,20 @@ async def predict_naive_castday(
         return None
     
 
-    # Read the sun minute ratios from the pastlog to the castday
-    sunratios = await get_hour_sunshine_ratios(
+    # Read the sky ratios from the pastlog to the castday
+    skyratios = await get_hour_sky_ratios(
         days[:-1] + [castday], lat, lon
     )
-    if sunratios is None:
-        logger.error(f'Sunratios are not available')
+    if skyratios is None:
+        logger.error(f'Skyratios are not available')
         return None
 
     # Update the irridiance past day average to expected aky conditions
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= np.sqrt(sunratios) 
+    pastlog.loc[:,"SBPI"] *= np.sqrt(skyratios) 
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
     pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
-    logger.info(f'Expected sun performance by weather: "{100*pastlog_perf:.0f}%"')
+    logger.info(f'Expected sky performance by weather: "{100*pastlog_perf:.0f}%"')
 
     # Keep SOC
     pastsoc = pastlog["SBSB"].iloc[0]

@@ -1,7 +1,7 @@
 {% if castday is none %}
-{% set title = 'P12 Cast Obs Naive' + ' . ' + today %}
+{% set title = 'P12 Cast Naive Live' + ' . ' + today %}
 {% else %}
-{% set title = 'P12 Cast Sun Naive' + ' . ' + castday %}
+{% set title = 'P12 Cast Naive Cloud' + ' . ' + castday %}
 {% endif %}
 
 {% extends 'base.html' %}
@@ -10,9 +10,9 @@
 
 <div style='display:flex;justify-content:center;'>
   {% if castday is none %}
-  <a href='/plot_predict_naive/{{ today }}'>Today Sun Naive</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive/{{ today }}'>Today Naive Cloud</a>&nbsp;&nbsp
   {% else %}
-  <a href='/plot_predict_naive'>Today Obs Naive</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive'>Today Naive Live</a>&nbsp;&nbsp
   {% endif %}
   <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp
   {% if castday is none %}
@@ -37,9 +37,9 @@
 
   <div style='display:flex;justify-content:center;'>
     {% if castday is none %}
-    <h1 style='margin:4px;'>Cast Obs Naive {{today}}</h1>
+    <h1 style='margin:4px;'>Cast Naive Live {{today}}</h1>
     {% else %}
-    <h1 style='margin:4px;'>Cast Sun Naive {{castday}}</h1>
+    <h1 style='margin:4px;'>Cast Naive Cloud {{castday}}</h1>
     {% endif %}
   </div>
 
