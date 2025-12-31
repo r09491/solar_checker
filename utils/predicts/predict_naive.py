@@ -328,15 +328,18 @@ async def predict_naive_today(
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1]
 
-    # Calc prediction data
+    # Calc prediction data. For the last hour not all samples
+    # aremeasured yet. Therefore the last hour is part of the casting
+    # and excluded from the calculating of the ratio.
     realstop = pastlog.index[len(todaylog.index)-1]
     caststart = pastlog.index[len(todaylog.index)]
     realsbpi = todaylog.loc[:realstop,"SBPI"]
-    realsbpisum = realsbpi.sum()
+    realsbpisum = realsbpi.iloc[:-1].sum()
     castsbpi = pastlog.loc[:realstop,"SBPI"]
-    castsbpisum = castsbpi.sum()
-
-    ratiosbpi = np.sqrt(realsbpisum/(castsbpisum+1)) # no div by zero
+    castsbpisum = castsbpi.iloc[:-1].sum()
+    realsbpisum = realsbpisum if castsbpisum >0 else realsbpi.sum()
+    castsbpisum = castsbpisum if castsbpisum >0 else castsbpi.sum()
+    ratiosbpi = np.sqrt((realsbpisum+1)/(castsbpisum+1)) # no div by zero
     
     logger.info(f'Last real stop is "{realstop}"')
     logger.info(f'Last cast start is "{caststart}"')
@@ -347,7 +350,7 @@ async def predict_naive_today(
     logger.info(f'Expected live performance: "{100*pastlog_perf*ratiosbpi:.0f}%"')
         
     # The restlog needs adaptation
-    restlog = pastlog.loc[caststart:,:].copy()
+    restlog = pastlog.loc[realstop:,:].copy()
     restlog.loc[:,"SBPI"] *= ratiosbpi
 
     #Predict the system
@@ -356,7 +359,7 @@ async def predict_naive_today(
     )
 
     #Join the current real data with the cast data
-    castlog = pd.concat([todaylog[:realstop],restlog])
+    castlog = pd.concat([todaylog[:realstop].iloc[:-1],restlog])
 
     return today, castlog, realstop, caststart
 
