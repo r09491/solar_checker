@@ -29,26 +29,27 @@ async def get_kwh_sum_month_unified(
     logger.info(f'{__me__}: started "{logmonth}"')
 
     mkwhs = await get_kwh_sum_month(
-        logmonth, logprefix, logdir, logdayformat)
+        logmonth,
+        logprefix,
+        logdir,
+        logdayformat)
     if mkwhs is None:
         logger.info(f'{__me__}: aborted')
         return None
-    
+
     mtime, msmeon, msmeoff, mive1, mive2, mspeh, msbeo = mkwhs.values()
 
-    # 3.Prio
-    umkwhs = msbeo.copy()
-
-    #!!! Should be done with unified power
-    
-    # 2.Prio 
-    #mive = mive1 + mive2
-    #isive = mive>0 
-    #umkwhs[isive] = mive[isive]
-
     # 1.Prio
-    #isspeh = mspeh>0
-    #umkwhs[isspeh] = mspeh[isspeh]
+    umkwhs = mspeh.copy()
+    isumkwhs = umkwhs > 0
+
+    # 2.Prio 
+    mive = mive1 + mive2
+    umkwhs[~isumkwhs] = mive[~isumkwhs]
+    isumkwhs = umkwhs > 0
+
+    # 3.Prio
+    umkwhs[~isumkwhs] = msbeo[~isumkwhs]
 
     logger.info(f'{__me__}: started')
     return {'TIME':mtime, 'SMEON':msmeon, 'SMEOFF':msmeoff,'PANEL':umkwhs}
