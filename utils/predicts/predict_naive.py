@@ -30,7 +30,8 @@ from ..typing import(
     List, Optional, f64
 )
 from ..common import(
-    PREDICT_POWER_NAMES
+    POWER_NAMES,
+    PARTITION_2_VIEW
 )
 from ..csvlog import(
     get_windowed_logs
@@ -106,7 +107,7 @@ async def get_hour_sample_logs(
         logwindow = logwindow,
         logprefix = logprefix,
         logdir = logdir,
-        usecols = PREDICT_POWER_NAMES
+        usecols = POWER_NAMES[:-4] # Skip plugs!
     )
 
     # Make hour logs from the the minute logs
@@ -142,14 +143,35 @@ async def get_predict_tables(
         '3h', label='left', closed='left'
     ).mean()
 
+    sbsb_df = casthours["SBSB"]
+    sbsb_df.reset_index(inplace=True, drop=True)    
+    casthours.drop("SBSB", inplace=True, axis=1)
+    
+    casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
+    casthours.drop("IVP1", inplace=True, axis=1)
+    casthours.drop("IVP2", inplace=True, axis=1)
+
+    casthours[">SBPB"] = casthours["SBPB"]
+    casthours[">SBPB"][casthours["SBPB"]>0] = 0
+    casthours["SBPB>"] = casthours["SBPB"]
+    casthours["SBPB>"][casthours["SBPB"]<0] = 0
+    casthours.drop("SBPB", inplace=True, axis=1)
+
+    casthours[">SMP"] = casthours["SMP"]
+    casthours[">SMP"][casthours["SMP"]>0] = 0
+    casthours["SMP>"] = casthours["SMP"]
+    casthours["SMP>"][casthours["SMP"]<0] = 0
+    casthours.drop("SMP", inplace=True, axis=1)
+
+    if not casthours["SPPH"].any():
+        casthours.drop("SPPH", inplace=True, axis=1)
+    
+    casthours.rename(columns=PARTITION_2_VIEW, inplace=True)
+
     starts = casthours.index.strftime("%H:00")
     stops = casthours.index.shift(1).strftime("%H:00")
     start_stop_df = pd.DataFrame({"START":starts, "STOP":stops})
 
-    sbsb_df = casthours["SBSB"]
-    sbsb_df.reset_index(inplace=True, drop=True)
-    
-    casthours.drop("SBSB", inplace=True, axis=1)
     casthours.reset_index(inplace=True, drop=True)
     
     watts_table = pd.concat(
@@ -157,9 +179,11 @@ async def get_predict_tables(
         axis=1
     )
     energy_table = pd.concat(
-        [start_stop_df, 3*casthours.cumsum(), 100*sbsb_df],
+        [start_stop_df, 3*casthours.cumsum()],
         axis=1
     )
+
+    energy_table["BAT%"] = 100*sbsb_df
     
     return (watts_table, energy_table)
 
@@ -245,15 +269,40 @@ async def simulate_solix_1_energy_wh(
     
 
 """
+Simulates the inverter part
+"""
+async def simulate_inverter_w(
+        log: pd.DataFrame
+):
+
+    log["IVP1"] = 0.45*log["SBPO"] if log["SBPO"].any() else log["IVP1"] 
+    log["IVP2"] = 0.45*log["SBPO"] if log["SBPO"].any() else log["IVP2"] 
+
+    log["SBPI"] = log["SBPI"] if log["SBPO"].any() else 0.0
+    log["SBPB"] = log["SBPB"] if log["SBPO"].any() else 0.0
+
+    
+"""
+Simulates the home plug part
+"""
+async def simulate_home_plug_w(
+        log: pd.DataFrame
+):
+    log["SPPH"] = 0.0 if not log["SPPH"].any() else 0.9*(log["IVP1"] + log["IVP2"]) 
+
+    
+"""
 Simulates the grid power part
 """
-async def simulate_grid_power_w(
+async def simulate_grid_w(
         log: pd.DataFrame
 ):
 
     # Simultate the smartmeter
-    log["SMP"] -= log["SBPO"]
-
+    log["SMP"] -= log["SPPH"] if log["SPPH"].any() else (
+        (log["IVP1"]+log["IVP2"]) if (log["IVP1"]+log["IVP2"]).any() else log["SBPO"]
+    )
+    
 
 """
 Simulates the system
@@ -273,7 +322,17 @@ async def simulate_system(
     )
 
     #Update grid power
-    await simulate_grid_power_w(
+    await simulate_inverter_w(
+        log
+    )
+
+    #Update grid power
+    await simulate_home_plug_w(
+        log
+    )
+    
+    #Update grid power
+    await simulate_grid_w(
         log
     )
     
@@ -331,8 +390,15 @@ async def predict_naive_today(
     # Calc prediction data. For the last hour not all samples
     # aremeasured yet. Therefore the last hour is part of the casting
     # and excluded from the calculating of the ratio.
+
     realstop = pastlog.index[len(todaylog.index)-1]
     caststart = pastlog.index[len(todaylog.index)]
+
+    logger.info(f'Last real stop is "{realstop}"')
+    logger.info(f'Last cast start is "{caststart}"')
+
+    #
+    
     realsbpi = todaylog.loc[:realstop,"SBPI"]
     realsbpisum = realsbpi.iloc[:-1].sum()
     castsbpi = pastlog.loc[:realstop,"SBPI"]
@@ -341,17 +407,63 @@ async def predict_naive_today(
     castsbpisum = castsbpisum if castsbpisum >0 else castsbpi.sum()
     ratiosbpi = np.sqrt((realsbpisum+1)/(castsbpisum+1)) # no div by zero
     
-    logger.info(f'Last real stop is "{realstop}"')
-    logger.info(f'Last cast start is "{caststart}"')
     logger.info(f'Real irridiance is "{realsbpisum:.0f}"')
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
     logger.info(f'Real/Cast ratio is "{ratiosbpi:.2f}"')
+    logger.info(f'Expected SBPI live performance: "{100*pastlog_perf*ratiosbpi:.0f}%"')
 
-    logger.info(f'Expected live performance: "{100*pastlog_perf*ratiosbpi:.0f}%"')
-        
+    #
+
+    realivp1 = todaylog.loc[:realstop,"IVP1"]
+    realivp1sum = realivp1.iloc[:-1].sum()
+    castivp1 = pastlog.loc[:realstop,"IVP1"]
+    castivp1sum = castivp1.iloc[:-1].sum()
+    realivp1sum = realivp1sum if castivp1sum >0 else realivp1.sum()
+    castivp1sum = castivp1sum if castivp1sum >0 else castivp1.sum()
+    ratioivp1 = np.sqrt((realivp1sum+1)/(castivp1sum+1)) # no div by zero
+    
+    logger.info(f'Real irridiance is "{realivp1sum:.0f}"')
+    logger.info(f'Cast irridiance is "{castivp1sum:.0f}"')
+    logger.info(f'Real/Cast ratio is "{ratioivp1:.2f}"')
+    logger.info(f'Expected IVP1 live performance: "{100*pastlog_perf*ratioivp1:.0f}%"')
+
+    #
+    
+    realivp2 = todaylog.loc[:realstop,"IVP2"]
+    realivp2sum = realivp2.iloc[:-1].sum()
+    castivp2 = pastlog.loc[:realstop,"IVP2"]
+    castivp2sum = castivp2.iloc[:-1].sum()
+    realivp2sum = realivp2sum if castivp2sum >0 else realivp2.sum()
+    castivp2sum = castivp2sum if castivp2sum >0 else castivp2.sum()
+    ratioivp2 = np.sqrt((realivp2sum+1)/(castivp2sum+1)) # no div by zero
+    
+    logger.info(f'Real irridiance is "{realivp2sum:.0f}"')
+    logger.info(f'Cast irridiance is "{castivp2sum:.0f}"')
+    logger.info(f'Real/Cast ratio is "{ratioivp2:.2f}"')
+    logger.info(f'Expected IVP2 live performance: "{100*pastlog_perf*ratioivp2:.0f}%"')
+
+    #
+    
+    realspph = todaylog.loc[:realstop,"SPPH"]
+    realspphsum = realspph.iloc[:-1].sum()
+    castspph = pastlog.loc[:realstop,"SPPH"]
+    castspphsum = castspph.iloc[:-1].sum()
+    realspphsum = realspphsum if castspphsum >0 else realspph.sum()
+    castspphsum = castspphsum if castspphsum >0 else castspph.sum()
+    ratiospph = np.sqrt((realspphsum+1)/(castspphsum+1)) # no div by zero
+    
+    logger.info(f'Real irridiance is "{realspphsum:.0f}"')
+    logger.info(f'Cast irridiance is "{castspphsum:.0f}"')
+    logger.info(f'Real/Cast ratio is "{ratiospph:.2f}"')
+    logger.info(f'Expected SPPH live performance: "{100*pastlog_perf*ratiospph:.0f}%"')
+
+    
     # The restlog needs adaptation
     restlog = pastlog.loc[realstop:,:].copy()
     restlog.loc[:,"SBPI"] *= ratiosbpi
+    restlog.loc[:,"IVP1"] *= ratioivp1
+    restlog.loc[:,"IVP2"] *= ratioivp2
+    restlog.loc[:,"SPPH"] *= ratiospph
 
     #Predict the system
     await simulate_system(

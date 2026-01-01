@@ -80,6 +80,9 @@ async def plot_predict_naive(request: web.Request) -> dict:
     sbpo = np.array(casthours['SBPO'])
     sbpb = np.array(casthours['SBPB'])
     sbsb = np.array(casthours['SBSB'])
+    ivp1 = np.array(casthours['IVP1'])
+    ivp2 = np.array(casthours['IVP2'])
+    spph = np.array(casthours['SPPH'])
     smp = np.array(casthours['SMP'])
 
     smpon = np.zeros_like(smp)
@@ -98,9 +101,9 @@ async def plot_predict_naive(request: web.Request) -> dict:
         get_w_line(
             time,
             smp,
-            None,
-            None,
-            None,
+            ivp1,
+            ivp2,
+            spph,
             sbpi,
             sbpo,
             sbpb,
@@ -110,9 +113,9 @@ async def plot_predict_naive(request: web.Request) -> dict:
             time,
             smpon.cumsum()/1000 if smpon is not None else None,
             smpoff.cumsum()/1000 if smpoff is not None else None,
-            None,
-            None,
-            None,
+            ivp1.cumsum()/1000 if ivp1 is not None else None,
+            ivp2.cumsum()/1000 if ivp2 is not None else None,
+            spph.cumsum()/1000 if spph is not None else None,
             sbpi.cumsum()/1000 if sbpi is not None else None,
             sbpo.cumsum()/1000 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000 if sbpbcharge is not None else None,
