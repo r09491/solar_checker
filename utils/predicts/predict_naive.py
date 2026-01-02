@@ -201,31 +201,32 @@ async def simulate_solix_1_power_w(
     # Avoid negative radiation
     isnosbpi = (log["SBPI"] <0) 
     log.loc[isnosbpi, "SBPI"] = 0
+
+    isivpover = (log["IVP1"] + log["IVP2"]) > log["SBPI"]
     
     # Simultate low irradiance
-    issbpi = (log["SBPI"] >0) & (log["SBPI"] <=35) 
+    issbpi = (log["SBPI"] >0) & (log["SBPI"] <=35) & (~isivpover) 
     log.loc[issbpi, "SBPB"] = -log.loc[issbpi, "SBPI"]
     #log.loc[issbpi, "SBPO"] = 0
 
     # Simultate grey irradiance
-    issbpi = (log["SBPI"] >35) & (log["SBPI"] <=100)
+    issbpi = (log["SBPI"] >35) & (log["SBPI"] <=100) & (~isivpover) 
     #log.loc[issbpi,"SBPB"] = 0
     log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]
 
     # constrain high irradiance
-    issbpi = (log["SBPI"] > 800)
+    issbpi = (log["SBPI"] > 800) & (~isivpover) 
     log.loc[issbpi,"SBPI"] = 800
 
     # Simultate grey irradiance
-    issbpi = (log["SBPI"] >600)
+    issbpi = (log["SBPI"] >600) & (~isivpover) 
     log.loc[issbpi,"SBPB"] = -600
     log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]-600
 
     # Simultate bright irradiance
-    issbpi = (log["SBPI"] >100) & (log["SBPI"] <=600)
+    issbpi = (log["SBPI"] >100) & (log["SBPI"] <=600) & (~isivpover) 
     log.loc[issbpi,"SBPB"] = -log.loc[issbpi,"SBPI"] + 100
     log.loc[issbpi,"SBPO"] = log.loc[issbpi,"SBPI"] + log.loc[issbpi,"SBPB"]
-
 
 """
 Simulates the Anker Solix generation 1 energy part
@@ -272,25 +273,46 @@ async def simulate_solix_1_energy_wh(
 Simulates the inverter part
 """
 async def simulate_inverter_w(
-        log: pd.DataFrame
+        log: pd.DataFrame,
+        loss: f64 = 0.9
 ):
 
-    log["IVP1"] = 0.45*log["SBPO"] if log["SBPO"].any() else log["IVP1"] 
-    log["IVP2"] = 0.45*log["SBPO"] if log["SBPO"].any() else log["IVP2"] 
+    sbpi = log["SBPI"]
+    issbpi = sbpi >0    
+    sbpo = log["SBPO"]
+    issbpo = sbpo >0
 
-    log["SBPI"] = log["SBPI"] if log["SBPO"].any() else 0.0
-    log["SBPB"] = log["SBPB"] if log["SBPO"].any() else 0.0
+    isbatcharge = issbpi & ~issbpo
+    ivp = log.loc[isbatcharge,"IVP1"]
+    ivp += log.loc[isbatcharge,"IVP2"]
+    log.loc[isbatcharge,"SBPI"] = ivp
+
+    isbatbypass = issbpi & issbpo
+    log.loc[isbatbypass, "IVP1"] = 0.5*loss*sbpo[isbatbypass]
+    log.loc[isbatbypass,"IVP2"] = 0.5*loss*sbpo[isbatbypass]
+
+    #Otherwise keep IVP as is
 
     
 """
 Simulates the home plug part
 """
 async def simulate_home_plug_w(
-        log: pd.DataFrame
+        log: pd.DataFrame,
+        loss: f64 = 0.9
 ):
-    log["SPPH"] = 0.0 if not log["SPPH"].any() else 0.9*(log["IVP1"] + log["IVP2"]) 
+    spph = log["SPPH"]
+    isspph = spph >0
+    if isspph.any():
+        log.info("The home smart plug is present")
 
-    
+        # Keep samples not set in IVP!
+        # Use simulated samples of IVP! 
+        ivp = log["IVP1"] + log["IVP2"]
+        isivp = ivp >0
+        spph[isivp] = loss*ivp[isivp]
+
+        
 """
 Simulates the grid power part
 """
@@ -298,10 +320,20 @@ async def simulate_grid_w(
         log: pd.DataFrame
 ):
 
+    # Vote for the balcony input
+    
+    balcony = log["SPPH"].copy()
+    isbalcony = balcony >0
+
+    ivp = log["IVP1"] + log["IVP2"]
+    balcony[~isbalcony] = ivp[~isbalcony]
+    isbalcony = balcony >0
+
+    sbpo =  log["SBPO"]
+    balcony[~isbalcony] = sbpo[~isbalcony]
+
     # Simultate the smartmeter
-    log["SMP"] -= log["SPPH"] if log["SPPH"].any() else (
-        (log["IVP1"]+log["IVP2"]) if (log["IVP1"]+log["IVP2"]).any() else log["SBPO"]
-    )
+    log["SMP"] -= balcony
     
 
 """
@@ -320,22 +352,22 @@ async def simulate_system(
     await simulate_solix_1_energy_wh(
         log, soc
     )
-
-    #Update grid power
+    
+    #Update inverter power
     await simulate_inverter_w(
         log
     )
 
-    #Update grid power
+    #Update home plug power
     await simulate_home_plug_w(
         log
     )
-    
+
     #Update grid power
     await simulate_grid_w(
         log
     )
-    
+
 
 @dataclass
 class Script_Arguments:
@@ -469,7 +501,7 @@ async def predict_naive_today(
     await simulate_system(
         restlog, realsoc
     )
-
+   
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog[:realstop].iloc[:-1],restlog])
 
