@@ -369,6 +369,20 @@ async def simulate_system(
     )
 
 
+"""
+Fix the inconsistencies of samples introduced by resampling
+"""
+async def fix_todaylog(
+        log: pd.DataFrame,
+):
+    sbpo = log["SBPO"]
+    ivp = log["IVP1"] + log["IVP2"]
+    isivpoversbpo = ivp > sbpo
+    log.loc[isivpoversbpo, "SBPO"] = 0
+    log.loc[isivpoversbpo, "SBPB"] = 0
+    log.loc[isivpoversbpo, "SBPI"] = ivp[isivpoversbpo]
+    
+
 @dataclass
 class Script_Arguments:
     castday: str
@@ -392,6 +406,8 @@ async def predict_naive_today(
         logdir = logdir
     )
 
+    await fix_todaylog(todaylog)
+    
     # today is the last list entry
     today = days[-1]
 
