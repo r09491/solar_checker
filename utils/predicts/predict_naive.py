@@ -165,6 +165,12 @@ async def get_predict_tables(
 
     if not casthours["SPPH"].any():
         casthours.drop("SPPH", inplace=True, axis=1)
+    if not casthours[">SMP"].any():
+        casthours.drop(">SMP", inplace=True, axis=1)
+    if not casthours[">SBPB"].any():
+        casthours.drop(">SBPB", inplace=True, axis=1)
+    if not casthours["SBPB>"].any():
+        casthours.drop("SBPB>", inplace=True, axis=1)
     
     casthours.rename(columns=PARTITION_2_VIEW, inplace=True)
 
