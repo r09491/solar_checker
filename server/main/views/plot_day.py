@@ -66,7 +66,7 @@ async def plot_day(request: web.Request) -> dict:
 
     # Override sbpi  with inverter if solix is out, eg low protection
     ivp = ivp1 + ivp2
-    isivpoversbpi = ivp > sbpi
+    isivpoversbpi = (ivp > sbpi) & ~(sbpb>0)
     sbpo[isivpoversbpi] = 0
     sbpb[isivpoversbpi] = 0
     sbpi[isivpoversbpi] = ivp[isivpoversbpi]
