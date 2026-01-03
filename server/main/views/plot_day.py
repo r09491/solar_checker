@@ -64,6 +64,13 @@ async def plot_day(request: web.Request) -> dict:
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB'] 
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
+    # Override sbpi  with inverter if solix is out, eg low protection
+    ivp = ivp1 + ivp2
+    isivpoversbpi = ivp > sbpi
+    sbpo[isivpoversbpi] = 0
+    sbpb[isivpoversbpi] = 0
+    sbpi[isivpoversbpi] = ivp[isivpoversbpi]
+
     if smp is not None:    
         smpon = np.zeros_like(smp)
         smpoff = np.zeros_like(smp)

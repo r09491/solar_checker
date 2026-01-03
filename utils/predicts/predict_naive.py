@@ -95,6 +95,20 @@ async def get_hour_sky_ratios(
     return ratios[:-1]
 
 
+"""
+Fix the inconsistencies of samples introduced by resampling
+"""
+async def fix_log(
+        log: pd.DataFrame
+):
+    sbpi = log["SBPI"]
+    ivp = log["IVP1"] + log["IVP2"]
+    isivpoversbpi = ivp > sbpi
+    log.loc[isivpoversbpi, "SBPO"] = 0
+    log.loc[isivpoversbpi, "SBPB"] = 0
+    log.loc[isivpoversbpi, "SBPI"] = ivp[isivpoversbpi]
+
+
 LOGWINDOWSIZE = 2
 async def get_hour_sample_logs(
         logprefix: str,
@@ -132,6 +146,9 @@ async def get_hour_sample_logs(
         freq="h"
     ).set_names('TIME')
 
+    await fix_log(pastlog)
+    await fix_log(todaylog)
+
     return logdays, pastlog, todaylog
 
 
@@ -152,15 +169,15 @@ async def get_predict_tables(
     casthours.drop("IVP2", inplace=True, axis=1)
 
     casthours[">SBPB"] = casthours["SBPB"]
-    casthours[">SBPB"][casthours["SBPB"]>0] = 0
+    casthours.loc[casthours["SBPB"]>0,">SBPB"] = 0
     casthours["SBPB>"] = casthours["SBPB"]
-    casthours["SBPB>"][casthours["SBPB"]<0] = 0
+    casthours.loc[casthours["SBPB"]<0, "SBPB>"] = 0
     casthours.drop("SBPB", inplace=True, axis=1)
 
     casthours[">SMP"] = casthours["SMP"]
-    casthours[">SMP"][casthours["SMP"]>0] = 0
+    casthours.loc[casthours["SMP"]>0, ">SMP"]= 0
     casthours["SMP>"] = casthours["SMP"]
-    casthours["SMP>"][casthours["SMP"]<0] = 0
+    casthours.loc[casthours["SMP"]<0,"SMP>"] = 0
     casthours.drop("SMP", inplace=True, axis=1)
 
     if not casthours["SPPH"].any():
@@ -282,20 +299,18 @@ async def simulate_inverter_w(
         log: pd.DataFrame,
         loss: f64 = 0.9
 ):
-
     sbpi = log["SBPI"]
-    issbpi = sbpi >0    
     sbpo = log["SBPO"]
-    issbpo = sbpo >0
+    ivp = log["IVP1"]
+    ivp += log["IVP2"]
+    issbpioverivp = sbpi > ivp
 
-    isbatcharge = issbpi & ~issbpo
-    ivp = log.loc[isbatcharge,"IVP1"]
-    ivp += log.loc[isbatcharge,"IVP2"]
-    log.loc[isbatcharge,"SBPI"] = ivp
-
-    isbatbypass = issbpi & issbpo
-    log.loc[isbatbypass, "IVP1"] = 0.5*loss*sbpo[isbatbypass]
-    log.loc[isbatbypass,"IVP2"] = 0.5*loss*sbpo[isbatbypass]
+    log.loc[~issbpioverivp,"SBPI"] = ivp
+    log.loc[~issbpioverivp,"SBPB"] = 0.0
+    log.loc[~issbpioverivp,"SBPO"] = 0.0
+    
+    log.loc[issbpioverivp,"IVP1"] = 0.5*loss*sbpo[issbpioverivp]
+    log.loc[issbpioverivp,"IVP2"] = 0.5*loss*sbpo[issbpioverivp]
 
     #Otherwise keep IVP as is
 
@@ -375,20 +390,6 @@ async def simulate_system(
     )
 
 
-"""
-Fix the inconsistencies of samples introduced by resampling
-"""
-async def fix_todaylog(
-        log: pd.DataFrame,
-):
-    sbpo = log["SBPO"]
-    ivp = log["IVP1"] + log["IVP2"]
-    isivpoversbpo = ivp > sbpo
-    log.loc[isivpoversbpo, "SBPO"] = 0
-    log.loc[isivpoversbpo, "SBPB"] = 0
-    log.loc[isivpoversbpo, "SBPI"] = ivp[isivpoversbpo]
-    
-
 @dataclass
 class Script_Arguments:
     castday: str
@@ -412,8 +413,6 @@ async def predict_naive_today(
         logdir = logdir
     )
 
-    await fix_todaylog(todaylog)
-    
     # today is the last list entry
     today = days[-1]
 
