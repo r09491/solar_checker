@@ -187,7 +187,7 @@ def _get_w_line(time: t64s, smp: f64s,
         issmpout &= ~isfill
 
     if issmpout is not None: #export
-        isfill = issmpin|np.roll(issmpin,1)|np.roll(issmpin,-1)
+        isfill = issmpout|np.roll(issmpout,1)|np.roll(issmpout,-1)
         ax.fill_between(time, 0, smpout,
                         where = isfill,
                         color='b', lw=0, alpha=0.3)
