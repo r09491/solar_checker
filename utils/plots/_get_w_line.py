@@ -264,7 +264,7 @@ def _get_w_line(time: t64s, smp: f64s,
         
     ax.set_title(title)
     
-    ax.legend(loc='upper left')
+    ax.legend(loc='best')
     ax.set_ylabel('Power [W]')
     ax.set_yscale('symlog')
     ax.xaxis_date()

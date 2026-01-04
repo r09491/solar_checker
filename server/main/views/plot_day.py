@@ -64,13 +64,6 @@ async def plot_day(request: web.Request) -> dict:
     sbpi, sbpo, sbpb, sbsb = c['SBPI'], c['SBPO'], c['SBPB'], c['SBSB'] 
     spp1, spp2, spp3, spp4 = c['SPP1'], c['SPP2'], c['SPP3'], c['SPP4']
 
-    # Override sbpi  with inverter if solix is out, eg low protection
-    ivp = ivp1 + ivp2
-    isivpoversbpi = (ivp > sbpi) & ~(sbpb>0)
-    sbpo[isivpoversbpi] = 0
-    sbpb[isivpoversbpi] = 0
-    sbpi[isivpoversbpi] = ivp[isivpoversbpi]
-
     if smp is not None:    
         smpon = np.zeros_like(smp)
         smpoff = np.zeros_like(smp)
@@ -83,16 +76,27 @@ async def plot_day(request: web.Request) -> dict:
         sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
         sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
 
-    blocks, w, kwh = await asyncio.gather(
-        get_blocks(time[-1], smp[-1], ivp1[-1], ivp2[-1],
-                   spph[-1] if spph is not None else 0,
-                   sbpi[-1] if sbpi is not None else 0,
-                   sbpo[-1] if sbpo is not None else 0,
-                   sbpb[-1] if sbpb is not None else 0,
-                   spp1[-1] if spp1 is not None else 0,
-                   spp2[-1] if spp2 is not None else 0,
-                   spp3[-1] if spp3 is not None else 0,
-                   spp4[-1] if spp4 is not None else 0),
+    # Considers solix out internally!
+    blocks = await get_blocks(
+        time[-1], smp[-1], ivp1[-1], ivp2[-1],
+        spph[-1] if spph is not None else 0,
+        sbpi[-1] if sbpi is not None else 0,
+        sbpo[-1] if sbpo is not None else 0,
+        sbpb[-1] if sbpb is not None else 0,
+        spp1[-1] if spp1 is not None else 0,
+        spp2[-1] if spp2 is not None else 0,
+        spp3[-1] if spp3 is not None else 0,
+        spp4[-1] if spp4 is not None else 0
+    )
+    
+    # Override sbpi  with inverter if solix is out, eg low protection
+    ivp = ivp1 + ivp2
+    isivpoversbpi = (ivp > sbpi) & ~(sbpb>0)
+    sbpo[isivpoversbpi] = 0
+    sbpb[isivpoversbpi] = 0
+    sbpi[isivpoversbpi] = ivp[isivpoversbpi]
+
+    w, kwh = await asyncio.gather(
         get_w_line(time, smp, ivp1, ivp2,
                    spph, sbpi, sbpo, sbpb),
         get_kwh_line(time,

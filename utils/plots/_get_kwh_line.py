@@ -49,6 +49,7 @@ def _get_kwh_line(
 
     issbeoon = sbeo>0 if sbeo is not None else None
     sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
+    issmeon = smeon>0 if smeon is not None else None
 
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
@@ -71,16 +72,33 @@ def _get_kwh_line(
                 alpha = 0.1
             )        
 
-    
-    if sbeoon is not None:
-        ax.fill_between(time, 0, sbeo,
+    # Stacked!
+            
+    ftop = 0
+    if issbeoon is not None:
+        flow = ftop
+        ftop = sbeo
+        ax.fill_between(time, flow, ftop,
                         color='grey', label='BANK',alpha=0.3)
-        ax.fill_between(time, sbeo, sbeo + smeon,
+
+    if isiveon is not None:
+        flow = ftop
+        ftop = ive
+        ax.fill_between(time, flow, ftop,
+                        color='c', label='INV', alpha=0.3)
+
+    if isspehon is not None:
+        flow = ftop
+        ftop += speh
+        ax.fill_between(time, 0+ive, speh+ive,
+                        color='brown', label='PLUG', alpha=0.3)
+
+    if issmeon is not None:
+        flow = ftop
+        ftop = flow + smeon
+        ax.fill_between(time, flow, ftop,
                         color='b',label='GRID', alpha=0.3)
 
-    elif smeon is not None:
-        ax.fill_between(time, smeoff, smeon,
-                        color='b',label='GRID', alpha=0.3)
 
         
     if sbsb is not None:
@@ -102,13 +120,14 @@ def _get_kwh_line(
         ax.fill_between(time, 0, -smeoff,
                         color='b', alpha=0.3)
 
-        
+    """    
     if spehon is not None:
         ax.plot(time, speh,
                 color='brown', label='PLUG', lw=2, ls='-', alpha=0.6)
     if iveon is not None:
         ax.plot(time, ive2 + ive1,
-                color='c',label='INV', lw=2, ls='-', alpha=0.6)                             
+                color='c',label='INV', lw=2, ls='-', alpha=0.6)
+    """
     if sbeion is not None:
         ax.plot(time[issbeion], sbei[issbeion],
                 color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
@@ -199,7 +218,7 @@ def _get_kwh_line(
 
     ax.set_title(title)
 
-    ax.legend(loc="upper left")
+    ax.legend(loc="best")
     ax.set_ylabel('Energy [kWh]')
     ax.xaxis_date()
     ax_formatter = mdates.DateFormatter(time_format, tz=tz)

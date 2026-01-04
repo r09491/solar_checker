@@ -102,11 +102,12 @@ async def fix_log(
         log: pd.DataFrame
 ):
     sbpi = log["SBPI"]
+    sbpb = log["SBPB"]
     ivp = log["IVP1"] + log["IVP2"]
-    isivpoversbpi = ivp > sbpi
+    isivpoversbpi = (ivp > sbpi) & ~(sbpb >0)
+    log.loc[isivpoversbpi, "SBPI"] = ivp[isivpoversbpi]
     log.loc[isivpoversbpi, "SBPO"] = 0
     log.loc[isivpoversbpi, "SBPB"] = 0
-    log.loc[isivpoversbpi, "SBPI"] = ivp[isivpoversbpi]
 
 
 LOGWINDOWSIZE = 2
@@ -146,9 +147,9 @@ async def get_hour_sample_logs(
         freq="h"
     ).set_names('TIME')
 
-    await fix_log(pastlog)
-    await fix_log(todaylog)
-
+    #await fix_log(pastlog)
+    #await fix_log(todaylog)
+    
     return logdays, pastlog, todaylog
 
 
@@ -217,39 +218,45 @@ Simulates the Anker Solix generation 1 power part
 async def simulate_solix_1_power_w(
         log: pd.DataFrame
 ):
+    sbpi = log["SBPI"]
+    sbpb = log["SBPB"]
+    sbpo = log["SBPO"]
+    ivp1 = log["IVP1"]
+    ivp2 = log["IVP2"]
+    ivp = ivp1 + ivp2 
+    isivpover = (ivp > sbpi) & ~(sbpb>0)
+
     #Reset
-    log["SBPB"] = 0.0
-    log["SBPO"] = 0.0
+    sbpb[~isivpover] = 0.0
+    sbpo[~isivpover] = 0.0
+    ivp1[~isivpover] = 0.0
+    ivp2[~isivpover] = 0.0
     
     # Avoid negative radiation
-    isnosbpi = (log["SBPI"] <0) 
-    log.loc[isnosbpi, "SBPI"] = 0
+    isnosbpi = (sbpi <0) 
+    sbpi[isnosbpi] = 0
 
-    isivpover = (log["IVP1"] + log["IVP2"]) > log["SBPI"]
-    
     # Simultate low irradiance
-    issbpi = (log["SBPI"] >0) & (log["SBPI"] <=35) & (~isivpover) 
-    log.loc[issbpi, "SBPB"] = -log.loc[issbpi, "SBPI"]
-    #log.loc[issbpi, "SBPO"] = 0
+    issbpi = (sbpi >0) & (sbpi <=35) & (~isivpover) 
+    sbpb[issbpi] = -sbpi[issbpi]
 
     # Simultate grey irradiance
-    issbpi = (log["SBPI"] >35) & (log["SBPI"] <=100) & (~isivpover) 
-    #log.loc[issbpi,"SBPB"] = 0
-    log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]
+    issbpi = (sbpi >35) & (sbpi <=100) & (~isivpover) 
+    sbpo[issbpi] = sbpi[issbpi]
 
     # constrain high irradiance
-    issbpi = (log["SBPI"] > 800) & (~isivpover) 
-    log.loc[issbpi,"SBPI"] = 800
+    issbpi = (sbpi > 800) & (~isivpover) 
+    sbpi[issbpi] = 800
 
     # Simultate grey irradiance
-    issbpi = (log["SBPI"] >600) & (~isivpover) 
-    log.loc[issbpi,"SBPB"] = -600
-    log.loc[issbpi,"SBPO"] = log.loc[issbpi, "SBPI"]-600
+    issbpi = (sbpi >600) & (~isivpover) 
+    sbpb[issbpi] = -600
+    sbpo[issbpi] = sbpi[issbpi]-600
 
     # Simultate bright irradiance
-    issbpi = (log["SBPI"] >100) & (log["SBPI"] <=600) & (~isivpover) 
-    log.loc[issbpi,"SBPB"] = -log.loc[issbpi,"SBPI"] + 100
-    log.loc[issbpi,"SBPO"] = log.loc[issbpi,"SBPI"] + log.loc[issbpi,"SBPB"]
+    issbpi = (sbpi >100) & (sbpi <=600) & (~isivpover) 
+    sbpb[issbpi] = -sbpi[issbpi] + 100
+    sbpo[issbpi] = sbpi[issbpi] + sbpb[issbpi]
 
 """
 Simulates the Anker Solix generation 1 energy part
@@ -260,35 +267,36 @@ async def simulate_solix_1_energy_wh(
         full_wh: f64 = -1600,
         empty_wh: f64 = -160
 ):
+    sbpi = log["SBPI"]
+    sbpb = log["SBPB"]
+    sbpo = log["SBPO"]
 
     # Avoid discharge below 100
-    isnodischarge = (log["SBPB"] >0) & (log["SBPB"]<100)
-    log.loc[isnodischarge,"SBPB"] = 0
-    log.loc[isnodischarge,"SBPO"] = 0
-
+    isnodischarge = (sbpb >0) & (sbpb<100)
+    sbpb[isnodischarge] = 0
+    sbpo[isnodischarge] = 0
     
     # Simulate battery almostfull
-    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
+    log_wh = (sbpb.cumsum()+soc*full_wh)
     isprefull = (log_wh > full_wh) & (log_wh < 0.9*full_wh) & (log["SBPI"] >0) 
-    log.loc[isprefull,"SBPB"] = 0.05*full_wh
-    log.loc[isprefull,"SBPO"] = log.loc[isprefull, "SBPI"] - 0.05*full_wh
+    sbpb[isprefull] = 0.05*full_wh
+    sbpo[isprefull] = sbpi[isprefull] - 0.05*full_wh
     
     # Simulate battery full
-    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
+    log_wh = (sbpb.cumsum()+soc*full_wh)
     isfull = log_wh <full_wh
-    log.loc[isfull,"SBPB"] = 0
-    log.loc[isfull,"SBPO"] = log.loc[isfull, "SBPI"]
-
+    sbpb[isfull] = 0
+    sbpo[isfull] = sbpi[isfull]
 
     # Simulate battery empty
-    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
+    log_wh = (sbpb.cumsum()+soc*full_wh)
     isempty = log_wh >empty_wh
-    log.loc[isempty,"SBPB"] = 0
-    log.loc[isempty,"SBPO"] = 0
+    sbpb[isempty] = 0
+    sbpo[isempty] = 0
     
     
     # Update SOC
-    log_wh = (log["SBPB"].cumsum()+soc*full_wh)
+    log_wh = (sbpb.cumsum()+soc*full_wh)
     log["SBSB"] = log_wh/full_wh
     
 
@@ -297,22 +305,25 @@ Simulates the inverter part
 """
 async def simulate_inverter_w(
         log: pd.DataFrame,
-        loss: f64 = 0.9
+        loss: f64
 ):
     sbpi = log["SBPI"]
+    sbpb = log["SBPB"]
     sbpo = log["SBPO"]
-    ivp = log["IVP1"]
-    ivp += log["IVP2"]
-    issbpioverivp = sbpi > ivp
+    ivp1 = log["IVP1"]
+    ivp2 = log["IVP2"]
+    ivp = ivp1 + ivp2
+    issbpioverivp = (sbpi > ivp) & ~(sbpb >0)
 
-    log.loc[~issbpioverivp,"SBPI"] = ivp
-    log.loc[~issbpioverivp,"SBPB"] = 0.0
-    log.loc[~issbpioverivp,"SBPO"] = 0.0
-    
-    log.loc[issbpioverivp,"IVP1"] = 0.5*loss*sbpo[issbpioverivp]
-    log.loc[issbpioverivp,"IVP2"] = 0.5*loss*sbpo[issbpioverivp]
+    sbpi[~issbpioverivp] = ivp/loss
+    sbpb[~issbpioverivp] = 0.0
+    sbpo[~issbpioverivp] = 0.0
+
+    ivp1[issbpioverivp] = 0.5*loss*sbpo[issbpioverivp]
+    ivp1[issbpioverivp] = 0.5*loss*sbpo[issbpioverivp]
 
     #Otherwise keep IVP as is
+
 
     
 """
@@ -320,7 +331,7 @@ Simulates the home plug part
 """
 async def simulate_home_plug_w(
         log: pd.DataFrame,
-        loss: f64 = 0.9
+        loss: f64
 ):
     spph = log["SPPH"]
     isspph = spph >0
@@ -362,8 +373,11 @@ Simulates the system
 """
 async def simulate_system(
         log: pd.DataFrame,
-        soc: f64
+        soc: f64,
+        inv_loss: f64 = 0.9,
+        plug_loss: f64 = 0.9,
 ):
+
     #Predict the samples
     await simulate_solix_1_power_w(
         log
@@ -373,15 +387,15 @@ async def simulate_system(
     await simulate_solix_1_energy_wh(
         log, soc
     )
-    
+
     #Update inverter power
     await simulate_inverter_w(
-        log
+        log, inv_loss
     )
 
     #Update home plug power
     await simulate_home_plug_w(
-        log
+        log, plug_loss
     )
 
     #Update grid power
@@ -526,6 +540,8 @@ async def predict_naive_today(
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog[:realstop].iloc[:-1],restlog])
 
+    await fix_log(castlog)
+    
     return today, castlog, realstop, caststart
 
 
@@ -562,7 +578,7 @@ async def predict_naive_castday(
 
     # Update the irridiance past day average to expected aky conditions
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= np.sqrt(skyratios) 
+    pastlog.loc[:,"SBPI"] *= np.sqrt(skyratios)
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
     pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
     logger.info(f'Expected sky performance by weather: "{100*pastlog_perf:.0f}%"')
