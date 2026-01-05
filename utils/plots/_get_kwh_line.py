@@ -129,7 +129,7 @@ def _get_kwh_line(
                 color='c',label='INV', lw=2, ls='-', alpha=0.6)
     if sbeion is not None:
         ax.plot(time[issbeion], sbei[issbeion],
-                color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
+                color='orange', label='SUN', lw=4, ls='-', alpha=0.8)
 
         
     title = f'# Energy #\n'

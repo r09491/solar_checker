@@ -211,7 +211,7 @@ def _get_w_line(time: t64s, smp: f64s,
                 color='c', lw=2, ls='-', alpha=0.3)
     if sbpoon is not None and sbpoon.any():
         ax.plot(time, sbpo,
-                color='g', lw=2, ls='-', alpha=0.3)
+                color='grey', lw=2, ls='-', alpha=0.3)
     if sbpion is not None and sbpion.any():
         ax.plot(time[issbpion], sbpi[issbpion],
                 color='orange', label='SUN', lw=4, ls='-', alpha=0.8)
