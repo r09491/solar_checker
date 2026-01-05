@@ -26,6 +26,9 @@ from ..typing import (
 TZ='Europe/Berlin'
 XSIZE, YSIZE = 9, 6
 
+POWER_PAYED = 12*44/0.279/365 #kWh
+POWER_USED = (1010+532)/365 #kWh
+
 def _get_kwh_line(
         time: t64s, smeon: f64s, smeoff: f64s,
         ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
@@ -75,23 +78,36 @@ def _get_kwh_line(
     # Stacked!
             
     ftop = 0
-    if issbeoon is not None and issbeoon.any():
+    if issbeion is not None and issbeion.any():
         flow = ftop
-        ftop = sbeo
+        ftop = flow + sbei
         ax.fill_between(time, flow, ftop,
-                        color='grey', label='BANK',alpha=0.3)
+                        color='yellow', label='SUN', alpha=0.3)
 
-    if isiveon is not None and isiveon.any():
-        flow = ftop
-        ftop = ive
-        ax.fill_between(time, flow, ftop,
-                        color='c', label='INV', alpha=0.3)
-
+    ftop = 0
     if isspehon is not None and isspehon.any():
         flow = ftop
-        ftop += speh
-        ax.fill_between(time, 0+ive, speh+ive,
-                        color='brown', label='PLUG', alpha=0.3)
+        ftop = flow + speh
+        # ax.fill_between(time, 0+ive, speh+ive,
+        #                 color='brown', label='PLUG', alpha=0.3)
+        ax.plot(time, ftop,
+                color='brown', label='PLUG', lw=1, ls='-', alpha=0.3)
+
+    elif isiveon is not None and isiveon.any():
+        flow = ftop
+        ftop = flow + ive
+        # ax.fill_between(time, flow, ftop,
+        #                 color='c', label='INV', alpha=0.3)
+        ax.plot(time, ftop,
+                color='c',label='INV', lw=1, ls='-', alpha=0.3)
+
+    elif issbeoon is not None and issbeoon.any():
+        flow = ftop
+        ftop = flow + sbeo
+        # ax.fill_between(time, flow, ftop,
+        #                 color='grey', label='BANK',alpha=0.3)
+        ax.plot(time, ftop,
+                color='grey',label='BANK', lw=1, ls='-', alpha=0.3)
 
     if issmeon is not None and issmeon.any():
         flow = ftop
@@ -99,6 +115,8 @@ def _get_kwh_line(
         ax.fill_between(time, flow, ftop,
                         color='b',label='GRID', alpha=0.3)
 
+        ax.axhline(flow[-1] + POWER_PAYED, label='PAYED', color='orange', ls='--')
+        ax.axhline(flow[-1] + POWER_USED, label='USED', color='g', ls='--')        
 
         
     if sbsb is not None:
@@ -121,17 +139,6 @@ def _get_kwh_line(
                         color='b', alpha=0.3)
 
 
-    if spehon is not None:
-        ax.plot(time, speh,
-                color='brown', label='PLUG', lw=2, ls='-', alpha=0.6)
-    if iveon is not None:
-        ax.plot(time, ive2 + ive1,
-                color='c',label='INV', lw=2, ls='-', alpha=0.6)
-    if sbeion is not None:
-        ax.plot(time[issbeion], sbei[issbeion],
-                color='orange', label='SUN', lw=4, ls='-', alpha=0.8)
-
-        
     title = f'# Energy #\n'
     if sbeion is not None:
         if time_format == '%H:%M': # Accumulated

@@ -128,58 +128,34 @@ def _get_w_line(time: t64s, smp: f64s,
 
 
     """ Plot solarbank and smartmeter filled """
-    if issbpoon is not None and issbpoon.any():
-        isfill = issbpoon|np.roll(issbpoon,+1)
-        ax.fill_between(time, 0, sbpo,
+    if issbpion is not None and issbpion.any():
+        isfill = issbpion|np.roll(issbpion,-1)|np.roll(issbpion,+1)
+        ax.fill_between(time, 0, sbpi,
                         where = isfill,
-                        color='grey', label='BANK', lw=1, alpha=0.3)
+                        color='yellow', label='SUN', lw=1, alpha=0.3)
 
-        ax.fill_between(time, sbpo, sbpo + smpin,
+        ax.fill_between(time, sbpi, sbpi + smpin,
                         where = isfill,
                         color='b', lw=1, alpha=0.3)
-        if issmpin is not None:
-            issmpin &= ~issbpoon
-        if isivpon is not None:
-            isivpon &= ~issbpoon
-        if isspphon is not None:
-            isspphon &= ~issbpoon
 
-    if isivpon is not None and isivpon.any():
-        isfill = isivpon|np.roll(isivpon,+1)
-        ax.fill_between(time, 0, ivp,
-                        where = isfill,
-                        color='c', label='INV', lw=1, alpha=0.3)
-        ax.fill_between(time, ivp, ivp + smpin,
-                        where = isfill,
-                        color='b', lw=1, alpha=0.3)
         if issmpin is not None:
-            issmpin &= ~isivpon
-        if isspphon is not None:
-            isspphon &= ~isivpon
+            issmpin &= ~isfill #~issbpion
 
-    if isspphon is not None and isspphon.any():
-        isfill = isspphon|np.roll(isspphon,+1)
-        ax.fill_between(time, 0, spph,
-                        where = isfill,
-                        color='brown', label='PLUG', lw=1, alpha=0.3)
-        ax.fill_between(time, spph, spph + smpin,
-                        where = isfill,
-                        color='b', lw=1, alpha=0.3)
-        if issmpin is not None:
-            issmpin &= ~isspphon
-   
+        if time.size<=24*60: #only plot within 24h
+            ax.fill_between(time[issbpion],
+                            np.full_like(sbpion, 600),
+                            np.full_like(sbpion, 800),
+                            color='red', label='LIMITS', alpha=0.2)
 
     if issmpin is not None: #import
-        isfill = issmpin|np.roll(issmpin,+1)
+        isfill = issmpin|np.roll(issmpin,-1)|np.roll(issmpin,+1)
         ax.fill_between(time, 0, smpin,
                         where = isfill,
                         color='b', label='GRID', lw=1, alpha=0.3)
-        issmpout &= ~issmpin
-        
-    """ Plot the battery power of the solarbank during charging"""
 
+        
     if issbpbin is not None and issbpbin.any(): #charge
-        isfill = issbpbin|np.roll(issbpbin,+1)
+        isfill = issbpbin|np.roll(issbpbin,-1)|np.roll(issbpbin,+1)
         ax.fill_between(time, sbpbin, 0,
                         where = isfill,
                         color='m', label='BAT', alpha=0.3)
@@ -189,13 +165,13 @@ def _get_w_line(time: t64s, smp: f64s,
         issmpout &= ~issbpbin
 
     if issmpout is not None and issmpout.any(): #export
-        isfill = issmpout|np.roll(issmpout,+1)
+        isfill = issmpout|np.roll(issmpout,-1)|np.roll(issmpout,+1)
         ax.fill_between(time, 0, smpout,
-                        where = issmpout, #isfill,
+                        where = isfill,
                         color='b', lw=0, alpha=0.3)
 
     if issbpbout is not None and issbpbout.any(): #discharge
-        isfill = issbpbout|np.roll(issbpbout,+1)
+        isfill = issbpbout|np.roll(issbpbout,-1)|np.roll(issbpbout,+1)
         ax.fill_between(time, sbpbout, 0,
                         where = isfill,
                         color='m', alpha=0.3)
@@ -205,21 +181,14 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if spphon is not None and spphon.any():
         ax.plot(time, spph,
-                color='brown', lw=2, ls='-', alpha=0.3)
+                color='brown', lw=2, ls='-', alpha=0.4)
     if ivpon is not None and ivpon.any():
         ax.plot(time, ivp,
-                color='c', lw=2, ls='-', alpha=0.3)
+                color='c', lw=2, ls='-', alpha=0.4)
     if sbpoon is not None and sbpoon.any():
         ax.plot(time, sbpo,
-                color='grey', lw=2, ls='-', alpha=0.3)
-    if sbpion is not None and sbpion.any():
-        ax.plot(time[issbpion], sbpi[issbpion],
-                color='orange', label='SUN', lw=4, ls='-', alpha=0.8)
-        if time.size<=24*60: #only plot within 24h
-            ax.fill_between(time[issbpion],
-                            np.full_like(sbpion, 600),
-                            np.full_like(sbpion, 800),
-                            color='black', label='LIMITS', alpha=0.1)
+                color='grey', lw=2, ls='-', alpha=0.4)
+
 
     """ Generate title """
             
