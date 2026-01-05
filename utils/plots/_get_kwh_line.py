@@ -75,25 +75,25 @@ def _get_kwh_line(
     # Stacked!
             
     ftop = 0
-    if issbeoon is not None:
+    if issbeoon is not None and issbeoon.any():
         flow = ftop
         ftop = sbeo
         ax.fill_between(time, flow, ftop,
                         color='grey', label='BANK',alpha=0.3)
 
-    if isiveon is not None:
+    if isiveon is not None and isiveon.any():
         flow = ftop
         ftop = ive
         ax.fill_between(time, flow, ftop,
                         color='c', label='INV', alpha=0.3)
 
-    if isspehon is not None:
+    if isspehon is not None and isspehon.any():
         flow = ftop
         ftop += speh
         ax.fill_between(time, 0+ive, speh+ive,
                         color='brown', label='PLUG', alpha=0.3)
 
-    if issmeon is not None:
+    if issmeon is not None and issmeon.any():
         flow = ftop
         ftop = flow + smeon
         ax.fill_between(time, flow, ftop,
@@ -120,14 +120,13 @@ def _get_kwh_line(
         ax.fill_between(time, 0, -smeoff,
                         color='b', alpha=0.3)
 
-    """    
+
     if spehon is not None:
         ax.plot(time, speh,
                 color='brown', label='PLUG', lw=2, ls='-', alpha=0.6)
     if iveon is not None:
         ax.plot(time, ive2 + ive1,
                 color='c',label='INV', lw=2, ls='-', alpha=0.6)
-    """
     if sbeion is not None:
         ax.plot(time[issbeion], sbei[issbeion],
                 color='orange', label='SUN', lw=2, ls='-', alpha=0.8)
