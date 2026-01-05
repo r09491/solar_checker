@@ -82,7 +82,7 @@ def _get_kwh_line(
         flow = ftop
         ftop = flow + sbei
         ax.fill_between(time, flow, ftop,
-                        color='yellow', label='SUN', alpha=0.3)
+                        color='orange', label='SUN', alpha=0.3)
 
     ftop = 0
     if isspehon is not None and isspehon.any():
