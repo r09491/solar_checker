@@ -77,46 +77,36 @@ def _get_kwh_line(
 
     # Stacked!
             
-    ftop = 0
     if issbeion is not None and issbeion.any():
-        flow = ftop
-        ftop = flow + sbei
-        ax.fill_between(time, flow, ftop,
+        ax.fill_between(time, 0, sbei,
                         color='yellow', label='SUN', alpha=0.3)
 
-    ftop = 0
     if isspehon is not None and isspehon.any():
-        flow = ftop
-        ftop = flow + speh
-        # ax.fill_between(time, 0+ive, speh+ive,
-        #                 color='brown', label='PLUG', alpha=0.3)
-        ax.plot(time, ftop,
+        ax.plot(time, speh,
                 color='brown', label='PLUG', lw=1, ls='-', alpha=0.3)
-
+        balcony = speh
+        
     elif isiveon is not None and isiveon.any():
-        flow = ftop
-        ftop = flow + ive
-        # ax.fill_between(time, flow, ftop,
-        #                 color='c', label='INV', alpha=0.3)
-        ax.plot(time, ftop,
+        ax.plot(time, ive,
                 color='c',label='INV', lw=1, ls='-', alpha=0.3)
-
+        balcony = ive
+        
     elif issbeoon is not None and issbeoon.any():
-        flow = ftop
-        ftop = flow + sbeo
-        # ax.fill_between(time, flow, ftop,
-        #                 color='grey', label='BANK',alpha=0.3)
-        ax.plot(time, ftop,
+        ax.plot(time, sbeo,
                 color='grey',label='BANK', lw=1, ls='-', alpha=0.3)
-
+        balcony = sbeo
+        
+    else:
+        balcony = np.zeros_like(smeon)
+        
     if issmeon is not None and issmeon.any():
-        flow = ftop
-        ftop = flow + smeon
-        ax.fill_between(time, flow, ftop,
+        ax.fill_between(time, balcony, balcony + smeon,
                         color='b',label='GRID', alpha=0.3)
 
-        ax.axhline(flow[-1] + POWER_PAYED, label='PAYED', color='orange', ls='--')
-        ax.axhline(flow[-1] + POWER_USED, label='USED', color='g', ls='--')        
+        ax.axhline(balcony[-1] + POWER_PAYED,
+                   label='PAYED', color='orange', ls='--')
+        ax.axhline(balcony[-1] + POWER_USED,
+                   label='USED', color='g', ls='--')        
 
         
     if sbsb is not None:
