@@ -79,7 +79,7 @@ def _get_kwh_line(
             
     if issbeion is not None and issbeion.any():
         ax.fill_between(time, 0, sbei,
-                        color='yellow', label='SUN', alpha=0.3)
+                        color='orange', label='SUN', alpha=0.3)
 
     if isspehon is not None and isspehon.any():
         ax.plot(time, speh,
@@ -104,9 +104,9 @@ def _get_kwh_line(
                         color='b',label='GRID', alpha=0.3)
 
         ax.axhline(balcony[-1] + POWER_PAYED,
-                   label='PAYED', color='orange', ls='--')
+                   label='PAYED', lw=2, color='orange', ls='--')
         ax.axhline(balcony[-1] + POWER_USED,
-                   label='USED', color='g', ls='--')        
+                   label='GOAL', lw=2, color='g', ls='--')        
 
         
     if sbsb is not None:

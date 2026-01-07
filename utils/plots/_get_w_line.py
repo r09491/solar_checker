@@ -132,7 +132,7 @@ def _get_w_line(time: t64s, smp: f64s,
         isfill = issbpion|np.roll(issbpion,-1)|np.roll(issbpion,+1)
         ax.fill_between(time, 0, sbpi,
                         where = isfill,
-                        color='yellow', label='SUN', lw=1, alpha=0.3)
+                        color='orange', label='SUN', lw=1, alpha=0.3)
 
         ax.fill_between(time, sbpi, sbpi + smpin,
                         where = isfill,
