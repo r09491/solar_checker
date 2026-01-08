@@ -109,11 +109,11 @@ async def get_hour_sky_info(
 
 
 """
-Fix the inconsistencies of samples introduced by resampling.Only
-irridiance and grid power shall be predicted. Everything else shall be
-simulated.
+Fix the inconsistencies of samples if solix is off (cold). There is
+still may be irridiance. Then the inverter IVP1, IVP2 show it. Other
+samples are simulated dependent on the irridiance SBPI.
 """
-async def fix_log(
+async def fix_sbpi(
         log: pd.DataFrame
 ):
     sbpi = log["SBPI"]
@@ -160,6 +160,10 @@ async def get_hour_sample_logs(
         freq="h"
     ).set_names('TIME')
 
+    # Proper working Solix shall be ensured
+    await fix_sbpi(todaylog)
+    await fix_sbpi(todaylog)
+    
     return logdays, pastlog, todaylog
 
 
@@ -239,23 +243,25 @@ async def simulate_solix_1_power_w(
     sbpo = log["SBPO"]
     ivp1 = log["IVP1"]
     ivp2 = log["IVP2"]
-    ivp = ivp1 + ivp2 
-    isivpover = (ivp > sbpi) & ~(sbpb>0)
+    #ivp = ivp1 + ivp2 
+    #isivpover = (ivp > sbpi) & ~(sbpb>0)
 
-    iswarm = log["T"] >3
-    
     #Reset
-    sbpb[~isivpover] = 0.0
-    sbpo[~isivpover] = 0.0
-    ivp1[~isivpover] = 0.0
-    ivp2[~isivpover] = 0.0
+    sbpb[:] = 0.0
+    sbpo[:] = 0.0
+    ivp1[:] = 0.0
+    ivp2[:] = 0.0
+
+    
+    # No battery if cold
+    iswarm = log["T"] >3
 
     # Avoid rounding errors
     isnosbpi = (sbpi <10) 
     sbpi[isnosbpi] = 0
 
     # Adapt sbpi to low temperaturs
-    sbpi[isivpover] = ivp[isivpover]
+    #sbpi[isivpover] = ivp[isivpover]
     
     # Simultate low irradiance
     issbpi = (sbpi >0) & (sbpi <=35)
