@@ -46,6 +46,5 @@ alias solar_checker_watts_tail='tail -f $SOLAR_CHECKER_STORE_DIR/solar_checker_l
 alias solar_checker_plot="solar_checker_plot.sh"
 alias solar_checker_plot_anyday="solar_checker_plot_anyday.sh"
 alias solar_checker_plot_yesterday="solar_checker_plot_yesterday.sh"
-alias solar_checker_slots="solar_checker_slots.sh"
 alias solar_checker_slots_anyday="solar_checker_slots_anyday.sh"
 alias solar_checker_slots_yesterday="solar_checker_slots_yesterday.sh"

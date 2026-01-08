@@ -27,7 +27,7 @@ from datetime import(
     datetime
 )
 from ..typing import(
-    List, Optional, f64
+    List, Optional, f64, f64s
 )
 from ..common import(
     POWER_NAMES,
@@ -40,6 +40,14 @@ from brightsky import (
     Sky
 )
 
+K = 1 # Ratio denominator
+
+async def skyadaptor(
+        ratios: np.ndarray
+) -> np.ndarray:
+    return np.sqrt(ratios*K)
+
+
 SKY_TZ='Europe/Berlin'
 """ Returns the sky for each hour in the castday """
 async def get_hour_sky_pool(
@@ -50,7 +58,7 @@ async def get_hour_sky_pool(
 ) -> Optional[pd.DataFrame]:
     
     sky = Sky(lat, lon, castday, tz)
-    df = (await sky.get_sky_info())['cloud_cover'].fillna(0.0)
+    df = (await sky.get_solar_info()).iloc[:,1:].fillna(0.0)
     if df is None:
         logger.error(f'No sky features for {castday}')
         return None
@@ -59,12 +67,12 @@ async def get_hour_sky_pool(
 
 """ Return the ratio of sky% for each hour from the
 castday to today """
-async def get_hour_sky_ratios(
+async def get_hour_sky_info(
         castdays: List[str],
         lat: f64,
         lon: f64,
         tz: str = SKY_TZ
-)  -> Optional[np.ndarray]:
+)  -> (f64s,f64s):
 
     skytasks = [asyncio.create_task(
         get_hour_sky_pool(
@@ -90,15 +98,22 @@ async def get_hour_sky_ratios(
         logger.error(f'Unable to retrieve sky for "{castday}"')
         return None
 
-    # No div by zero!
-    ratios = ((100 - todaysky.values) + 1) / ((100-pastsky.values) + 1) 
-    return ratios[:-1]
+    today_cloud_free = 100.0 - todaysky["cloud_cover"].values
+    past_cloud_free = 100.0 - pastsky["cloud_cover"].values
+    ratios = (today_cloud_free + 1) / (past_cloud_free + 1) # No div by zero!
+
+    # The weather for today is better (more irridiance) with ratios > 1
+    # The weather for today is worse (less irridiance) with ratios < 1
+    
+    return ratios[:-1], todaysky["temperature"].values[:-1]
 
 
 """
-Fix the inconsistencies of samples introduced by resampling
+Fix the inconsistencies of samples if solix is off (cold). There is
+still may be irridiance. Then the inverter IVP1, IVP2 show it. Other
+samples are simulated dependent on the irridiance SBPI.
 """
-async def fix_log(
+async def fix_sbpi(
         log: pd.DataFrame
 ):
     sbpi = log["SBPI"]
@@ -106,8 +121,6 @@ async def fix_log(
     ivp = log["IVP1"] + log["IVP2"]
     isivpoversbpi = (ivp > sbpi) & ~(sbpb >0)
     log.loc[isivpoversbpi, "SBPI"] = ivp[isivpoversbpi]
-    log.loc[isivpoversbpi, "SBPO"] = 0
-    log.loc[isivpoversbpi, "SBPB"] = 0
 
 
 LOGWINDOWSIZE = 2
@@ -147,8 +160,9 @@ async def get_hour_sample_logs(
         freq="h"
     ).set_names('TIME')
 
-    #await fix_log(pastlog)
-    #await fix_log(todaylog)
+    # Proper working Solix shall be ensured
+    await fix_sbpi(todaylog)
+    await fix_sbpi(todaylog)
     
     return logdays, pastlog, todaylog
 
@@ -164,6 +178,10 @@ async def get_predict_tables(
     sbsb_df = casthours["SBSB"]
     sbsb_df.reset_index(inplace=True, drop=True)    
     casthours.drop("SBSB", inplace=True, axis=1)
+
+    t_df = casthours["T"]
+    t_df.reset_index(inplace=True, drop=True)    
+    casthours.drop("T", inplace=True, axis=1)
     
     casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
     casthours.drop("IVP1", inplace=True, axis=1)
@@ -207,6 +225,7 @@ async def get_predict_tables(
         axis=1
     )
 
+    watts_table["T"] = t_df
     energy_table["BAT%"] = 100*sbsb_df
     
     return (watts_table, energy_table)
@@ -218,45 +237,54 @@ Simulates the Anker Solix generation 1 power part
 async def simulate_solix_1_power_w(
         log: pd.DataFrame
 ):
+
     sbpi = log["SBPI"]
     sbpb = log["SBPB"]
     sbpo = log["SBPO"]
     ivp1 = log["IVP1"]
     ivp2 = log["IVP2"]
-    ivp = ivp1 + ivp2 
-    isivpover = (ivp > sbpi) & ~(sbpb>0)
+    #ivp = ivp1 + ivp2 
+    #isivpover = (ivp > sbpi) & ~(sbpb>0)
 
     #Reset
-    sbpb[~isivpover] = 0.0
-    sbpo[~isivpover] = 0.0
-    ivp1[~isivpover] = 0.0
-    ivp2[~isivpover] = 0.0
+    sbpb[:] = 0.0
+    sbpo[:] = 0.0
+    ivp1[:] = 0.0
+    ivp2[:] = 0.0
+
     
-    # Avoid negative radiation
-    isnosbpi = (sbpi <0) 
+    # No battery if cold
+    iswarm = log["T"] >3
+
+    # Avoid rounding errors
+    isnosbpi = (sbpi <10) 
     sbpi[isnosbpi] = 0
 
+    # Adapt sbpi to low temperaturs
+    #sbpi[isivpover] = ivp[isivpover]
+    
     # Simultate low irradiance
-    issbpi = (sbpi >0) & (sbpi <=35) & (~isivpover) 
-    sbpb[issbpi] = -sbpi[issbpi]
-
+    issbpi = (sbpi >0) & (sbpi <=35)
+    sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm]
+    
     # Simultate grey irradiance
-    issbpi = (sbpi >35) & (sbpi <=100) & (~isivpover) 
+    issbpi = (sbpi >35) & (sbpi <=100) # & (~isivpover) 
     sbpo[issbpi] = sbpi[issbpi]
 
     # constrain high irradiance
-    issbpi = (sbpi > 800) & (~isivpover) 
+    issbpi = (sbpi > 800) # & (~isivpover) 
     sbpi[issbpi] = 800
 
     # Simultate grey irradiance
-    issbpi = (sbpi >600) & (~isivpover) 
-    sbpb[issbpi] = -600
-    sbpo[issbpi] = sbpi[issbpi]-600
-
+    issbpi = (sbpi >600) #& (~isivpover) 
+    sbpb[issbpi & iswarm] = -600
+    sbpo[issbpi] = sbpi[issbpi]-sbpb[issbpi]
+    
     # Simultate bright irradiance
-    issbpi = (sbpi >100) & (sbpi <=600) & (~isivpover) 
-    sbpb[issbpi] = -sbpi[issbpi] + 100
-    sbpo[issbpi] = sbpi[issbpi] + sbpb[issbpi]
+    issbpi = (sbpi >100) & (sbpi <=600) # & (~isivpover) 
+    sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm] + 100
+    sbpo[issbpi] = sbpi[issbpi] - sbpb[issbpi]
+
 
 """
 Simulates the Anker Solix generation 1 energy part
@@ -307,20 +335,12 @@ async def simulate_inverter_w(
         log: pd.DataFrame,
         loss: f64
 ):
-    sbpi = log["SBPI"]
-    sbpb = log["SBPB"]
     sbpo = log["SBPO"]
     ivp1 = log["IVP1"]
     ivp2 = log["IVP2"]
-    ivp = ivp1 + ivp2
-    issbpioverivp = (sbpi > ivp) & ~(sbpb >0)
 
-    sbpi[~issbpioverivp] = ivp/loss
-    sbpb[~issbpioverivp] = 0.0
-    sbpo[~issbpioverivp] = 0.0
-
-    ivp1[issbpioverivp] = 0.5*loss*sbpo[issbpioverivp]
-    ivp1[issbpioverivp] = 0.5*loss*sbpo[issbpioverivp]
+    ivp1[:] = 0.49*loss*sbpo
+    ivp2[:] = 0.49*loss*sbpo
 
     #Otherwise keep IVP as is
 
@@ -352,6 +372,10 @@ async def simulate_grid_w(
         log: pd.DataFrame
 ):
 
+    smp =  log["SMP"]
+    isexport = smp <0
+    smp[isexport] = 0
+    
     # Vote for the balcony input
     
     balcony = log["SPPH"].copy()
@@ -365,7 +389,7 @@ async def simulate_grid_w(
     balcony[~isbalcony] = sbpo[~isbalcony]
 
     # Simultate the smartmeter
-    log["SMP"] -= balcony
+    smp[:] -= balcony
     
 
 """
@@ -377,7 +401,6 @@ async def simulate_system(
         inv_loss: f64 = 0.9,
         plug_loss: f64 = 0.9,
 ):
-
     #Predict the samples
     await simulate_solix_1_power_w(
         log
@@ -393,6 +416,7 @@ async def simulate_system(
         log, inv_loss
     )
 
+
     #Update home plug power
     await simulate_home_plug_w(
         log, plug_loss
@@ -403,7 +427,7 @@ async def simulate_system(
         log
     )
 
-
+    
 @dataclass
 class Script_Arguments:
     castday: str
@@ -435,19 +459,30 @@ async def predict_naive_today(
         # No cast is possible at the end of today
         return today, todaylog, None, None
 
+    
     # Read the sky ratios from the pastlog to today
-    skyratios = await get_hour_sky_ratios(
+    skyratios, temperatures = await get_hour_sky_info(
         days, lat, lon
     )
     if skyratios is None:
         logger.error(f'Skyratios not available')
         return None
-    
+
+
+    # Add the temperatures to the frames
+    pastlog.insert(pastlog.shape[1], "T", temperatures)
+    todaylog.insert(todaylog.shape[1], "T", temperatures[:len(todaylog)])
+
+
     # Update the irridiance past day average to expected aky conditions
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= np.sqrt(skyratios)
+    skyfactor = await skyadaptor(skyratios)
+    pastlog.loc[:, "SBPI"] *= skyfactor
+    pastlog.loc[:, "IVP1"] *= skyfactor
+    pastlog.loc[:, "IVP2"] *= skyfactor
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
 
+    
     pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
     logger.info(f'Expected sky performance: "{100*pastlog_perf:.0f}%"')
     
@@ -458,21 +493,22 @@ async def predict_naive_today(
     # aremeasured yet. Therefore the last hour is part of the casting
     # and excluded from the calculating of the ratio.
 
-    realstop = pastlog.index[len(todaylog.index)-1]
-    caststart = pastlog.index[len(todaylog.index)]
+    realstop = pastlog.index[len(todaylog)-1]
+    caststart = pastlog.index[len(todaylog)]
 
-    logger.info(f'Last real stop is "{realstop}"')
-    logger.info(f'Last cast start is "{caststart}"')
+    logger.info(f'Real stop at intervsl end of "{realstop}"')
+    logger.info(f'Cast start at interval  beginning of "{caststart}"')
 
     #
-    
+
     realsbpi = todaylog.loc[:realstop,"SBPI"]
+    # Only items not changing ny more
     realsbpisum = realsbpi.iloc[:-1].sum()
     castsbpi = pastlog.loc[:realstop,"SBPI"]
     castsbpisum = castsbpi.iloc[:-1].sum()
     realsbpisum = realsbpisum if castsbpisum >0 else realsbpi.sum()
     castsbpisum = castsbpisum if castsbpisum >0 else castsbpi.sum()
-    ratiosbpi = np.sqrt((realsbpisum+1)/(castsbpisum+1)) # no div by zero
+    ratiosbpi = np.sqrt((realsbpisum+1)/(castsbpisum+1)/K) # no div by zero
     
     logger.info(f'Real irridiance is "{realsbpisum:.0f}"')
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
@@ -480,68 +516,22 @@ async def predict_naive_today(
     logger.info(f'Expected SBPI live performance: "{100*pastlog_perf*ratiosbpi:.0f}%"')
 
     #
-
-    realivp1 = todaylog.loc[:realstop,"IVP1"]
-    realivp1sum = realivp1.iloc[:-1].sum()
-    castivp1 = pastlog.loc[:realstop,"IVP1"]
-    castivp1sum = castivp1.iloc[:-1].sum()
-    realivp1sum = realivp1sum if castivp1sum >0 else realivp1.sum()
-    castivp1sum = castivp1sum if castivp1sum >0 else castivp1.sum()
-    ratioivp1 = np.sqrt((realivp1sum+1)/(castivp1sum+1)) # no div by zero
-    
-    logger.info(f'Real irridiance is "{realivp1sum:.0f}"')
-    logger.info(f'Cast irridiance is "{castivp1sum:.0f}"')
-    logger.info(f'Real/Cast ratio is "{ratioivp1:.2f}"')
-    logger.info(f'Expected IVP1 live performance: "{100*pastlog_perf*ratioivp1:.0f}%"')
-
-    #
-    
-    realivp2 = todaylog.loc[:realstop,"IVP2"]
-    realivp2sum = realivp2.iloc[:-1].sum()
-    castivp2 = pastlog.loc[:realstop,"IVP2"]
-    castivp2sum = castivp2.iloc[:-1].sum()
-    realivp2sum = realivp2sum if castivp2sum >0 else realivp2.sum()
-    castivp2sum = castivp2sum if castivp2sum >0 else castivp2.sum()
-    ratioivp2 = np.sqrt((realivp2sum+1)/(castivp2sum+1)) # no div by zero
-    
-    logger.info(f'Real irridiance is "{realivp2sum:.0f}"')
-    logger.info(f'Cast irridiance is "{castivp2sum:.0f}"')
-    logger.info(f'Real/Cast ratio is "{ratioivp2:.2f}"')
-    logger.info(f'Expected IVP2 live performance: "{100*pastlog_perf*ratioivp2:.0f}%"')
-
-    #
-    
-    realspph = todaylog.loc[:realstop,"SPPH"]
-    realspphsum = realspph.iloc[:-1].sum()
-    castspph = pastlog.loc[:realstop,"SPPH"]
-    castspphsum = castspph.iloc[:-1].sum()
-    realspphsum = realspphsum if castspphsum >0 else realspph.sum()
-    castspphsum = castspphsum if castspphsum >0 else castspph.sum()
-    ratiospph = np.sqrt((realspphsum+1)/(castspphsum+1)) # no div by zero
-    
-    logger.info(f'Real irridiance is "{realspphsum:.0f}"')
-    logger.info(f'Cast irridiance is "{castspphsum:.0f}"')
-    logger.info(f'Real/Cast ratio is "{ratiospph:.2f}"')
-    logger.info(f'Expected SPPH live performance: "{100*pastlog_perf*ratiospph:.0f}%"')
-
-    
+    todaylog = todaylog[:realstop].iloc[:-1]
     # The restlog needs adaptation
     restlog = pastlog.loc[realstop:,:].copy()
-    restlog.loc[:,"SBPI"] *= ratiosbpi
-    restlog.loc[:,"IVP1"] *= ratioivp1
-    restlog.loc[:,"IVP2"] *= ratioivp2
-    restlog.loc[:,"SPPH"] *= ratiospph
+    realfactor = await skyadaptor(ratiosbpi)
+    restlog.loc[:,"SBPI"] *= realfactor
+    restlog.loc[:,"IVP1"] *= realfactor
+    restlog.loc[:,"IVP2"] *= realfactor
 
     #Predict the system
     await simulate_system(
         restlog, realsoc
     )
-   
-    #Join the current real data with the cast data
-    castlog = pd.concat([todaylog[:realstop].iloc[:-1],restlog])
 
-    await fix_log(castlog)
-    
+    #Join the current real data with the cast data
+    castlog = pd.concat([todaylog[:realstop],restlog])
+
     return today, castlog, realstop, caststart
 
 
@@ -569,16 +559,22 @@ async def predict_naive_castday(
     
 
     # Read the sky ratios from the pastlog to the castday
-    skyratios = await get_hour_sky_ratios(
+    skyratios, temperatures = await get_hour_sky_info(
         days[:-1] + [castday], lat, lon
     )
     if skyratios is None:
         logger.error(f'Skyratios are not available')
         return None
 
+    # Add the temperature column
+    pastlog.insert(pastlog.shape[1], "T", temperatures)
+    
     # Update the irridiance past day average to expected aky conditions
+    skyfactor = await skyadaptor(skyratios)
     pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= np.sqrt(skyratios)
+    pastlog.loc[:,"SBPI"] *= skyfactor
+    pastlog.loc[:,"IVP1"] *= skyfactor
+    pastlog.loc[:,"IVP2"] *= skyfactor
     pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
     pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
     logger.info(f'Expected sky performance by weather: "{100*pastlog_perf:.0f}%"')
