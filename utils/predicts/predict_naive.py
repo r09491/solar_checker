@@ -170,7 +170,23 @@ async def get_hour_sample_logs(
 async def get_predict_tables(
         casthours: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
-    
+
+    casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
+    casthours.drop("IVP1", inplace=True, axis=1)
+    casthours.drop("IVP2", inplace=True, axis=1)
+
+    casthours[">SMP"] = casthours["SMP"]
+    casthours.loc[casthours["SMP"]>0, ">SMP"]= 0
+    casthours["SMP>"] = casthours["SMP"]
+    casthours.loc[casthours["SMP"]<0,"SMP>"] = 0
+    casthours.drop("SMP", inplace=True, axis=1)
+
+    casthours[">SBPB"] = casthours["SBPB"]
+    casthours.loc[casthours["SBPB"]>0,">SBPB"] = 0
+    casthours["SBPB>"] = casthours["SBPB"]
+    casthours.loc[casthours["SBPB"]<0, "SBPB>"] = 0
+    casthours.drop("SBPB", inplace=True, axis=1)
+
     casthours = casthours.resample(
         '3h', label='left', closed='left'
     ).mean()
@@ -183,22 +199,6 @@ async def get_predict_tables(
     t_df.reset_index(inplace=True, drop=True)    
     casthours.drop("T", inplace=True, axis=1)
     
-    casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
-    casthours.drop("IVP1", inplace=True, axis=1)
-    casthours.drop("IVP2", inplace=True, axis=1)
-
-    casthours[">SBPB"] = casthours["SBPB"]
-    casthours.loc[casthours["SBPB"]>0,">SBPB"] = 0
-    casthours["SBPB>"] = casthours["SBPB"]
-    casthours.loc[casthours["SBPB"]<0, "SBPB>"] = 0
-    casthours.drop("SBPB", inplace=True, axis=1)
-
-    casthours[">SMP"] = casthours["SMP"]
-    casthours.loc[casthours["SMP"]>0, ">SMP"]= 0
-    casthours["SMP>"] = casthours["SMP"]
-    casthours.loc[casthours["SMP"]<0,"SMP>"] = 0
-    casthours.drop("SMP", inplace=True, axis=1)
-
     if not casthours["SPPH"].any():
         casthours.drop("SPPH", inplace=True, axis=1)
     if not casthours[">SMP"].any():
