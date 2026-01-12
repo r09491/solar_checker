@@ -148,7 +148,7 @@ def _get_w_line(time: t64s, smp: f64s,
     if issmpin is not None  and issmpin.any(): #import        
         ax.fill_between(time, sbpi, sbpi + smpin,
                         where = ~issbpbout,
-                        color='b', lw=1, alpha=0.3)
+                        color='b', lw=1, label='Grid', alpha=0.3)
         
     if issbpbin is not None and issbpbin.any(): #charge
         ax.fill_between(time, sbpbin, 0,
