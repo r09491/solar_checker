@@ -127,15 +127,9 @@ def _get_w_line(time: t64s, smp: f64s,
             )        
 
 
-    if issbpion is not None and issbpion.any(): # irridiance
+    if issbpion is not None and issbpion.any(): # irridiance            
         ax.fill_between(time, 0, sbpi,
-                        where = issbpion,
                         color='orange', label='SUN', lw=1, alpha=0.3)
-        ax.fill_between(time, sbpi, sbpi + smpin,
-                        where = issbpion,
-                        color='b', lw=1, alpha=0.3)
-        if issmpin is not None:
-            issmpin &= ~issbpion
 
         if time.size<=24*60: #only plot within 24h
             ax.fill_between(time[issbpion],
@@ -148,33 +142,20 @@ def _get_w_line(time: t64s, smp: f64s,
                         where = issbpbout,
                         color='m', alpha=0.3)
         ax.fill_between(time, sbpbout, sbpbout + smpin,
-                        where = issbpbout, #isfill,
-                        color='b', alpha=0.3)
-        if issbpbout is not None:
-            issmpin &= ~issbpbout
-            
-    if issmpin is not None: #import
-        isfill = issmpin|np.roll(issmpin,-1)|np.roll(issmpin,+1)
-        ax.fill_between(time, 0, smpin,
-                        where = isfill,
-                        color='b', label='GRID', lw=1, alpha=0.3)
-        if issmpin is not None:
-            issmpout &= ~issmpin
+                        where = issbpbout,
+                        color='b', lw=1, alpha=0.3)
+
+    if issmpin is not None  and issmpin.any(): #import        
+        ax.fill_between(time, sbpi, sbpi + smpin,
+                        where = ~issbpbout,
+                        color='b', lw=1, alpha=0.3)
         
     if issbpbin is not None and issbpbin.any(): #charge
-        isfill = issbpbin|np.roll(issbpbin,-1)|np.roll(issbpbin,+1)
         ax.fill_between(time, sbpbin, 0,
-                        where = isfill, #issbpbin,
                         color='m', label='BAT', alpha=0.3)
-        ax.fill_between(time, smpout+sbpbin, sbpbin,
-                        where = isfill, #issbpbin,
-                        color='b', lw=0, alpha=0.3)
-        issmpout &= ~isfill
         
     if issmpout is not None and issmpout.any(): #export
-        isfill = issmpout|np.roll(issmpout,-1)|np.roll(issmpout,+1)
-        ax.fill_between(time, smpout, 0,
-                        where = isfill,
+        ax.fill_between(time, smpout + sbpbin, sbpbin,
                         color='b', lw=0, alpha=0.3)
         
     
