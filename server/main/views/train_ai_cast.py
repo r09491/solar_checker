@@ -13,5 +13,5 @@ async def train_ai_cast(request: web.Request) -> dict:
 
     return aiohttp_jinja2.render_template(
         'error.html', request,
-        {'error' : f'AI train not implemented</brk>Use script from command line'}
+        {'error' : 'AI training is not implemented.\nUse script from command line!'}
     )

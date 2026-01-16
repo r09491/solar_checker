@@ -4,7 +4,7 @@ with open("README.md", 'r') as f:
     long_description = f.read()
     
 setup(name='solar_checker',
-      version='1.9.2',
+      version='1.9.3',
       description='Solar checker with Ecoflow Delta Max,APsystems,Anker,Tuya and BrightSky API',
       url='https://github.com/r09491/solar_checker',
       author='r09491',
@@ -45,7 +45,8 @@ setup(name='solar_checker',
           './scripts/solar_checker_slots_yesterday.sh',
           './scripts/solar_checker_zeroise.py',
           './scripts/solar_checker_zeroise.sh',
-          './server/main/p12run',
+          './server/main/p12.0.run',
+          './server/main/p12.1.run',
       ],
       packages=[
           'aicast',

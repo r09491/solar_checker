@@ -1,9 +1,10 @@
 from aiohttp import web
 import aiohttp_jinja2, jinja2
 
-from settings import conf, BASE_DIR
+from settings import BASE_DIR
 from utils.csvlog import _get_logdays
 
+conf = None
 def get_logdays_jinja2():
     """ !!!  Coroutines can not be used in templates !!! """
     return set(_get_logdays(conf['logprefix'], conf['logdir']))
@@ -21,6 +22,9 @@ def get_jinja2_loader() -> str:
     return jinja2.FileSystemLoader(str(BASE_DIR / 'main' / 'templates'))
 
 def setup_jinja2(app: web.Application):
+    global conf
+    conf = app['conf']
+    
     loader = get_jinja2_loader()
     aiohttp_jinja2.setup(app, loader = loader )
 

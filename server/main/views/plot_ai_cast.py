@@ -52,7 +52,12 @@ async def plot_ai_cast(request: web.Request) -> dict:
     full_kwh = full_wh / 1000
     empty_kwh = conf['battery_min_percent'] /100 * full_kwh
     
-    modeldir = conf['modeldir']
+    modeldir = conf['modeldir'] if 'modeldir' in conf else None
+    if modeldir is None:
+        return aiohttp_jinja2.render_template(
+            "error.html", request,
+            {"error" : '<p>Directory for AI models is not configured</p><p>Is AI intended?</p>'}
+        )
     
     tz = conf['tz']
     lat = conf['lat']

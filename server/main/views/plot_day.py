@@ -78,7 +78,10 @@ async def plot_day(request: web.Request) -> dict:
 
     # Considers solix out internally!
     blocks = await get_blocks(
-        time[-1], smp[-1], ivp1[-1], ivp2[-1],
+        time[-1],
+        smp[-1] if smp is not None else 0,
+        ivp1[-1] if ivp1 is not None else 0,
+        ivp2[-1] if ivp1 is not None else 0,
         spph[-1] if spph is not None else 0,
         sbpi[-1] if sbpi is not None else 0,
         sbpo[-1] if sbpo is not None else 0,
@@ -90,7 +93,8 @@ async def plot_day(request: web.Request) -> dict:
     )
     
     # Override sbpi  with inverter if solix is out, eg low protection
-    ivp = ivp1 + ivp2
+    ivp = ((ivp1 if ivp1 is not None else 0) +
+           (ivp2 if ivp2 is not None else 0))
     isivpoversbpi = (ivp > sbpi) & ~(sbpb>0)
     sbpo[isivpoversbpi] = 0
     sbpb[isivpoversbpi] = 0
