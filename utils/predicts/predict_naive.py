@@ -86,26 +86,31 @@ async def get_hour_sky_info(
         logger.error(f'Unable to retrieve sky pools')
         return None
 
-    # Reduce past days
-    pastskys = pd.concat(
-        [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
-    )
-    pastsky = pastskys.groupby(pastskys.index).mean()
-
     # Todays always the last in the list
     todaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
     if todaysky is None:
         logger.error(f'Unable to retrieve sky for "{castday}"')
         return None
-
-    today_cloud_free = 100.0 - todaysky["cloud_cover"].values
-    past_cloud_free = 100.0 - pastsky["cloud_cover"].values
-    ratios = (today_cloud_free + 1) / (past_cloud_free + 1) # No div by zero!
-
-    # The weather for today is better (more irridiance) with ratios > 1
-    # The weather for today is worse (less irridiance) with ratios < 1
     
-    return ratios[:-1], todaysky["temperature"].values[:-1]
+    temperatures = todaysky["temperature"].values
+
+    ratios = None
+    if len(skys) >1:
+        # Reduce past days
+        pastskys = pd.concat(
+            [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
+        )
+        pastsky = pastskys.groupby(pastskys.index).mean()
+
+
+        today_cloud_free = 100.0 - todaysky["cloud_cover"].values
+        past_cloud_free = 100.0 - pastsky["cloud_cover"].values
+        ratios = (today_cloud_free + 1) / (past_cloud_free + 1) # No div by zero!
+
+        # The weather for today is better (more irridiance) with ratios > 1
+        # The weather for today is worse (less irridiance) with ratios < 1
+    
+    return ratios[:-1] if ratios is not None else None, temperatures[:-1]
 
 
 """
@@ -116,6 +121,13 @@ samples are simulated dependent on the irridiance SBPI.
 async def fix_sbpi(
         log: pd.DataFrame
 ):
+    if not (
+        ("SBPI" in log) and
+        ("SBPB" in log) and
+        (("IVP1" in log) or ("IVP2" in log))
+    ):
+        return # log not modified
+    
     sbpi = log["SBPI"]
     sbpb = log["SBPB"]
     ivp = log["IVP1"] + log["IVP2"]
@@ -147,21 +159,24 @@ async def get_hour_sample_logs(
     todaylog = logs[-1]
 
     # Make a single log from the many passed logs
-    
-    pastlogs = pd.concat(
-        [l.reset_index(drop=True) for l in logs[:-1]]
-    )
-    
-    pastlog = pastlogs.groupby(pastlogs.index).mean()
 
-    pastlog.index = pd.date_range(
-        todaylog.index[0].date(),
-        periods=len(pastlog),
-        freq="h"
-    ).set_names('TIME')
+    pastlog = None
+    if len(logs)> 1:
+        pastlogs = pd.concat(
+            [l.reset_index(drop=True) for l in logs[:-1]]
+        )
+    
+        pastlog = pastlogs.groupby(pastlogs.index).mean()
 
-    # Proper working Solix shall be ensured
-    await fix_sbpi(pastlog)
+        pastlog.index = pd.date_range(
+            todaylog.index[0].date(),
+            periods=len(pastlog),
+            freq="h"
+        ).set_names('TIME')
+
+        # Proper working Solix shall be ensured
+        await fix_sbpi(pastlog)
+
     await fix_sbpi(todaylog)
     
     return logdays, pastlog, todaylog
@@ -171,41 +186,48 @@ async def get_predict_tables(
         casthours: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
 
-    casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
-    casthours.drop("IVP1", inplace=True, axis=1)
-    casthours.drop("IVP2", inplace=True, axis=1)
+    if "IVP1" in "casthours" and "IVP2" in casthours:
+        casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
+        casthours.drop("IVP1", inplace=True, axis=1)
+        casthours.drop("IVP2", inplace=True, axis=1)
 
-    casthours[">SMP"] = casthours["SMP"]
-    casthours.loc[casthours["SMP"]>0, ">SMP"]= 0
-    casthours["SMP>"] = casthours["SMP"]
-    casthours.loc[casthours["SMP"]<0,"SMP>"] = 0
-    casthours.drop("SMP", inplace=True, axis=1)
+    if "SMP" in casthours:
+        casthours[">SMP"] = casthours["SMP"]
+        casthours.loc[casthours["SMP"]>0, ">SMP"]= 0
+        casthours["SMP>"] = casthours["SMP"]
+        casthours.loc[casthours["SMP"]<0,"SMP>"] = 0
+        casthours.drop("SMP", inplace=True, axis=1)
 
-    casthours[">SBPB"] = casthours["SBPB"]
-    casthours.loc[casthours["SBPB"]>0,">SBPB"] = 0
-    casthours["SBPB>"] = casthours["SBPB"]
-    casthours.loc[casthours["SBPB"]<0, "SBPB>"] = 0
-    casthours.drop("SBPB", inplace=True, axis=1)
+    if "SBPB" in casthours:        
+        casthours[">SBPB"] = casthours["SBPB"]
+        casthours.loc[casthours["SBPB"]>0,">SBPB"] = 0
+        casthours["SBPB>"] = casthours["SBPB"]
+        casthours.loc[casthours["SBPB"]<0, "SBPB>"] = 0
+        casthours.drop("SBPB", inplace=True, axis=1)
 
     casthours = casthours.resample(
         '3h', label='left', closed='left'
     ).mean()
 
-    sbsb_df = casthours["SBSB"]
-    sbsb_df.reset_index(inplace=True, drop=True)    
-    casthours.drop("SBSB", inplace=True, axis=1)
+    sbsb_df = None
+    if "SBSB" in casthours:
+        sbsb_df = casthours["SBSB"]
+        sbsb_df.reset_index(inplace=True, drop=True)    
+        casthours.drop("SBSB", inplace=True, axis=1)
 
-    t_df = casthours["T"]
-    t_df.reset_index(inplace=True, drop=True)    
-    casthours.drop("T", inplace=True, axis=1)
+    t_df = None
+    if "T" in casthours:
+        t_df = casthours["T"]
+        t_df.reset_index(inplace=True, drop=True)    
+        casthours.drop("T", inplace=True, axis=1)
     
-    if not casthours["SPPH"].any():
+    if "SPPH" in casthours and not casthours["SPPH"].any():
         casthours.drop("SPPH", inplace=True, axis=1)
-    if not casthours[">SMP"].any():
+    if ">SMP" in casthours and not casthours[">SMP"].any():
         casthours.drop(">SMP", inplace=True, axis=1)
-    if not casthours[">SBPB"].any():
+    if ">SBPB" in casthours and not casthours[">SBPB"].any():
         casthours.drop(">SBPB", inplace=True, axis=1)
-    if not casthours["SBPB>"].any():
+    if "SBPB>" in casthours and not casthours["SBPB>"].any():
         casthours.drop("SBPB>", inplace=True, axis=1)
     
     casthours.rename(columns=PARTITION_2_VIEW, inplace=True)
@@ -225,8 +247,10 @@ async def get_predict_tables(
         axis=1
     )
 
-    watts_table["T"] = t_df
-    energy_table["BAT%"] = 100*sbsb_df
+    if t_df is not None:
+        watts_table["T"] = t_df
+    if sbsb_df is not None:
+        energy_table["BAT%"] = 100*sbsb_df
     
     return (watts_table, energy_table)
 
@@ -457,66 +481,86 @@ async def predict_naive_today(
     skyratios, temperatures = await get_hour_sky_info(
         days, lat, lon
     )
+
+    # Abort if skyratios are not avalable
     if skyratios is None:
         logger.error(f'Skyratios not available')
-        return None
-
-    # Add the temperatures to the frames
-    pastlog.insert(pastlog.shape[1], "T", temperatures)
-    todaylog.insert(todaylog.shape[1], "T", temperatures[:len(todaylog)])
-
-    
-    # Abort if a cast is not possible (at the end of today)
-    if len(todaylog.index) >= len(pastlog.index):
-        # No cast is possible at the end of today
         return today, todaylog, None, None
 
+    # Add the temperatures to the frames
+    todaylog.insert(todaylog.shape[1], "T", temperatures[:len(todaylog)])
 
-    # Update the irridiance past day average to expected aky conditions
-    pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    skyfactor = await skyadaptor(skyratios)
-    pastlog.loc[:, "SBPI"] *= skyfactor
-    pastlog.loc[:, "IVP1"] *= skyfactor
-    pastlog.loc[:, "IVP2"] *= skyfactor
-    pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
-    logger.info(f'Expected sky performance: "{100*pastlog_perf:.0f}%"')
+    # Abort if there is nothing in the past
+    if pastlog is None:
+        logger.error(f'There are no logs in the past')
+        return today, todaylog, None, None
+        
+    # Abort if a cast is not possible (at the end of today)
+    if len(todaylog.index) >= len(pastlog.index):
+        return today, todaylog, None, None
+
+    pastlog.insert(pastlog.shape[1], "T", temperatures)
     
-    # Keep SOC
-    realsoc = todaylog["SBSB"].iloc[-1]
-
-    # Calc prediction data. For the last hour not all samples
-    # aremeasured yet. Therefore the last hour is part of the casting
-    # and excluded from the calculating of the ratio.
-
+    # For the last hour not all samples aremeasured yet. Therefore the
+    # last hour is part of the casting and excluded from the
+    # calculating of the ratio.
     realstop = pastlog.index[len(todaylog)-1]
     logger.info(f'Real stop at intervsl end of "{realstop}"')
     caststart = pastlog.index[len(todaylog)]
     logger.info(f'Cast start at interval  beginning of "{caststart}"')
 
-    #
+    todaylog = todaylog[:realstop].iloc[:-1]
+    restlog = pastlog.loc[realstop:,:].copy()
+    
+    if not (
+        ("SBPI" in todaylog) and
+        (("IVP1" in todaylog) or ("IVP2" in todaylog)) and
+        ("SBSB" in todaylog)
+    ):
+        # No cast without real irridiance
+        castlog = pd.concat([todaylog[:realstop],restlog])
+        return today, castlog, realstop, caststart
+
+    if not (
+        ("SBPI" in restlog) and
+        (("IVP1" in restlog) or ("IVP2" in restloglog))
+    ):
+        # No cast without redicted irridiance
+        castlog = pd.concat([todaylog[:realstop],restlog])
+        return today, castlog, realstop, caststart
+
+    
+    # Update the irridiance of the past day average to expected aky
+    # conditions
+    
+    restlog_pre_sum = restlog.loc[:,"SBPI"].sum()
+    skyfactor = await skyadaptor(skyratios)
+    restlog.loc[:, "SBPI"] *= skyfactor[len(todaylog):]
+    restlog.loc[:, "IVP1"] *= skyfactor[len(todaylog):]
+    restlog.loc[:, "IVP2"] *= skyfactor[len(todaylog):]
+    restlog_post_sum = restlog.loc[:,"SBPI"].sum()
+    restlog_perf = (restlog_post_sum / restlog_pre_sum)
+    logger.info(f'Expected sky performance: "{100*restlog_perf:.0f}%"')
+
+    # Keep SOC
+    realsoc = todaylog["SBSB"].iloc[-1]
 
     realsbpi = todaylog.loc[:realstop,"SBPI"]
     # Only items not changing ny more
     realsbpisum = realsbpi.iloc[:-1].sum()
     logger.info(f'Real irridiance is "{realsbpisum:.0f}"')
     
-    castsbpi = pastlog.loc[:realstop,"SBPI"]
-    castsbpisum = castsbpi.iloc[:-1].sum()
-    logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
+    restsbpi = restlog.loc[:realstop,"SBPI"]
+    restsbpisum = restsbpi.iloc[:-1].sum()
+    logger.info(f'Rest irridiance is "{restsbpisum:.0f}"')
     
-    realsbpisum = realsbpisum if castsbpisum >0 else realsbpi.sum()
-    castsbpisum = castsbpisum if castsbpisum >0 else castsbpi.sum()
-    ratiosbpi = np.sqrt((realsbpisum+1)/(castsbpisum+1)/K) # no div by zero
-    logger.info(f'Real/Cast ratio is "{ratiosbpi:.2f}"')
+    realsbpisum = realsbpisum if restsbpisum >0 else realsbpi.sum()
+    restsbpisum = restsbpisum if restsbpisum >0 else restsbpi.sum()
+    ratiosbpi = np.sqrt((realsbpisum+1)/(restsbpisum+1)/K) # no div by zero
+    logger.info(f'Real/Rest ratio is "{ratiosbpi:.2f}"')
 
-    logger.info(f'Expected SBPI live performance: "{100*pastlog_perf*ratiosbpi:.0f}%"')
+    logger.info(f'Expected SBPI live performance: "{100*restlog_perf*ratiosbpi:.0f}%"')
 
-    #
-    todaylog = todaylog[:realstop].iloc[:-1]
-    
-    # The restlog needs adaptation
-    restlog = pastlog.loc[realstop:,:].copy()
     realfactor = await skyadaptor(ratiosbpi)
     restlog.loc[:,"SBPI"] *= realfactor
     restlog.loc[:,"IVP1"] *= realfactor
@@ -550,6 +594,10 @@ async def predict_naive_castday(
         logdir = logdir
     )
 
+    if days is None or pastlog is None:
+        logger.info(f'Nothing is in the past')
+        return None
+
     today = days[-1]
     if castday < today:
         logger.error(f'"{castday}" is in the past')
@@ -566,22 +614,28 @@ async def predict_naive_castday(
 
     # Add the temperature column
     pastlog.insert(pastlog.shape[1], "T", temperatures)
-    
-    # Update the irridiance past day average to expected aky conditions
-    skyfactor = await skyadaptor(skyratios)
-    pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog.loc[:,"SBPI"] *= skyfactor
-    pastlog.loc[:,"IVP1"] *= skyfactor
-    pastlog.loc[:,"IVP2"] *= skyfactor
-    pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
-    pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
-    logger.info(f'Expected sky performance by weather: "{100*pastlog_perf:.0f}%"')
 
-    # Keep SOC
-    pastsoc = pastlog["SBSB"].iloc[0]
+    if (
+        ("SBPI" in pastlog) and
+        (("IVP1" in pastlog) or ("IVP2" in pastloglog))
+    ):
+    
+        # Update the irridiance past day average to expected aky
+        # conditions
+        skyfactor = await skyadaptor(skyratios)
+        pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
+        pastlog.loc[:,"SBPI"] *= skyfactor
+        pastlog.loc[:,"IVP1"] *= skyfactor
+        pastlog.loc[:,"IVP2"] *= skyfactor
+        pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
+        pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
+        logger.info(f'Expected sky performance: "{100*pastlog_perf:.0f}%"')
+
+        # Keep SOC
+        pastsoc = pastlog["SBSB"].iloc[0]
             
-    await simulate_system(
-        pastlog, pastsoc
-    )
+        await simulate_system(
+            pastlog, pastsoc
+        )
 
     return castday, pastlog, None, pastlog.index[0]

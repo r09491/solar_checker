@@ -56,7 +56,7 @@ async def plot_ai_cast(request: web.Request) -> dict:
     if modeldir is None:
         return aiohttp_jinja2.render_template(
             "error.html", request,
-            {"error" : '<p>Directory for AI models is not configured</p><p>Is AI intended?</p>'}
+            {"error" :'Directory for AI models is not configured.Is AI availanle?'}
         )
     
     tz = conf['tz']

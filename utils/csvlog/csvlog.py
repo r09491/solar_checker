@@ -125,13 +125,7 @@ def _get_log(
     if (logday is None) or (logprefix is None) or (logdir is None):
         logger.info(f'Reading CSV data from "stdin"')
         try:
-            samples = read_csv(
-                sys.stdin,
-                names = SAMPLE_NAMES,
-                #usecols = usecols,
-                parse_dates=["TIME"],
-                dtype="float64"
-            )
+            samples = read_csv(sys.stdin)
         except:
             logger.error(f'Erroneous CSV data from "stdin"')
             return None
@@ -142,29 +136,28 @@ def _get_log(
         if not os.path.isfile(logname):
             logger.warning(f'CSV data file not found "{logname}"')
             return None
-
+        
         try:
-            with open(logname, 'r') as logfile:
-                samples = read_csv(
-                    logfile,
-                    names = SAMPLE_NAMES,
-                    #usecols = usecols,
-                    parse_dates=["TIME"],
-                    dtype="float64"
-                )
+            # We cannot make any assumption about the number of rows
+            samples = read_csv(logname)
         except:
             logger.error(f'Erroneous CSV data file "{logname}"')
             return None
-        
-    try:        
-        samples['TIME'] = samples['TIME'].apply(t64_first)
-    except:
-        logger.error(f'Problem in TIME column of "{logname}"')
-        return None
-    
-    samples.drop_duplicates(inplace = True)
-    samples.fillna(0.0, inplace = True)
 
+    # With time new samples were added to the
+    # right. Name the remaining column names!
+    samples.columns = SAMPLE_NAMES[:len(samples.columns)]
+    samples = samples[samples.columns]
+
+    # Cleanup
+    samples['TIME'] = samples['TIME'].apply(t64_first)
+    samples.drop_duplicates('TIME', keep='first', inplace=True)
+
+    # All colums but TIME are float
+    samples.iloc[:, 1:] = samples.iloc[:,1:].astype(float)        
+
+    # TIME must not index!
+    
     return samples
 
 @cache
@@ -191,8 +184,11 @@ async def get_sample_log(
         logday = logday,
         logprefix = logprefix,
         logdir = logdir)
+    if log is None:
+        return None
     
-    return log[SAMPLE_NAMES] if log is not None else None
+    log = log[list(set(log.columns) & set(SAMPLE_NAMES))]
+    return log
 
 async def get_power_log(
         logday: str = None,
@@ -203,8 +199,11 @@ async def get_power_log(
         logday = logday,
         logprefix = logprefix,
         logdir = logdir)
+    if log is None:
+        return None
     
-    return log[POWER_NAMES] if log is not None else None
+    log = log[list(set(log.columns) & set(POWER_NAMES))]
+    return log
 
 async def get_predict_power_log(
         logday: str = None,
@@ -215,8 +214,11 @@ async def get_predict_power_log(
         logday = logday,
         logprefix = logprefix,
         logdir = logdir)
+    if log is None:
+        return None
     
-    return log[PREDICT_POWER_NAMES] if log is not None else None
+    log = log[list(set(log.columns) & set(PREDICT_POWER_NAMES))]
+    return log
 
 
 """ Get the list of logdays and the list of dataframes with the
@@ -243,8 +245,12 @@ async def get_logs(
     
     """ Get the list of associated columns """
     logs = await asyncio.gather(*logtasks)
-    
-    return logdays, [log[usecols] for log in logs if log is not None]
+
+    logs = [log[list(
+        set(log.columns) & set(usecols)
+    )] for log in logs if log is not None]
+
+    return logdays, logs
 
 
 """ Get the list of logdays and the list of dataframes with the
@@ -270,8 +276,12 @@ async def get_windowed_logs(
     
     """ Get the list of associated columns """
     logs = await asyncio.gather(*logtasks)
-    
-    return logdays, [log[usecols] for log in logs if log is not None]
+
+    logs = [log[list(
+        set(log.columns) & set(usecols)
+    )] for log in logs if log is not None]
+
+    return logdays, logs
 
 
 """ Get the dataframe with the list of logdays and the list of

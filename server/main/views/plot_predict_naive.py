@@ -74,16 +74,17 @@ async def plot_predict_naive(request: web.Request) -> dict:
         _, casthours, realstop, caststart = cast
     else:
         castday, casthours, realstop, caststart = cast
-    
+
+    nsamples = casthours.shape[0]
     time = np.array(casthours.index)
-    sbpi = np.array(casthours['SBPI'])
-    sbpo = np.array(casthours['SBPO'])
-    sbpb = np.array(casthours['SBPB'])
-    sbsb = np.array(casthours['SBSB'])
-    ivp1 = np.array(casthours['IVP1'])
-    ivp2 = np.array(casthours['IVP2'])
-    spph = np.array(casthours['SPPH'])
-    smp = np.array(casthours['SMP'])
+    sbpi = np.array(casthours['SBPI']) if "SBPI" in casthours else np.zeros(nsamples)
+    sbpo = np.array(casthours['SBPO']) if "SBPO" in casthours else np.zeros(nsamples)
+    sbpb = np.array(casthours['SBPB']) if "SBPB" in casthours else np.zeros(nsamples)
+    sbsb = np.array(casthours['SBSB']) if "SBSB" in casthours else np.zeros(nsamples)
+    ivp1 = np.array(casthours['IVP1']) if "IVP1" in casthours else np.zeros(nsamples)
+    ivp2 = np.array(casthours['IVP2']) if "IVP2" in casthours else np.zeros(nsamples)
+    spph = np.array(casthours['SPPH']) if "SPPH" in casthours else np.zeros(nsamples)
+    smp = np.array(casthours['SMP']) if "SMP" in casthours else np.zeros(nsamples)
 
     smpon = np.zeros_like(smp)
     smpon[smp>0] = smp[smp>0]

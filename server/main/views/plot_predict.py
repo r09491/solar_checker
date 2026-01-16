@@ -87,6 +87,13 @@ async def plot_predict(request: web.Request) -> dict:
         logdir
     )
 
+    if not "SBPI" in logsdf:
+        return aiohttp_jinja2.render_template(
+            'error.html', request,
+            {'error' : f'No irridiance recorded in the logfiles'}
+        )
+
+
     """ Preset the start and stop time for the find slot """
     issbpion = logsdf.loc[logday, 'SBPI']>0 # radiation
     timesbpion = logsdf.loc[logday, 'TIME'][issbpion] if (
