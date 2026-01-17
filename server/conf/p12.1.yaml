@@ -1,11 +1,13 @@
 name : Floor.1
-host : think
-port : 9442
 side : right
+local_host : think
+local_port : 9442
+remote_host : wanderer.hopto.org
+remote_port : 39442
 
 other_name : Floor.0
-other_host : think
-other_port : 9440
+other_host : wanderer.hopto.org
+other_port : 39440
 
 modeldir : /home/r09491/storage/solar_checker/aicast/models
 

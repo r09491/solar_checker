@@ -1,8 +1,8 @@
 <h1> </h1>
 <h1>Sites</h1>
 
-{% set name, host, port, side = get_this_site_jinja2() %}
-{% set other_name, other_host, other_port = get_other_site_jinja2() %}
+{% set name, host, port, side = get_remote_access_jinja2() %}
+{% set other_name, other_host, other_port = get_other_access_jinja2() %}
 
 {% if side == 'left' %}
 <div id='menu'>

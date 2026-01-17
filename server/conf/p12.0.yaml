@@ -1,11 +1,13 @@
 name : Floor.0
-host : think
-port : 9440
 side : left
+local_host : think
+local_port : 9440
+remote_host : wanderer.hopto.org
+remote_port : 39440
 
 other_name : Floor.1
-other_host : think
-other_port : 9442
+other_host : wanderer.hopto.org
+other_port : 39442
 
 
 logdir : /home/r09491/storage/ecotracker

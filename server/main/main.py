@@ -53,7 +53,11 @@ def main() -> int:
     setup_conf(app, args.config_path)
     setup_jinja2(app)
     setup_routes(app)
-    web.run_app(app, host=app['conf']['host'], port=app['conf']['port'])
+    web.run_app(
+        app,
+        host=app['conf']['local_host'],
+        port=app['conf']['local_port']
+    )
     return 0
 
 if __name__ == '__main__':
