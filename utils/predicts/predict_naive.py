@@ -496,9 +496,13 @@ async def predict_naive_today(
         return today, todaylog, None, None
         
     # Abort if a cast is not possible (at the end of today)
-    if len(todaylog.index) >= len(pastlog.index):
+    if len(todaylog) >= len(pastlog):
         return today, todaylog, None, None
 
+    # Abort if pastlog is not 24h
+    if len(pastlog) <24:
+        return today, todaylog, None, None
+    
     pastlog.insert(pastlog.shape[1], "T", temperatures)
     
     # For the last hour not all samples aremeasured yet. Therefore the
@@ -602,7 +606,11 @@ async def predict_naive_castday(
     if castday < today:
         logger.error(f'"{castday}" is in the past')
         return None
-    
+
+    if len(pastlog) < 24:
+        logger.error(f'The provided past log is illegal')
+        return None
+
 
     # Read the sky ratios from the pastlog to the castday
     skyratios, temperatures = await get_hour_sky_info(

@@ -78,7 +78,7 @@ async def plot_day(request: web.Request) -> dict:
 
     # Considers solix out internally!
     blocks = await get_blocks(
-        time[-1],
+        time[-1] if time is not None else None,
         smp[-1] if smp is not None else 0,
         ivp1[-1] if ivp1 is not None else 0,
         ivp2[-1] if ivp1 is not None else 0,
