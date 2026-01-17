@@ -1,6 +1,6 @@
 __doc__=""" Predicts the samples of an Anker Solix 1 powerbank for the
-rest of today or a complete given future castday assuming they behave
-similar than some passed days. Changes for the rest of today are
+rest of today or a given future castday assuming they behave
+similar than some common passed days. Changes for the rest of today are
 calculated from ratio of the latest irridiance of today or cloud
 coverage of the passed days """
 
@@ -509,9 +509,9 @@ async def predict_naive_today(
     # last hour is part of the casting and excluded from the
     # calculating of the ratio.
     realstop = pastlog.index[len(todaylog)-1]
-    logger.info(f'Real stop at intervsl end of "{realstop}"')
+    logger.info(f'Real stop at end of interval"{realstop}"')
     caststart = pastlog.index[len(todaylog)]
-    logger.info(f'Cast start at interval  beginning of "{caststart}"')
+    logger.info(f'Cast start at beginning of interval"{caststart}"')
 
     todaylog = todaylog[:realstop].iloc[:-1]
     restlog = pastlog.loc[realstop:,:].copy()

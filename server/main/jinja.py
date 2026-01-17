@@ -18,6 +18,13 @@ def get_logyears_jinja2():
     return set(ld[:2] for ld in logdays)
 
 
+def get_this_site_jinja2():
+    return conf['name'], conf['host'], conf['port'], conf['side']
+
+def get_other_site_jinja2():
+    return conf['other_name'], conf['other_host'], conf['other_port']
+
+
 def get_jinja2_loader() -> str:
     return jinja2.FileSystemLoader(str(BASE_DIR / 'main' / 'templates'))
 
@@ -32,3 +39,5 @@ def setup_jinja2(app: web.Application):
     env.globals.update(get_logdays_jinja2=get_logdays_jinja2)
     env.globals.update(get_logmonths_jinja2=get_logmonths_jinja2)
     env.globals.update(get_logyears_jinja2=get_logyears_jinja2)
+    env.globals.update(get_this_site_jinja2=get_this_site_jinja2)
+    env.globals.update(get_other_site_jinja2=get_other_site_jinja2)

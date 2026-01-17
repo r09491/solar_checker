@@ -142,7 +142,7 @@ async def main(sm: Smartmeter, iv: Inverter,
 
     # Tasmota sometimes returns with an invalid time. Ensure there is
     # a valid time!
-    nowiso = datetime.now().isoformat('T',"seconds")
+    nowiso = datetime.now().isoformat('T',"minutes")
 
     # The order in the list determines the columns in the recording
     # file

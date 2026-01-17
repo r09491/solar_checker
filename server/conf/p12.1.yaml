@@ -1,5 +1,11 @@
-host : 0.0.0.0
+name : Floor.1
+host : think
 port : 9442
+side : right
+
+other_name : Floor.0
+other_host : think
+other_port : 9440
 
 modeldir : /home/r09491/storage/solar_checker/aicast/models
 
