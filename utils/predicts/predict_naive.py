@@ -1,8 +1,7 @@
-__doc__=""" Predicts the samples of an Anker Solix 1 powerbank for the
-rest of today or a given future castday assuming they behave
-similar than some common passed days. Changes for the rest of today are
-calculated from ratio of the latest irridiance of today or cloud
-coverage of the passed days """
+__doc__=""" Predicts the samples of an Anker Solix 1 powerstation for
+the rest of today or a given future castday. Forecasts for the rest of
+today are calculated from ratio of the latest irridiance of today or
+cloud coverage of the passed days """
 
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -186,7 +185,7 @@ async def get_predict_tables(
         casthours: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
 
-    if "IVP1" in "casthours" and "IVP2" in casthours:
+    if "IVP1" in casthours and "IVP2" in casthours:
         casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
         casthours.drop("IVP1", inplace=True, axis=1)
         casthours.drop("IVP2", inplace=True, axis=1)
