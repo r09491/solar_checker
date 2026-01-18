@@ -21,7 +21,7 @@ alias apsystems_watt_hours_lifetime="tail -n 5 \$SOLAR_CHECKER_STORE_DIR/solar_c
 
 #based on the energy at the start of the year (PH = Power, EY = Energy current Year, EL = Energy Lifetime)
 alias home_latest_tail="tail -f \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log| \
-    gawk -F, 'BEGIN{start=1843;price=0.279}{printf(\"PH %+5.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh\n\",\$2, \$3-start, (\$3-start)*price, \$3)}'"
+    gawk -F, 'BEGIN{start=1843;price=0.279}{printf(\"%s  PH %+5.0fW  EY %.1fkWh|%.2f€ EL %.1fkWh\n\", substr(\$1,12,5), \$2, \$3-start, (\$3-start)*price, \$3)}'"
 
 alias home_watts="tail -n5 \$SOLAR_CHECKER_STORE_DIR/solar_checker_latest_\$(date +%y%m%d).log | \
       			    gawk -F, '{ printf(\"%d,%f\n\", NR, \$2); fflush(); }' | \
