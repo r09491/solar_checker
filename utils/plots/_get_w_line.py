@@ -127,48 +127,57 @@ def _get_w_line(time: t64s, smp: f64s,
             )        
 
 
+    """ Plot positive sample segmants """
+    
     issbpifill = issbpion|np.roll(issbpion,1)|np.roll(issbpion,-1)            
-    issbpbfill = issbpbout|np.roll(issbpbout,1)|np.roll(issbpbout,-1)     
-    isintersect = issbpbfill & issbpifill
-    
-    if issbpion is not None and issbpion.any(): # irridiance
+    issbpbfill = issbpbout|np.roll(issbpbout,1)|np.roll(issbpbout,-1)
+    issmpfill = issmpin|np.roll(issmpin,1)|np.roll(issmpin,-1)     
+
+    issbpifills = [~issbpifill,issbpifill]
+    issbpbfills = [~issbpbfill,issbpbfill]
+    issmpfills = [~issmpfill,issmpfill]
+
+    isfills = [
+        sbpi | sbpb | smp
+        for sbpi in issbpifills
+        for sbpb in issbpbfills
+        for smp in issmpfills
+    ]
+
+    for isfill in isfills:
         ax.fill_between(time, 0, sbpi,
-                        where = issbpifill,
-                        color='orange', label='SUN', lw=1, alpha=0.3)
-        ax.fill_between(time, sbpi, sbpi + smpin,
-                        where = issbpifill & ~isintersect, 
-                        color='b', lw=1, label='Grid', alpha=0.3)
+                        where = isfill,
+                        color='orange', lw=1, alpha=0.06)
+        ax.fill_between(time, sbpi, sbpi + sbpbout,
+                        where = isfill, 
+                        color='m', lw=1, alpha=0.06)
+        ax.fill_between(time, sbpi + sbpbout, sbpi + sbpbout + smpin,
+                        where = isfill, 
+                        color='b', lw=1, alpha=0.06)
 
-        if time.size<=24*60: #only plot within 24h
-            ax.fill_between(time[issbpion],
-                            np.full_like(sbpion, 600),
-                            np.full_like(sbpion, 800),
-                            color='red', label='LIMITS', alpha=0.2)
-
-    if issbpbout is not None and issbpbout.any(): #discharge
-        ax.fill_between(time, 0, sbpbout,
-                        where = issbpbfill,
-                        color='m', alpha=0.3)
-        ax.fill_between(time, sbpbout, sbpbout + smpin,
-                        where = issbpbfill & ~isintersect,
-                        color='b', lw=1, alpha=0.3)
-
-    issmpin &= ~issbpbfill & ~issbpifill
-    issmpfill = issmpin|np.roll(issmpin,1)|np.roll(issmpin,-1)             
-    if issmpin is not None  and issmpin.any(): #import
-        ax.fill_between(time, 0, smpin,
-                        where = issmpfill,
-                        color='b', lw=1, label='Grid', alpha=0.3)
-    
-    
-    if issbpbin is not None and issbpbin.any(): #charge
-        ax.fill_between(time, sbpbin, 0,
-                        color='m', label='BAT', alpha=0.3)
         
-    if issmpout is not None and issmpout.any(): #export
-        ax.fill_between(time, smpout + sbpbin, sbpbin,
-                        color='b', lw=0, alpha=0.3)
+    """ Plot negative sample segmants"""
         
+    issbpbfill = issbpbin|np.roll(issbpbin,1)|np.roll(issbpbin,-1)
+    issmpfill = issmpout|np.roll(issmpout,1)|np.roll(issmpout,-1)     
+
+    issbpbfills = [~issbpbfill,issbpbfill]
+    issmpfills = [~issmpfill,issmpfill]
+
+    isfills = [
+        sbpb | smp
+        for sbpb in issbpbfills
+        for smp in issmpfills
+    ]
+
+    for isfill in isfills:
+        ax.fill_between(time, 0, sbpbin,
+                        where = isfill, 
+                        color='m', lw=1, alpha=0.09)
+        ax.fill_between(time, sbpbin, sbpbin + smpout,
+                        where = isfill, 
+                        color='b', lw=1, alpha=0.09)
+
     
     """ Plot amplifying data as lines """
 
