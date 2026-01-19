@@ -127,9 +127,17 @@ def _get_w_line(time: t64s, smp: f64s,
             )        
 
 
-    if issbpion is not None and issbpion.any(): # irridiance            
+    issbpifill = issbpion|np.roll(issbpion,1)|np.roll(issbpion,-1)            
+    issbpbfill = issbpbout|np.roll(issbpbout,1)|np.roll(issbpbout,-1)     
+    isintersect = issbpbfill & issbpifill
+    
+    if issbpion is not None and issbpion.any(): # irridiance
         ax.fill_between(time, 0, sbpi,
+                        where = issbpifill,
                         color='orange', label='SUN', lw=1, alpha=0.3)
+        ax.fill_between(time, sbpi, sbpi + smpin,
+                        where = issbpifill & ~isintersect, 
+                        color='b', lw=1, label='Grid', alpha=0.3)
 
         if time.size<=24*60: #only plot within 24h
             ax.fill_between(time[issbpion],
@@ -139,17 +147,20 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if issbpbout is not None and issbpbout.any(): #discharge
         ax.fill_between(time, 0, sbpbout,
-                        where = issbpbout,
+                        where = issbpbfill,
                         color='m', alpha=0.3)
         ax.fill_between(time, sbpbout, sbpbout + smpin,
-                        where = issbpbout,
+                        where = issbpbfill & ~isintersect,
                         color='b', lw=1, alpha=0.3)
 
-    if issmpin is not None  and issmpin.any(): #import        
-        ax.fill_between(time, sbpi, sbpi + smpin,
-                        where = ~issbpbout,
+    issmpin &= ~issbpbfill & ~issbpifill
+    issmpfill = issmpin|np.roll(issmpin,1)|np.roll(issmpin,-1)             
+    if issmpin is not None  and issmpin.any(): #import
+        ax.fill_between(time, 0, smpin,
+                        where = issmpfill,
                         color='b', lw=1, label='Grid', alpha=0.3)
-        
+    
+    
     if issbpbin is not None and issbpbin.any(): #charge
         ax.fill_between(time, sbpbin, 0,
                         color='m', label='BAT', alpha=0.3)
