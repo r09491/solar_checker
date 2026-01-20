@@ -128,71 +128,53 @@ def _get_w_line(time: t64s, smp: f64s,
 
 
     """ Plot positive sample segmants """
-    
-    issbpifill = issbpion|np.roll(issbpion,1)|np.roll(issbpion,-1)            
-    issbpbfill = issbpbout|np.roll(issbpbout,1)|np.roll(issbpbout,-1)
-    issmpfill = issmpin|np.roll(issmpin,1)|np.roll(issmpin,-1)     
 
-    issbpifills = [~issbpifill,issbpifill]
-    issbpbfills = [~issbpbfill,issbpbfill]
-    issmpfills = [~issmpfill,issmpfill]
+    # Is irrodiance detected by ivp  and not solar bank
+    isivpi = isivpon if isivpon is not None else False
+    isivpi &= ~issbpion if issbpion is not None else False
+    isivpi &= ~issbpbin if issbpbin is not None else False
+    isivpi &= ~issbpbout if issbpbout is not None else False
 
-    isfills = [
-        sbpi | sbpb | smp
-        for sbpi in issbpifills
-        for sbpb in issbpbfills
-        for smp in issmpfills
-    ]
+    if ivp is not None:
+        ivpi = np.zeros_like(ivp)
+        ivpi[isivpi] = ivp[isivpi]
+    else:
+        ivpi = 0
 
-    for isfill in isfills:
-        ax.fill_between(time, 0, sbpi,
-                        where = isfill,
-                        color='orange', lw=1, alpha=0.06)
-        ax.fill_between(time, sbpi, sbpi + sbpbout,
-                        where = isfill, 
-                        color='m', lw=1, alpha=0.06)
-        ax.fill_between(time, sbpi + sbpbout, sbpi + sbpbout + smpin,
-                        where = isfill, 
-                        color='b', lw=1, alpha=0.06)
+    stage = 0
+    ax.fill_between(time, stage, stage+ivpi,
+                     color='c', lw=0, alpha=0.3, label='INV')
+    stage += ivpi
+    ax.fill_between(time, stage, stage+sbpi,
+                    color='orange', lw=0, alpha=0.3, label='SUN')
+    stage += sbpi
+    ax.fill_between(time, stage, stage+sbpbout,
+                   color='m', lw=0, alpha=0.3, label='BAT')
+    stage += sbpbout
+    ax.fill_between(time, stage, stage+smpin,
+                    color='b', lw=0, alpha=0.3, label='GRID')
 
-        
     """ Plot negative sample segmants"""
-        
-    issbpbfill = issbpbin|np.roll(issbpbin,1)|np.roll(issbpbin,-1)
-    issmpfill = issmpout|np.roll(issmpout,1)|np.roll(issmpout,-1)     
 
-    issbpbfills = [~issbpbfill,issbpbfill]
-    issmpfills = [~issmpfill,issmpfill]
-
-    isfills = [
-        sbpb | smp
-        for sbpb in issbpbfills
-        for smp in issmpfills
-    ]
-
-    for isfill in isfills:
-        ax.fill_between(time, 0, sbpbin,
-                        where = isfill, 
-                        color='m', lw=1, alpha=0.09)
-        ax.fill_between(time, sbpbin, sbpbin + smpout,
-                        where = isfill, 
-                        color='b', lw=1, alpha=0.09)
-
+    ax.fill_between(time, 0, sbpbin,
+                    color='m', lw=0, alpha=0.3)
+    ax.fill_between(time, sbpbin, sbpbin + smpout,
+                    color='b', lw=0, alpha=0.3)
     
     """ Plot amplifying data as lines """
 
     if spphon is not None and spphon.any():
         ax.plot(time, spph,
-                color='brown', lw=1, ls='-', alpha=0.4)
+                color='brown', lw=3, ls='-', alpha=0.4)
     if ivpon is not None and ivpon.any():
         ax.plot(time, ivp,
-                color='c', lw=2, ls='-', alpha=0.3)
-    if sbpoon is not None and sbpoon.any():
-        ax.plot(time, sbpo,
-                color='grey', lw=3, ls='-', alpha=0.2)
-    if sbpion is not None and issbpion.any():
-        ax.plot(time, sbpi,
-                color='orange', lw=4, ls='-', alpha=0.1)
+                color='c', lw=3, ls='-', alpha=0.3)
+    # if sbpoon is not None and sbpoon.any():
+    #     ax.plot(time, sbpo,
+    #             color='grey', lw=3, ls='-', alpha=0.2)
+    # if sbpion is not None and issbpion.any():
+    #     ax.plot(time, sbpi,
+    #             color='orange', lw=4, ls='-', alpha=0.1)
 
 
     """ Generate title """

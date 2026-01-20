@@ -102,6 +102,8 @@ def _get_kwh_line(
     if issmeon is not None and issmeon.any():
         ax.fill_between(time, balcony, balcony + smeon,
                         color='b',label='GRID', alpha=0.3)
+        # ax.fill_between(time, sbei, sbei + smeon,
+        #                 color='b',label='GRID', alpha=0.3)
 
         ax.axhline(balcony[-1] + POWER_PAYED,
                    label='PAYED', lw=2, color='orange', ls='--')
