@@ -125,11 +125,11 @@ def _get_log(
     if (logday is None) or (logprefix is None) or (logdir is None):
         logger.info(f'Reading CSV data from "stdin"')
         try:
-            samples = read_csv(sys.stdin)
+            samples = read_csv(sys.stdin, header=None)
         except:
             logger.error(f'Erroneous CSV data from "stdin"')
             return None
-        
+
     else:
         logname = os.path.join(logdir, f'{logprefix}_{logday}.log')
         logger.info(f'Reading CSV data from file "{logname}"')
@@ -139,7 +139,7 @@ def _get_log(
         
         try:
             # We cannot make any assumption about the number of rows
-            samples = read_csv(logname)
+            samples = read_csv(logname, header=None)
         except:
             logger.error(f'Erroneous CSV data file "{logname}"')
             return None
