@@ -150,15 +150,13 @@ def _get_log(
     samples = samples[samples.columns]
 
     # Cleanup
-    samples['TIME'] = samples['TIME'].apply(t64_first)
-    samples.drop_duplicates('TIME', keep='first', inplace=True)
-
+    time = samples['TIME'].apply(t64_first)
     # All colums but TIME are float
-    samples.iloc[:, 1:] = samples.iloc[:,1:].astype(float)        
+    columns = samples.iloc[:,1:].astype(float)        
 
-    # TIME must not index!
+    # TIME must not be index!
     
-    return samples
+    return concat([time,columns], axis=1).drop_duplicates('TIME', keep='first')
 
 @cache
 async def get_log(

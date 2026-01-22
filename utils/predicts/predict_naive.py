@@ -39,7 +39,7 @@ from brightsky import (
     Sky
 )
 
-K = 1 # Ratio denominator
+K = 1.2 # Ratio denominator
 
 async def skyadaptor(
         ratios: np.ndarray
@@ -316,6 +316,10 @@ async def simulate_solix_1_energy_wh(
         full_wh: f64 = -1600,
         empty_wh: f64 = -160
 ):
+
+    if soc is None:
+        return
+    
     sbpi = log["SBPI"]
     sbpb = log["SBPB"]
     sbpo = log["SBPO"]
@@ -347,7 +351,7 @@ async def simulate_solix_1_energy_wh(
     # Update SOC
     log_wh = (sbpb.cumsum()+soc*full_wh)
     log["SBSB"] = log_wh/full_wh
-    
+
 
 """
 Simulates the inverter part
@@ -512,59 +516,58 @@ async def predict_naive_today(
     caststart = pastlog.index[len(todaylog)]
     logger.info(f'Cast start at beginning of interval"{caststart}"')
 
-    todaylog = todaylog[:realstop].iloc[:-1]
-    restlog = pastlog.loc[realstop:,:].copy()
-    
     if not (
         ("SBPI" in todaylog) and
         (("IVP1" in todaylog) or ("IVP2" in todaylog)) and
         ("SBSB" in todaylog)
     ):
         # No cast without real irridiance
-        castlog = pd.concat([todaylog[:realstop],restlog])
-        return today, castlog, realstop, caststart
+        return today, pastlog, realstop, caststart
 
     if not (
-        ("SBPI" in restlog) and
-        (("IVP1" in restlog) or ("IVP2" in restloglog))
+        ("SBPI" in pastlog) and
+        (("IVP1" in pastlog) or ("IVP2" in pastlog))
     ):
         # No cast without redicted irridiance
-        castlog = pd.concat([todaylog[:realstop],restlog])
-        return today, castlog, realstop, caststart
+        return today, pastlog, realstop, caststart
 
+
+    # The sky cast starts with the pastlog to be scaled with sky
+    # factors for the whole day. 
+    castlog = pastlog
     
-    # Update the irridiance of the past day average to expected aky
-    # conditions
-    
-    restlog_pre_sum = restlog.loc[:,"SBPI"].sum()
+    castlog_pre_sum = castlog.loc[:,"SBPI"].sum()
     skyfactor = await skyadaptor(skyratios)
-    restlog.loc[:, "SBPI"] *= skyfactor[len(todaylog):]
-    restlog.loc[:, "IVP1"] *= skyfactor[len(todaylog):]
-    restlog.loc[:, "IVP2"] *= skyfactor[len(todaylog):]
-    restlog_post_sum = restlog.loc[:,"SBPI"].sum()
-    restlog_perf = (restlog_post_sum / restlog_pre_sum)
-    logger.info(f'Expected sky performance: "{100*restlog_perf:.0f}%"')
+    castlog.loc[:, "SBPI"] *= skyfactor
+    castlog.loc[:, "IVP1"] *= skyfactor
+    castlog.loc[:, "IVP2"] *= skyfactor
+    castlog_post_sum = castlog.loc[:,"SBPI"].sum()
+    castlog_perf = (castlog_post_sum / castlog_pre_sum)
+    logger.info(f'Expected sky performance: "{100*castlog_perf:.0f}%"')
+
+    # Only todaylog hours completed are considered. The last hour
+    # samples are still changing and therefore subject to cast.
+    ####todaylog = todaylog[:realstop].iloc[:-1]
 
     # Keep SOC
-    realsoc = todaylog["SBSB"].iloc[-1]
+    realsoc = todaylog["SBSB"].iloc[-1] if len(todaylog)>0 else None
 
-    realsbpi = todaylog.loc[:realstop,"SBPI"]
-    # Only items not changing ny more
-    realsbpisum = realsbpi.iloc[:-1].sum()
+    # Calc the real to cast ratio
+    
+    realsbpi = todaylog.loc[:realstop,"SBPI"].iloc[-1]
+    realsbpisum = realsbpi.sum()
     logger.info(f'Real irridiance is "{realsbpisum:.0f}"')
-    
-    restsbpi = restlog.loc[:realstop,"SBPI"]
-    restsbpisum = restsbpi.iloc[:-1].sum()
-    logger.info(f'Rest irridiance is "{restsbpisum:.0f}"')
-    
-    realsbpisum = realsbpisum if restsbpisum >0 else realsbpi.sum()
-    restsbpisum = restsbpisum if restsbpisum >0 else restsbpi.sum()
-    ratiosbpi = np.sqrt((realsbpisum+1)/(restsbpisum+1)/K) # no div by zero
-    logger.info(f'Real/Rest ratio is "{ratiosbpi:.2f}"')
 
-    logger.info(f'Expected SBPI live performance: "{100*restlog_perf*ratiosbpi:.0f}%"')
+    castsbpi = castlog.loc[:realstop,"SBPI"].iloc[-1]
+    castsbpisum = castsbpi.sum()
+    logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
+    
+    realfactor = K*np.sqrt((realsbpisum+1)/(castsbpisum+1)) # no div by zero
+    logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
 
-    realfactor = await skyadaptor(ratiosbpi)
+    # Adapt the rest of the log to the live factor
+
+    restlog = castlog.loc[realstop:] # Cast last hour of today 
     restlog.loc[:,"SBPI"] *= realfactor
     restlog.loc[:,"IVP1"] *= realfactor
     restlog.loc[:,"IVP2"] *= realfactor
@@ -575,8 +578,8 @@ async def predict_naive_today(
     )
 
     #Join the current real data with the cast data
-    castlog = pd.concat([todaylog[:realstop],restlog])
-
+    castlog = pd.concat([todaylog[:realstop].iloc[:-1],restlog])
+    print(castlog)
     return today, castlog, realstop, caststart
 
 

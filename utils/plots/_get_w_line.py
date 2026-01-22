@@ -130,14 +130,15 @@ def _get_w_line(time: t64s, smp: f64s,
     """ Plot positive sample segmants """
 
     # Is irrodiance detected by ivp  and not solar bank
-    isivpi = isivpon if isivpon is not None else False
-    isivpi &= ~issbpion if issbpion is not None else False
-    isivpi &= ~issbpbin if issbpbin is not None else False
-    isivpi &= ~issbpbout if issbpbout is not None else False
-
     if ivp is not None:
+        isivpi = isivpon if isivpon is not None else False
+        isivpi &= ~issbpion if issbpion is not None else False
+        isivpi &= ~issbpbin if issbpbin is not None else False
+        isivpi &= ~issbpbout if issbpbout is not None else False
+
         ivpi = np.zeros_like(ivp)
         ivpi[isivpi] = ivp[isivpi]
+
     else:
         ivpi = 0
 
