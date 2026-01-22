@@ -1,7 +1,9 @@
-__doc__=""" Predicts the samples of an Anker Solix 1 powerstation for
-the rest of today or a given future castday. Forecasts for the rest of
-today are calculated from ratio of the latest irridiance of today or
-cloud coverage of the passed days """
+__doc__=""" Estimates the irridiance of an Anker Solix 1 powerstation
+system for the rest of today or a given castday dependend on the
+averages of samples of some past days close to the prediction
+day. Battery charging/discharging is predicted using a simulation with
+the irridiance as input. Grid import/export is the mean of the passed
+days. """
 
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -39,7 +41,7 @@ from brightsky import (
     Sky
 )
 
-K = 1.2 # Ratio denominator
+K = 1.2 # Ratio adaptor
 
 async def skyadaptor(
         ratios: np.ndarray
@@ -148,6 +150,8 @@ async def get_hour_sample_logs(
         logdir = logdir,
         usecols = POWER_NAMES[:-4] # Skip plugs!
     )
+
+    logger.info(f'Logs based on "len(logdays)" days.')
 
     # Make hour logs from the the minute logs
     logs = [l.set_index('TIME').resample(
@@ -264,14 +268,10 @@ async def simulate_solix_1_power_w(
     sbpi = log["SBPI"]
     sbpb = log["SBPB"]
     sbpo = log["SBPO"]
-    #ivp1 = log["IVP1"]
-    #ivp2 = log["IVP2"]
 
     #Reset
     sbpb[:] = 0.0
     sbpo[:] = 0.0
-    #ivp1[:] = 0.0
-    #ivp2[:] = 0.0
 
     
     # No battery if cold
@@ -281,9 +281,6 @@ async def simulate_solix_1_power_w(
     isnosbpi = (sbpi <5) 
     sbpi[isnosbpi] = 0
 
-    # Adapt sbpi to low temperaturs
-    #sbpi[isivpover] = ivp[isivpover]
-    
     # Simultate low irradiance
     issbpi = (sbpi >0) & (sbpi <=35)
     sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm]
@@ -469,9 +466,8 @@ async def predict_naive_today(
         logdir: str
 ) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
 
-    # Read the available real samples for today and the 24 predicted
-    # samples for the model day. The later are calculated from the
-    # window selected logs. The logs have hour resolution.
+    # Read the samples for today and the mean of a number of past
+    # days. The logs have hour resolution.
     days, pastlog, todaylog = await get_hour_sample_logs(
         logprefix = logprefix,
         logdir = logdir
@@ -480,7 +476,9 @@ async def predict_naive_today(
     # today is the last list entry
     today = days[-1]
 
-    # Read the sky ratios from the pastlog to today
+    # Read the sky ratios from the pastlog to today. The sky ratio
+    # mulitplied with the today sky factor returns the today
+    # irridiance.
     skyratios, temperatures = await get_hour_sky_info(
         days, lat, lon
     )
@@ -516,18 +514,11 @@ async def predict_naive_today(
     caststart = pastlog.index[len(todaylog)]
     logger.info(f'Cast start at beginning of interval"{caststart}"')
 
-    if not (
-        ("SBPI" in todaylog) and
-        (("IVP1" in todaylog) or ("IVP2" in todaylog)) and
-        ("SBSB" in todaylog)
-    ):
+    if not (("SBPI" in todaylog)):
         # No cast without real irridiance
         return today, pastlog, realstop, caststart
 
-    if not (
-        ("SBPI" in pastlog) and
-        (("IVP1" in pastlog) or ("IVP2" in pastlog))
-    ):
+    if not (("SBPI" in pastlog)):
         # No cast without redicted irridiance
         return today, pastlog, realstop, caststart
 
@@ -535,19 +526,9 @@ async def predict_naive_today(
     # The sky cast starts with the pastlog to be scaled with sky
     # factors for the whole day. 
     castlog = pastlog
-    
-    castlog_pre_sum = castlog.loc[:,"SBPI"].sum()
     skyfactor = await skyadaptor(skyratios)
     castlog.loc[:, "SBPI"] *= skyfactor
-    castlog.loc[:, "IVP1"] *= skyfactor
-    castlog.loc[:, "IVP2"] *= skyfactor
-    castlog_post_sum = castlog.loc[:,"SBPI"].sum()
-    castlog_perf = (castlog_post_sum / castlog_pre_sum)
-    logger.info(f'Expected sky performance: "{100*castlog_perf:.0f}%"')
 
-    # Only todaylog hours completed are considered. The last hour
-    # samples are still changing and therefore subject to cast.
-    ####todaylog = todaylog[:realstop].iloc[:-1]
 
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1] if len(todaylog)>0 else None
@@ -562,24 +543,22 @@ async def predict_naive_today(
     castsbpisum = castsbpi.sum()
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
     
-    realfactor = K*np.sqrt((realsbpisum+1)/(castsbpisum+1)) # no div by zero
+    realfactor = K*np.sqrt(realsbpisum/(castsbpisum+1)) # no div by zero
     logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
 
     # Adapt the rest of the log to the live factor
 
-    restlog = castlog.loc[realstop:] # Cast last hour of today 
+    restlog = castlog.loc[caststart:].copy() # Cast last hour of today 
     restlog.loc[:,"SBPI"] *= realfactor
-    restlog.loc[:,"IVP1"] *= realfactor
-    restlog.loc[:,"IVP2"] *= realfactor
 
     #Predict the system
     await simulate_system(
         restlog, realsoc
     )
-
+    
     #Join the current real data with the cast data
-    castlog = pd.concat([todaylog[:realstop].iloc[:-1],restlog])
-    print(castlog)
+    castlog = pd.concat([todaylog[:realstop],restlog])
+
     return today, castlog, realstop, caststart
 
 
@@ -625,21 +604,13 @@ async def predict_naive_castday(
     # Add the temperature column
     pastlog.insert(pastlog.shape[1], "T", temperatures)
 
-    if (
-        ("SBPI" in pastlog) and
-        (("IVP1" in pastlog) or ("IVP2" in pastloglog))
-    ):
+
+    if (("SBPI" in pastlog)):
     
         # Update the irridiance past day average to expected aky
         # conditions
         skyfactor = await skyadaptor(skyratios)
-        pastlog_pre_sum = pastlog.loc[:,"SBPI"].sum()
         pastlog.loc[:,"SBPI"] *= skyfactor
-        pastlog.loc[:,"IVP1"] *= skyfactor
-        pastlog.loc[:,"IVP2"] *= skyfactor
-        pastlog_post_sum = pastlog.loc[:,"SBPI"].sum()
-        pastlog_perf = (pastlog_post_sum / pastlog_pre_sum)
-        logger.info(f'Expected sky performance: "{100*pastlog_perf:.0f}%"')
 
         # Keep SOC
         pastsoc = pastlog["SBSB"].iloc[0]
