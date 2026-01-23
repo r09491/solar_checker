@@ -151,7 +151,7 @@ async def get_hour_sample_logs(
         usecols = POWER_NAMES[:-4] # Skip plugs!
     )
 
-    logger.info(f'Logs based on "len(logdays)" days.')
+    logger.info(f'Logs based on "{len(logdays)}" days.')
 
     # Make hour logs from the the minute logs
     logs = [l.set_index('TIME').resample(
@@ -529,7 +529,6 @@ async def predict_naive_today(
     skyfactor = await skyadaptor(skyratios)
     castlog.loc[:, "SBPI"] *= skyfactor
 
-
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1] if len(todaylog)>0 else None
 
@@ -542,13 +541,14 @@ async def predict_naive_today(
     castsbpi = castlog.loc[:realstop,"SBPI"].iloc[-1]
     castsbpisum = castsbpi.sum()
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
-    
-    realfactor = K*np.sqrt(realsbpisum/(castsbpisum+1)) # no div by zero
+
+    # No div by zero, produces "1" for small values!
+    realfactor = K*np.sqrt((realsbpisum+1)/(castsbpisum+1))
     logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
 
     # Adapt the rest of the log to the live factor
 
-    restlog = castlog.loc[caststart:].copy() # Cast last hour of today 
+    restlog = castlog.loc[caststart:].copy() # Cast last hour of today
     restlog.loc[:,"SBPI"] *= realfactor
 
     #Predict the system
