@@ -143,17 +143,28 @@ def _get_w_line(time: t64s, smp: f64s,
         ivpi = 0
 
     stage = 0
-    ax.fill_between(time, stage, stage+ivpi,
-                     color='c', lw=0, alpha=0.3, label='INV')
-    stage += ivpi
-    ax.fill_between(time, stage, stage+sbpi,
-                    color='orange', lw=0, alpha=0.3, label='SUN')
-    stage += sbpi
-    ax.fill_between(time, stage, stage+sbpbout,
-                   color='m', lw=0, alpha=0.3, label='BAT')
-    stage += sbpbout
-    ax.fill_between(time, stage, stage+smpin,
-                    color='b', lw=0, alpha=0.3, label='GRID')
+    if isspphon.any(): # Guard got label
+        ax.fill_between(time, stage, stage+spph,
+                        where = ~isivpi & ~issbpion & ~issbpbout,
+                        color='brown', lw=0, alpha=0.3, label='PLUG')
+        stage += spph
+    if isivpi.any(): # Guard got label
+        ax.fill_between(time, stage, stage+ivpi,
+                        where = ~issbpion & ~issbpbout,
+                        color='c', lw=0, alpha=0.3, label='INV')
+        stage += ivpi
+    if issbpion.any(): # Guard got label
+        ax.fill_between(time, stage, stage+sbpi,
+                        where = ~issbpbout,
+                        color='orange', lw=0, alpha=0.3, label='SUN')
+        stage += sbpi
+    if issbpbout.any(): # Guard got label
+        ax.fill_between(time, stage, stage+sbpbout,
+                        color='m', lw=0, alpha=0.3, label='BAT')
+        stage += sbpbout
+    if issmpin.any(): # Guard got label
+        ax.fill_between(time, stage, stage+smpin,
+                        color='b', lw=0, alpha=0.3, label='GRID')
 
     """ Plot negative sample segmants"""
 
@@ -166,7 +177,7 @@ def _get_w_line(time: t64s, smp: f64s,
 
     if spphon is not None and spphon.any():
         ax.plot(time, spph,
-                color='brown', lw=3, ls='-', alpha=0.4)
+                color='brown', lw=3, ls='-', alpha=0.2)
     if ivpon is not None and ivpon.any():
         ax.plot(time, ivp,
                 color='c', lw=3, ls='-', alpha=0.3)
