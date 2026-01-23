@@ -116,11 +116,11 @@ async def get_hour_sky_info(
 
 
 """
-Fix the inconsistencies of samples if solix is off (cold). There is
-still may be irridiance. Then the inverter IVP1, IVP2 show it. Other
-samples are simulated dependent on the irridiance SBPI.
+Fix the sample inconsistencies if the Solix is off (beloe zero
+celsius). There still may be irridiance though. Then the sum of the
+inverters IVP1, IVP2 is larger than SBPI (should be zero)
 """
-async def fix_sbpi(
+async def fix_sbpi_lazy(
         log: pd.DataFrame
 ):
     if not (
@@ -134,9 +134,35 @@ async def fix_sbpi(
     sbpb = log["SBPB"]
     ivp = log["IVP1"] + log["IVP2"]
     isivpoversbpi = (ivp > sbpi) & ~(sbpb >0)
-    log.loc[isivpoversbpi, "SBPI"] = ivp[isivpoversbpi]
+    #log.loc[isivpoversbpi, "SBPI"] = ivp[isivpoversbpi]
+    sbpi[isivpoversbpi] = ivp[isivpoversbpi]
 
+    
+"""
+Fix the inconsistencies if the Solix is not off but only returning
+frozen values. The inverter values may still be good though. Then they
+override the SBPI values.
+"""
+async def fix_sbpi_frozen(
+        log: pd.DataFrame
+):
+    if not (
+        ("SBPI" in log) and
+        (("IVP1" in log) or ("IVP2" in log))
+    ):
+        return # log not modified
 
+    ivp1 = log["IVP1"]
+    ivp2 = log["IVP2"]
+    sbpi = log["SBPI"]
+    issbpion = sbpi>0
+    sbpidiff = sbpi[issbpion].diff()
+    sbpifreeze = sbpidiff[sbpidiff==0]
+    if not sbpifreeze.all():
+        logger.info("Solix has frozen- Replace all SBPI by IVP")
+        sbpi[issbpion] = ivp1[issbpion] +ivp2[issbpion]
+
+        
 LOGWINDOWSIZE = 2
 async def get_hour_sample_logs(
         logprefix: str,
@@ -179,9 +205,10 @@ async def get_hour_sample_logs(
         ).set_names('TIME')
 
         # Proper working Solix shall be ensured
-        await fix_sbpi(pastlog)
+        await fix_sbpi_lazy(pastlog)
 
-    await fix_sbpi(todaylog)
+    await fix_sbpi_lazy(todaylog)
+    await fix_sbpi_frozen(todaylog)
     
     return logdays, pastlog, todaylog
 
