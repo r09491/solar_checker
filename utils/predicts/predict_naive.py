@@ -41,7 +41,8 @@ from brightsky import (
     Sky
 )
 
-K = 1.2 # Ratio adaptor
+K = 1.0 # Ratio amplifier
+KK = 50 # Ratio truncator
 
 async def skyadaptor(
         ratios: np.ndarray
@@ -543,7 +544,7 @@ async def predict_naive_today(
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
 
     # No div by zero, produces "1" for small values!
-    realfactor = K*np.sqrt((realsbpisum+1)/(castsbpisum+1))
+    realfactor = K*np.sqrt((realsbpisum//KK+1)/(castsbpisum//KK+1))
     logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
 
     # Adapt the rest of the log to the live factor
