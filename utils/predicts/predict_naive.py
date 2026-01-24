@@ -177,12 +177,16 @@ async def get_hour_sample_logs(
         usecols = POWER_NAMES[:-4] # Skip plugs!
     )
 
-    logger.info(f'Logs based on "{len(logdays)}" days.')
+    logger.info(f'Cast based on "{len(logdays)}" days.')
 
     # Make hour logs from the the minute logs
     logs = [l.set_index('TIME').resample(
         'h', label='left', closed='left'
     ).mean() for l in logs]
+
+    # Get rid of frozrn SBPI samples
+    for l in logs:
+        await fix_sbpi_frozen(l) 
 
     # The forcastday is at the end of the list
     todaylog = logs[-1]
@@ -194,9 +198,9 @@ async def get_hour_sample_logs(
         pastlogs = pd.concat(
             [l.reset_index(drop=True) for l in logs[:-1]]
         )
-    
+        
         pastlog = pastlogs.groupby(pastlogs.index).mean()
-
+        
         pastlog.index = pd.date_range(
             todaylog.index[0].date(),
             periods=len(pastlog),
@@ -207,8 +211,7 @@ async def get_hour_sample_logs(
         await fix_sbpi_lazy(pastlog)
 
     await fix_sbpi_lazy(todaylog)
-    await fix_sbpi_frozen(todaylog)
-    
+
     return logdays, pastlog, todaylog
 
 
@@ -536,9 +539,9 @@ async def predict_naive_today(
     # last hour is part of the casting and excluded from the
     # calculating of the ratio.
     realstop = pastlog.index[len(todaylog)-1]
-    logger.info(f'Real stop at end of interval"{realstop}"')
+    logger.info(f'Real stop at end of "{realstop}"')
     caststart = pastlog.index[len(todaylog)]
-    logger.info(f'Cast start at beginning of interval"{caststart}"')
+    logger.info(f'Cast start at beginning of "{caststart}"')
 
     if not (("SBPI" in todaylog)):
         # No cast without real irridiance
