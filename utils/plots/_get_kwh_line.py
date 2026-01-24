@@ -30,7 +30,7 @@ POWER_PAYED = 12*44/0.279/365 #kWh
 POWER_USED = (1010+532)/365 #kWh
 
 def _get_kwh_line(
-        time: t64s, smeon: f64s, smeoff: f64s,
+        time: t64s, smein: f64s, smeout: f64s,
         ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
         sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
         empty_kwh, full_kwh: f64s, price: f64,
@@ -40,20 +40,20 @@ def _get_kwh_line(
     __me__ ='_get_kwh_line'
     logger.info(f'started')
 
-    ive = ive1 + ive2 if ive1 is not None and ive1 is not None else None 
-    isiveon = ive>0 if ive is not None else None
-    iveon = ive[isiveon] if isiveon is not None and isiveon.any() else None
+    N = time.size
 
-    isspehon = speh>0 if speh is not None else None
-    spehon = speh[isspehon] if isspehon is not None and isspehon.any() else None
+    ive1 = np.zeros(N) if ive1 is None else ive1
+    ive2 = np.zeros(N) if ive2 is None else ive2
+    ive = ive1 + ive2
 
-    issbeion = sbei>0 if sbei is not None else None
-    sbeion = sbei[issbeion] if issbeion is not None and issbeion.any() else None
-
-    issbeoon = sbeo>0 if sbeo is not None else None
-    sbeoon = sbeo[issbeoon] if issbeoon is not None and issbeoon.any() else None
-    issmeon = smeon>0 if smeon is not None else None
-
+    speh = np.zeros(N) if speh is None else speh
+    sbei = np.zeros(N) if sbei is None else sbei
+    sbeo = np.zeros(N) if sbeo is None else sbeo
+    smein = np.zeros(N) if smein is None else smein
+    smeout = np.zeros(N) if smeout is None else smeout
+    sbebcharge = np.zeros(N) if sbebcharge is None else sbebcharge
+    sbebdischarge = np.zeros(N) if sbebdischarge is None else sbebdischarge
+    
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
 
     ax.clear()
@@ -77,33 +77,31 @@ def _get_kwh_line(
 
     # Stacked!
             
-    if issbeion is not None and issbeion.any():
+    if sbei.any():
         ax.fill_between(time, 0, sbei,
                         color='orange', label='SUN', alpha=0.3)
 
-    if isspehon is not None and isspehon.any():
+    if speh.any():
         ax.plot(time, speh,
-                color='brown', label='PLUG', lw=1, ls='-', alpha=0.3)
+                color='grey', label='PLUG', lw=1, ls='-', alpha=0.3)
         balcony = speh
         
-    elif isiveon is not None and isiveon.any():
+    elif ive.any():
         ax.plot(time, ive,
                 color='c',label='INV', lw=1, ls='-', alpha=0.3)
         balcony = ive
         
-    elif issbeoon is not None and issbeoon.any():
+    elif sbeo.any():
         ax.plot(time, sbeo,
                 color='grey',label='BANK', lw=1, ls='-', alpha=0.3)
         balcony = sbeo
         
     else:
-        balcony = np.zeros_like(smeon)
+        balcony = np.zeros(N)
         
-    if issmeon is not None and issmeon.any():
-        ax.fill_between(time, balcony, balcony + smeon,
+    if smein.any():
+        ax.fill_between(time, balcony, balcony + smein,
                         color='b',label='GRID', alpha=0.3)
-        # ax.fill_between(time, sbei, sbei + smeon,
-        #                 color='b',label='GRID', alpha=0.3)
 
         ax.axhline(balcony[-1] + POWER_PAYED,
                    label='PAYED', lw=2, color='orange', ls='--')
@@ -123,16 +121,16 @@ def _get_kwh_line(
         ax.fill_between(time, -sbsb, -sbeb,
                         color='black', label='LOSS', alpha=0.3)
 
-        ax.fill_between(time, -sbeb, -sbeb - smeoff,
+        ax.fill_between(time, -sbeb, -sbeb - smeout,
                         color='b', alpha=0.3)
         
     else:
-        ax.fill_between(time, 0, -smeoff,
+        ax.fill_between(time, 0, -smeout,
                         color='b', alpha=0.3)
 
 
     title = f'# Energy #\n'
-    if sbeion is not None:
+    if sbei.any():
         if time_format == '%H:%M': # Accumulated
             title += f'Sun>{sbei[-1]:.2f}kWh'
         else:
@@ -144,10 +142,10 @@ def _get_kwh_line(
         else:
             if sbeo.sum() > 0:
                 title += f' {sbeo.sum():.2f}kWh~{sbeo.sum()*price:.2f}€'
-        if (sbebcharge is not None) and ((sbebcharge>0).any()):
+        if (sbebcharge>0).any():
             title += '' if title[-1] == '\n' else ' + '
         
-    if (sbebcharge is not None) and (sbebcharge>0).any():
+    if (sbebcharge>0).any():
         if time_format == '%H:%M': # Accumulated
             title += f'{sbebcharge[sbebcharge>0][-1]:.2f}kWh>'
         else:
@@ -156,10 +154,10 @@ def _get_kwh_line(
         title += '' if title[-1] == '\n' else ' | '        
 
         
-    if (sbebcharge is not None) or (sbebdischarge is not None):
+    if sbebdischarge.any():
         title += 'BAT'
     
-    if (sbebdischarge is not None) and (sbebdischarge>0).any():
+    if (sbebdischarge>0).any():
         if time_format == '%H:%M': # Accumulated
             title += f'>{sbebdischarge[sbebdischarge>0][-1]:.2f}kWh'
         else:
@@ -171,48 +169,49 @@ def _get_kwh_line(
             
     title += '' if title[-1] == '\n' else '\n'
         
-    if iveon is not None:
-        if time_format == '%H:%M': # Accumulated
-            title += f'Inv>{ive[-1]:.2f}kWh~{ive[-1]*price:.2f}€'
-        else:
-            title += f'Inv>{ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
-
-    if spehon is not None:
+    if speh.any():
         title += '' if title[-1] == '\n' else '\n'
         if time_format == '%H:%M': # Accumulated
             title += f'Plug>{speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
         else:
             title += f'Plug>{speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
 
+        balcony =speh
+        
+    elif ive.any():
+        if time_format == '%H:%M': # Accumulated
+            title += f'Inv>{ive[-1]:.2f}kWh~{ive[-1]*price:.2f}€'
+        else:
+            title += f'Inv>{ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
+
+        balcony = ive
+    else:
+        balcony = np.zeros(N)
             
     title += '' if title[-1] == '\n' else ' | '            
             
-    if smeoff is not None:
+    if smeout.any():
         if time_format == '%H:%M': # Accumulated
-            if smeoff[-1] > 0:
-                title += f'{smeoff[-1]:.2f}kWh~{(smeoff[-1]*price):.2f}€>'
+            if smeout[-1] > 0:
+                title += f'{smeout[-1]:.2f}kWh~{(smeout[-1]*price):.2f}€>'
         else:
-            if smeoff.sum() > 0:
-                title += f'{smeoff.sum():.2f}kWh~{(smeoff.sum()*price):.2f}€>'
+            if smeout.sum() > 0:
+                title += f'{smeout.sum():.2f}kWh~{(smeout.sum()*price):.2f}€>'
 
     title += f'Grid'
     
-    if smeon is not None:
+    if smein.any():
         if time_format == '%H:%M': # Accumulated
-            title += f'>{smeon[-1]:.2f}kWh~{(smeon[-1]*price):.2f}€'
+            title += f'>{smein[-1]:.2f}kWh~{(smein[-1]*price):.2f}€'
         else:
-            title += f'>{smeon.sum():.2f}kWh~{(smeon.sum()*price):.2f}€'
+            title += f'>{smein.sum():.2f}kWh~{(smein.sum()*price):.2f}€'
 
-    if (iveon is not None) and (smeoff is not None):            
+    if balcony.any() and (smeout is not None):            
         if time_format == '%H:%M': # Accumulated
-            title += f' # Bonus {(ive[-1]-smeoff[-1]):.2f}kWh~{(ive[-1]-smeoff[-1])*price:.2f}€'
+            title += f' # Bonus {(balcony[-1]-smeout[-1]):.2f}kWh~{(balcony[-1]-smeout[-1])*price:.2f}€'
         else:
-            title += f' # Bonus {ive.sum()-smeoff.sum():.2f}kWh~{(ive.sum()-smeoff.sum())*price:.2f}€'
-    elif (sbeoon is not None) and (smeoff is not None):            
-        if time_format == '%H:%M': # Accumulated
-            title += f' # Bonus {(sbeo[-1]-smeoff[-1]):.2f}kWh~{(sbeo[-1]-smeoff[-1])*price:.2f}€'
-        else:
-            title += f' # Bonus {sbeo.sum()-smeoff.sum():.2f}kWh~{(sbeo.sum()-smeoff.sum())*price:.2f}€'
+            title += f' # Bonus {balcony.sum()-smeout.sum():.2f}kWh~{(balcony.sum()-smeout.sum())*price:.2f}€'
+
 
     ax.set_title(title)
 

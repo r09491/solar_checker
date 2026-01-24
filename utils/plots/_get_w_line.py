@@ -131,8 +131,11 @@ def _get_w_line(time: t64s, smp: f64s,
 
     stage = 0 #np.zeros_like(smp)
 
-    isfill = isspphon & ~isivpon & ~issbpion & ~issbpbout
-    if isfill.any():
+
+    ax.plot(time, spph, color='grey', lw=3, ls='-', alpha=0.3)
+
+    spph[isivpon|issbpion|issbpbout] = 0
+    if spph.any():
         ax.fill_between(
             time,
             stage, stage + spph,
@@ -140,17 +143,21 @@ def _get_w_line(time: t64s, smp: f64s,
         )
         stage += spph
 
-    isfill = isivpon & ~issbpion & ~issbpbout
-    if isfill.any():
+
+    ax.plot(time, ivp, color='c', lw=3, ls='-', alpha=0.3)
+
+    ivp[issbpion|issbpbout] =0
+    if ivp.any():
         ax.fill_between(
             time,
-            stage, stage + ivp, #i,
+            stage, stage + ivp,
             color='c', lw=0, alpha=0.2, label='INV'
         )
         stage += ivp
-    
-    isfill = issbpion # & ~issbpbout
-    if isfill.any():
+
+
+    sbpi[issbpbout] =0
+    if sbpi.any():
         ax.fill_between(
             time,
             stage, stage + sbpi,
@@ -165,8 +172,8 @@ def _get_w_line(time: t64s, smp: f64s,
             color='red', alpha=0.2
         )
         
-    isfill = issbpbout
-    if isfill.any():
+
+    if sbpbout.any():
         ax.fill_between(
             time,
             stage, stage + sbpbout,
@@ -174,8 +181,8 @@ def _get_w_line(time: t64s, smp: f64s,
         )
         stage += sbpbout
 
-    isfill = issmpin
-    if isfill.any():
+
+    if smpin.any():
         ax.fill_between(
             time,
             stage, stage + smpin,
@@ -194,15 +201,6 @@ def _get_w_line(time: t64s, smp: f64s,
     if spph.any():
         ax.plot(time, spph,
                 color='grey', lw=3, ls='-', alpha=0.3)
-    if ivp.any():
-        ax.plot(time, ivp,
-                color='c', lw=3, ls='-', alpha=0.3)
-    # if sbpoon is not None and sbpoon.any():
-    #     ax.plot(time, sbpo,
-    #             color='grey', lw=3, ls='-', alpha=0.2)
-    # if sbpion is not None and issbpion.any():
-    #     ax.plot(time, sbpi,
-    #             color='orange', lw=4, ls='-', alpha=0.1)
 
 
     """ Generate title """

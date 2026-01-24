@@ -93,12 +93,12 @@ async def plot_day(request: web.Request) -> dict:
     )
     
     # Override sbpi  with inverter if solix is out, eg low protection
-    ivp = ((ivp1 if ivp1 is not None else 0) +
-           (ivp2 if ivp2 is not None else 0))
-    isivpoversbpi = (ivp > sbpi) & ~(sbpb>0)
-    sbpo[isivpoversbpi] = 0
-    sbpb[isivpoversbpi] = 0
-    sbpi[isivpoversbpi] = ivp[isivpoversbpi]
+    # ivp = ((ivp1 if ivp1 is not None else 0) +
+    #        (ivp2 if ivp2 is not None else 0))
+    # isivpoversbpi = (ivp > sbpi) & ~(sbpb>0)
+    # sbpo[isivpoversbpi] = 0
+    # sbpb[isivpoversbpi] = 0
+    # sbpi[isivpoversbpi] = ivp[isivpoversbpi]
 
     w, kwh = await asyncio.gather(
         get_w_line(time, smp, ivp1, ivp2,

@@ -27,7 +27,7 @@ async def get_w_line(time: t64s, smp: f64s,
 
     
 async def get_kwh_line(
-        time: t64s, smeon: f64s, smeoff: f64s,
+        time: t64s, smein: f64s, smeout: f64s,
         ive1: f64s, ive2: f64s, speh: f64s, sbei: f64s, sbeo: f64s,
         sbebcharge: f64s, sbebdischarge: f64s, sbsb: f64s,
         empty_kwh: f64s, full_kwh: f64s, price: f64,
