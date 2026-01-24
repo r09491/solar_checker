@@ -133,10 +133,10 @@ def apply_sky_adapters( watts: pd.DataFrame,
     
     logger.info(f'Adapting watts "{phase}" to limits')
 
-    soc = -watts[
-        'tomorrowwatts1' if (phase == 'tomorrowwatts2') else 'findwatts'
-    ].loc[:,'SBSB'].iloc[-1]*MAX_SBPB
-    logger.info(f'"SOC is "{-soc:.0f}Wh"')
+    # soc = -watts[
+    #     'tomorrowwatts1' if (phase == 'tomorrowwatts2') else 'findwatts'
+    # ].loc[:,'SBSB'].iloc[-1]*MAX_SBPB
+    # logger.info(f'"SOC is "{-soc:.0f}Wh"')
 
     # Calculate the overall power consumption without a solarbank as
     # imported directly from the grid. For unknown reasons there may

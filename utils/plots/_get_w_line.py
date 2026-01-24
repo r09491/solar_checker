@@ -37,74 +37,74 @@ def _get_w_line(time: t64s, smp: f64s,
     __me__ ='_get_w_line'
     logger.info(f'started')
 
+    # Number of samples
+    N = time.size
+    
     # ?Have data (smartmeter)
-    issmpin = smp>0 if smp is not None else None
-    smpin = np.zeros_like(smp) if issmpin is not None else None
-    smpin[issmpin] = smp[issmpin] if issmpin is not None else None 
-    smpin_mean = 0 if (smpin is None or
-                       not issmpin.any()) else smpin.mean()
-    smpin_max = 0 if (smpin is None or
-                      not issmpin.any()) else smpin.max()
+    smp = np.zeros(N) if smp is None else smp
 
-    issmpout = smp<0 if smp is not None else None
-    smpout = np.zeros_like(smp) if issmpout is not None else None
-    smpout[issmpout] = smp[issmpout] if issmpout is not None else None 
-    smpout_mean = 0 if (smpout is None or
-                        not issmpout.any()) else smpout.mean()
-    smpout_min = 0 if (smpout is None or
-                       not issmpout.any()) else smpout.min()
+    issmpin = smp>0
+    smpin = np.zeros_like(smp)
+    smpin[issmpin] = smp[issmpin]
+    smpin_mean = smpin.mean()
+    smpin_max = smpin.max()
+
+    issmpout = smp<0
+    smpout = np.zeros_like(smp)
+    smpout[issmpout] = smp[issmpout]
+    smpout_mean = smpout.mean()
+    smpout_min = smpout.min()
 
     # ?Have data (inverter)
-    ivp = ivp1 + ivp2 if ivp1 is not None and ivp2 is not None else None
-    isivpon = ivp>0 if ivp is not None else None 
-    ivpon = ivp if isivpon is not None else None 
-    ivpon_mean = 0 if (ivpon is None or
-                       not isivpon.any()) else ivpon.mean()
-    ivpon_max = 0 if (ivpon is None or
-                      not isivpon.any()) else ivpon.max()
+    ivp1 = np.zeros(N) if ivp1 is None else ivp1
+    ivp2 = np.zeros(N) if ivp2 is None else ivp2
+
+    ivp = ivp1 + ivp2
+    isivpon = ivp>0
+    ivp_mean = ivp.mean()
+    ivp_max = ivp.max()
 
     # ?Have power ( smartplug)
-    isspphon = spph>0 if spph is not None else None
-    spphon = spph if isspphon is not None else None
-    spphon_mean = 0 if (spphon is None or
-                        not isspphon.any()) else spphon.mean()
-    spphon_max = 0 if (spphon is None or
-                       not isspphon.any()) else spphon.max()
+    spph = np.zeros(N) if spph is None else spph
+    
+    isspphon = spph>0
+    spph_mean = spph.mean()
+    spph_max = spph.max()
 
     # ?Have sun (solarbank)
-    issbpion = sbpi>0 if sbpi is not None else None
-    sbpion = sbpi[issbpion] if issbpion is not None else None
-    sbpion_mean = sbpion.mean() if (sbpion is not None and
-                                    issbpion.any()) else 0
-    sbpion_max = sbpion.max() if (sbpion is not None and
-                                  issbpion.any()) else 0
+    sbpi = np.zeros(N) if sbpi is None else sbpi
+        
+    issbpion = sbpi>0
+    sbpion = sbpi
+    sbpion[issbpion] = sbpi[issbpion]
+    sbpion_mean = sbpion.mean()
+    sbpion_max = sbpion.max() 
 
     # 'Have output (solarbank)
-    issbpoon = sbpo>0 if sbpo is not None else None
-    sbpoon = sbpo if issbpoon is not None else None
-    sbpoon_mean = sbpoon.mean() if (sbpoon is not None and
-                                    issbpoon.any()) else 0
-    sbpoon_max = sbpoon.max() if (sbpoon is not None and
-                                  issbpoon.any()) else 0
+    sbpo = np.zeros(N) if sbpo is None else sbpo
+
+    issbpoon = sbpo>0
+    sbpo_mean = sbpo.mean()
+    sbpo_max = sbpo.max()
+
+
+    sbpb = np.zeros(N) if sbpb is None else sbpb
 
     # ?Charging (solarbank)
-    issbpbin = sbpb<0 if sbpb is not None else None
-    sbpbin = np.zeros_like(sbpb) if issbpbin is not None else None
-    sbpbin[issbpbin] = sbpb[issbpbin] if issbpbin is not None else None 
-    sbpbin_mean = 0 if (sbpbin is None or
-                        not issbpbin.any()) else sbpbin.mean()
-    sbpbin_min = 0 if (sbpbin is None or
-                       not issbpbin.any()) else sbpbin.min()
+    issbpbin = sbpb<0
+    sbpbin = np.zeros_like(sbpb)
+    sbpbin[issbpbin] = sbpb[issbpbin]
+    sbpbin_mean = sbpbin.mean()
+    sbpbin_min = sbpbin.min()
 
     # ?Discharging (solarbank)
-    issbpbout = sbpb>0 if sbpb is not None else None
-    sbpbout = np.zeros_like(sbpb) if issbpbout is not None else None
-    sbpbout[issbpbout] = sbpb[issbpbout] if issbpbout is not None else None 
-    sbpbout_mean = 0 if (sbpbout is None or
-                         not issbpbout.any()) else sbpbout.mean()
-    sbpbout_max = 0 if (sbpbout is None or
-                        not issbpbout.any()) else sbpbout.max()
+    issbpbout = sbpb>0
+    sbpbout = np.zeros_like(sbpb)
+    sbpbout[issbpbout] = sbpb[issbpbout]
+    sbpbout_mean = sbpbout.mean()
+    sbpbout_max = sbpbout.max()
 
+    
     fig, ax = plt.subplots(nrows=1,figsize=(XSIZE, YSIZE))
     
     ax.clear()
@@ -129,42 +129,58 @@ def _get_w_line(time: t64s, smp: f64s,
 
     """ Plot positive sample segmants """
 
-    # Is irrodiance detected by ivp  and not solar bank
-    if ivp is not None:
-        isivpi = isivpon if isivpon is not None else False
-        isivpi &= ~issbpion if issbpion is not None else False
-        isivpi &= ~issbpbin if issbpbin is not None else False
-        isivpi &= ~issbpbout if issbpbout is not None else False
+    stage = 0 #np.zeros_like(smp)
 
-        ivpi = np.zeros_like(ivp)
-        ivpi[isivpi] = ivp[isivpi]
-
-    else:
-        ivpi = 0
-
-    stage = 0
-    if isspphon.any(): # Guard got label
-        ax.fill_between(time, stage, stage+spph,
-                        where = ~isivpi & ~issbpion & ~issbpbout,
-                        color='brown', lw=0, alpha=0.3, label='PLUG')
+    isfill = isspphon & ~isivpon & ~issbpion & ~issbpbout
+    if isfill.any():
+        ax.fill_between(
+            time,
+            stage, stage + spph,
+            color='grey', lw=0, alpha=0.2, label='PLUG'
+        )
         stage += spph
-    if isivpi.any(): # Guard got label
-        ax.fill_between(time, stage, stage+ivpi,
-                        where = ~issbpion & ~issbpbout,
-                        color='c', lw=0, alpha=0.3, label='INV')
-        stage += ivpi
-    if issbpion.any(): # Guard got label
-        ax.fill_between(time, stage, stage+sbpi,
-                        where = ~issbpbout,
-                        color='orange', lw=0, alpha=0.3, label='SUN')
+
+    isfill = isivpon & ~issbpion & ~issbpbout
+    if isfill.any():
+        ax.fill_between(
+            time,
+            stage, stage + ivp, #i,
+            color='c', lw=0, alpha=0.2, label='INV'
+        )
+        stage += ivp
+    
+    isfill = issbpion # & ~issbpbout
+    if isfill.any():
+        ax.fill_between(
+            time,
+            stage, stage + sbpi,
+            color='orange', lw=0, alpha=0.3, label='SUN'
+        )
         stage += sbpi
-    if issbpbout.any(): # Guard got label
-        ax.fill_between(time, stage, stage+sbpbout,
-                        color='m', lw=0, alpha=0.3, label='BAT')
+
+        ax.fill_between(
+            time[issbpion],
+            np.full_like(sbpi[issbpion], 600),
+            np.full_like(sbpi[issbpion], 800),
+            color='red', alpha=0.2
+        )
+        
+    isfill = issbpbout
+    if isfill.any():
+        ax.fill_between(
+            time,
+            stage, stage + sbpbout,
+            color='m', lw=0, alpha=0.3, label='BAT'
+        )
         stage += sbpbout
-    if issmpin.any(): # Guard got label
-        ax.fill_between(time, stage, stage+smpin,
-                        color='b', lw=0, alpha=0.3, label='GRID')
+
+    isfill = issmpin
+    if isfill.any():
+        ax.fill_between(
+            time,
+            stage, stage + smpin,
+            color='b', lw=0, alpha=0.3, label='GRID'
+        )
 
     """ Plot negative sample segmants"""
 
@@ -175,10 +191,10 @@ def _get_w_line(time: t64s, smp: f64s,
     
     """ Plot amplifying data as lines """
 
-    if spphon is not None and spphon.any():
+    if spph.any():
         ax.plot(time, spph,
-                color='brown', lw=3, ls='-', alpha=0.2)
-    if ivpon is not None and ivpon.any():
+                color='grey', lw=3, ls='-', alpha=0.3)
+    if ivp.any():
         ax.plot(time, ivp,
                 color='c', lw=3, ls='-', alpha=0.3)
     # if sbpoon is not None and sbpoon.any():
@@ -198,7 +214,7 @@ def _get_w_line(time: t64s, smp: f64s,
         title += f'={sbpion_mean:.0f}^{sbpion_max:.0f}W'
         title += '' if title[-1] == '\n' else ' | Bank>'
         title += f' {sbpo[-1]:.0f}'
-        title += f'={sbpoon_mean:.0f}^{sbpoon_max:.0f}W'
+        title += f'={sbpo_mean:.0f}^{sbpo_max:.0f}W'
         if (sbpbout is not None) or (sbpbin is not None):
            title += f' + '
     if np.any(sbpbin) and (sbpbin_min<0):
@@ -212,14 +228,14 @@ def _get_w_line(time: t64s, smp: f64s,
 
     title += '' if title[-1] == '\n' else '\n'
         
-    if ivpon is not None and np.any(ivpon):
+    if np.any(ivp):
         title += f'Inv>{ivp[-1]:.0f}'
-        title += f'={ivpon_mean:.0f}^{ivpon_max:.0f}W'
+        title += f'={ivp_mean:.0f}^{ivp_max:.0f}W'
 
-    if spphon is not None and np.any(spphon):
+    if np.any(spph):
         title += '' if title[-1] == '\n' else ' | '
         title += f'Plug>{spph[-1]:.0f}'
-        title += f'={spphon_mean:.0f}^{spphon_max:.0f}W'
+        title += f'={spph_mean:.0f}^{spph_max:.0f}W'
 
     if ((smpout is not None and np.any(smpout)) or
         (smpin is not None and np.any(smpin))):

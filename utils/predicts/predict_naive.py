@@ -134,7 +134,6 @@ async def fix_sbpi_lazy(
     sbpb = log["SBPB"]
     ivp = log["IVP1"] + log["IVP2"]
     isivpoversbpi = (ivp > sbpi) & ~(sbpb >0)
-    #log.loc[isivpoversbpi, "SBPI"] = ivp[isivpoversbpi]
     sbpi[isivpoversbpi] = ivp[isivpoversbpi]
 
     
@@ -412,8 +411,7 @@ async def simulate_home_plug_w(
         # Keep samples not set in IVP!
         # Use simulated samples of IVP! 
         ivp = log["IVP1"] + log["IVP2"]
-        isivp = ivp >0
-        spph[isivp] = loss*ivp[isivp]
+        spph[:] = loss*ivp
 
         
 """
