@@ -32,6 +32,7 @@ from ..typing import(
 )
 from ..common import(
     POWER_NAMES,
+    VIEW_NAMES,
     PARTITION_2_VIEW
 )
 from ..csvlog import(
@@ -266,11 +267,12 @@ async def get_predict_tables(
         casthours.drop("SBPB>", inplace=True, axis=1)
     
     casthours.rename(columns=PARTITION_2_VIEW, inplace=True)
+    neworder = [c for c in VIEW_NAMES if c in casthours.columns]
+    casthours.columns = neworder
 
     starts = casthours.index.strftime("%H:00")
     stops = casthours.index.shift(1).strftime("%H:00")
     start_stop_df = pd.DataFrame({"START":starts, "STOP":stops})
-
     casthours.reset_index(inplace=True, drop=True)
     
     watts_table = pd.concat(

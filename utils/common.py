@@ -54,8 +54,10 @@ PREDICT_NAMES = [
 ]
 
 
-PARTITION_NAMES = ['SBPI','>SBPB','SBPB>','SBPO','>SMP','SMP>']
-VIEW_NAMES = ['SUN', '>BAT', 'BAT>', 'BANK', '>GRID', 'GRID>']
+PARTITION_NAMES = ['SBPI','SBPO', 'IVP','SPPH',
+                   '>SMP', 'SMP>','>SBPB','SBPB>']
+VIEW_NAMES = ['SUN', 'BANK', 'INV', 'PLUG',
+              '>GRID', 'GRID>', '>BAT', 'BAT>']
 PARTITION_2_VIEW = dict(zip(PARTITION_NAMES, VIEW_NAMES))
 
 

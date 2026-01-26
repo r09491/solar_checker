@@ -49,11 +49,11 @@ async def get_hourly_cast_watts(
     means_df = pd.DataFrame(
         data = {
             "SBPI":sbpi_means,
-            ">SBPB":sbpb_means_in,
-            "SBPB>":sbpb_means_out,
             "SBPO":sbpo_means,
             ">SMP":smp_means_out,
             "SMP>":smp_means_in,
+            ">SBPB":sbpb_means_in,
+            "SBPB>":sbpb_means_out
         }
     )
 
