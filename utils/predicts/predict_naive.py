@@ -305,30 +305,30 @@ async def simulate_solix_1_power_w(
     iswarm = log["T"] >3
 
     # Avoid rounding errors
-    isnosbpi = (sbpi <5) 
+    isnosbpi = (sbpi <=5) 
     sbpi[isnosbpi] = 0
 
     # Simultate low irradiance
-    issbpi = (sbpi >0) & (sbpi <=35)
+    issbpi = (sbpi >5) & (sbpi <=35)
     sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm]
     
     # Simultate grey irradiance
     issbpi = (sbpi >35) & (sbpi <=100)
-    sbpo[issbpi] = sbpi[issbpi]
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm]
 
     # constrain high irradiance
     issbpi = (sbpi > 800)
-    sbpi[issbpi] = 800
+    sbpi[issbpi & iswarm] = 800
 
     # Simultate grey irradiance
     issbpi = (sbpi >600)
     sbpb[issbpi & iswarm] = -600
-    sbpo[issbpi] = sbpi[issbpi]-sbpb[issbpi]
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - sbpb[issbpi & iswarm]
     
     # Simultate bright irradiance
     issbpi = (sbpi >100) & (sbpi <=600)
     sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm] + 100
-    sbpo[issbpi] = sbpi[issbpi] - sbpb[issbpi]
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - sbpb[issbpi & iswarm]
 
 
 """
@@ -389,9 +389,12 @@ async def simulate_inverter_w(
     ivp1 = log["IVP1"]
     ivp2 = log["IVP2"]
 
+    # No battery if cold
+    iswarm = log["T"] >3
+
     ivp1[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
     ivp2[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
-
+        
     #Otherwise keep IVP as is
 
 
