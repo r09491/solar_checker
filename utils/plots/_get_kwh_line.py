@@ -135,7 +135,10 @@ def _get_kwh_line(
             title += f'Sun>{sbei[-1]:.2f}kWh'
         else:
             title += f'Sun>{sbei.sum():.2f}kWh'
-        title += '' if title[-1] == '\n' else ' | Bank> '
+        #title += '' if title[-1] == '\n' else ' | Bank>'
+
+    if sbeo.any():
+        title += ' | Bank>'
         if time_format == '%H:%M': # Accumulated
             if sbeo[-1] > 0:
                 title += f' {sbeo[-1]:.2f}kWh'
@@ -154,8 +157,8 @@ def _get_kwh_line(
         title += '' if title[-1] == '\n' else ' | '        
 
         
-    if sbebdischarge.any():
-        title += 'BAT'
+    #if sbebdischarge.any():
+    title += 'BAT'
     
     if (sbebdischarge>0).any():
         if time_format == '%H:%M': # Accumulated
@@ -166,17 +169,18 @@ def _get_kwh_line(
     if sbsb is not None:
         title += f' #{sbsb[-1]:.2f}kWh~{sbsb[-1]/full_kwh*100:.0f}%'
             
-            
     title += '' if title[-1] == '\n' else '\n'
-        
-    if speh.any():
+
+    
+    #if np.count_nonzero(speh) > np.count_nonzero(ive):
+    if speh.any():        
         title += '' if title[-1] == '\n' else '\n'
         if time_format == '%H:%M': # Accumulated
             title += f'Plug>{speh[-1]:.2f}kWh~{speh[-1]*price:.2f}€'
         else:
             title += f'Plug>{speh.sum():.2f}kWh~{speh.sum()*price:.2f}€'
 
-        balcony =speh
+        balcony = speh
         
     elif ive.any():
         if time_format == '%H:%M': # Accumulated
@@ -185,6 +189,7 @@ def _get_kwh_line(
             title += f'Inv>{ive.sum():.2f}kWh~{ive.sum()*price:.2f}€'
 
         balcony = ive
+
     else:
         balcony = np.zeros(N)
             

@@ -134,36 +134,38 @@ def _get_w_line(time: t64s, smp: f64s,
 
     ax.plot(time, spph, color='grey', lw=3, ls='-', alpha=0.3)
 
-    spph[isivpon|issbpion|issbpbout] = 0
+    delta = spph.copy()
+    delta[isivpon|issbpion|issbpbout] = 0
     if spph.any():
         ax.fill_between(
             time,
-            stage, stage + spph,
+            stage, stage + delta,
             color='grey', lw=0, alpha=0.2, label='PLUG'
         )
-        stage += spph
+        stage += delta
 
 
     ax.plot(time, ivp, color='c', lw=3, ls='-', alpha=0.3)
 
-    ivp[issbpion|issbpbout] =0
+    delta = ivp.copy()
+    delta[issbpion|issbpbout] =0
     if ivp.any():
         ax.fill_between(
             time,
-            stage, stage + ivp,
+            stage, stage + delta,
             color='c', lw=0, alpha=0.2, label='INV'
         )
-        stage += ivp
+        stage += delta
 
-
-    sbpi[issbpbout] =0
+    delta = sbpi.copy()   
+    delta[issbpbout] =0
     if sbpi.any():
         ax.fill_between(
             time,
-            stage, stage + sbpi,
+            stage, stage + delta,
             color='orange', lw=0, alpha=0.3, label='SUN'
         )
-        stage += sbpi
+        stage += delta
 
         ax.fill_between(
             time[issbpion],
@@ -213,7 +215,7 @@ def _get_w_line(time: t64s, smp: f64s,
         title += '' if title[-1] == '\n' else ' | Bank>'
         title += f' {sbpo[-1]:.0f}'
         title += f'={sbpo_mean:.0f}^{sbpo_max:.0f}W'
-        if (sbpbout is not None) or (sbpbin is not None):
+        if (sbpbout.any()) or (sbpbin.any()):
            title += f' + '
     if np.any(sbpbin) and (sbpbin_min<0):
         title += f'{-sbpbin[-1] if sbpb[-1]<0 else 0:.0f}'
