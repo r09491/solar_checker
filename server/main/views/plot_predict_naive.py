@@ -49,7 +49,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
     lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
 
     today = datetime.strftime(datetime.now(), logdayformat)
-    
+
     try:
         castday = request.match_info['castday']
     except KeyError:
@@ -74,27 +74,30 @@ async def plot_predict_naive(request: web.Request) -> dict:
         _, casthours, realstop, caststart = cast
     else:
         castday, casthours, realstop, caststart = cast
-
-    nsamples = casthours.shape[0]
+    
     time = np.array(casthours.index)
-    sbpi = np.array(casthours['SBPI']) if "SBPI" in casthours else np.zeros(nsamples)
-    sbpo = np.array(casthours['SBPO']) if "SBPO" in casthours else np.zeros(nsamples)
-    sbpb = np.array(casthours['SBPB']) if "SBPB" in casthours else np.zeros(nsamples)
-    sbsb = np.array(casthours['SBSB']) if "SBSB" in casthours else np.zeros(nsamples)
-    ivp1 = np.array(casthours['IVP1']) if "IVP1" in casthours else np.zeros(nsamples)
-    ivp2 = np.array(casthours['IVP2']) if "IVP2" in casthours else np.zeros(nsamples)
-    spph = np.array(casthours['SPPH']) if "SPPH" in casthours else np.zeros(nsamples)
-    smp = np.array(casthours['SMP']) if "SMP" in casthours else np.zeros(nsamples)
+    sbpi = np.array(casthours['SBPI']) if 'SBPI' in casthours else None
+    sbpo = np.array(casthours['SBPO']) if 'SBPO' in casthours else None
+    sbpb = np.array(casthours['SBPB']) if 'SBPB' in casthours else None
+    sbsb = np.array(casthours['SBSB']) if 'SBSB' in casthours else None
+    ivp1 = np.array(casthours['IVP1']) if 'IVP1' in casthours else None
+    ivp2 = np.array(casthours['IVP2']) if 'IVP2' in casthours else None
+    spph = np.array(casthours['SPPH']) if 'SPPH' in casthours else None
+    smp = np.array(casthours['SMP']) if 'SMP' in casthours else None
 
-    smpon = np.zeros_like(smp)
-    smpon[smp>0] = smp[smp>0]
-    smpoff = np.zeros_like(smp)
-    smpoff[smp<0] = -smp[smp<0]
+    smpon = smp.copy() if smp is not None else None
+    if smpon is not None:
+        smpon[smpon<0] = 0
+    smpoff = -smp.copy() if smp is not None else None
+    if smpoff is not None:
+        smpoff[smpoff<0] =0
 
-    sbpbcharge = np.zeros_like(sbpb)
-    sbpbcharge[sbpb<0] = -sbpb[sbpb<0]
-    sbpbdischarge = np.zeros_like(sbpb)
-    sbpbdischarge[sbpb>0] = sbpb[sbpb>0]
+    sbpbcharge = -sbpb.copy() if sbpb is not None else None
+    if sbpbcharge is not None:
+        sbpbcharge[sbpbcharge<0] =0
+    sbpbdischarge = sbpb.copy() if sbpb is not None else None
+    if sbpbdischarge is not None:
+        sbpbdischarge[sbpbdischarge<0] =0
 
     tphases = [realstop, caststart, caststart, time[-1]]
 
@@ -121,7 +124,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
             sbpo.cumsum()/1000 if sbpo is not None else None,
             sbpbcharge.cumsum()/1000 if sbpbcharge is not None else None,
             sbpbdischarge.cumsum()/1000 if sbpbdischarge is not None else None,
-            sbsb*full_kwh,
+            sbsb*full_kwh if sbsb is not None else None,
             empty_kwh,
             full_kwh,
             price[castday[:2] if castday is not None else today[:2]],

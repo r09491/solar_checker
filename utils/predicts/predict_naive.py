@@ -253,7 +253,9 @@ async def get_predict_tables(
         t_df = casthours["T"]
         t_df.reset_index(inplace=True, drop=True)    
         casthours.drop("T", inplace=True, axis=1)
-    
+
+    if "SBPO" in casthours and not casthours["SBPO"].any():
+        casthours.drop("SBPO", inplace=True, axis=1)        
     if "SPPH" in casthours and not casthours["SPPH"].any():
         casthours.drop("SPPH", inplace=True, axis=1)
     if ">SMP" in casthours and not casthours[">SMP"].any():
@@ -308,30 +310,30 @@ async def simulate_solix_1_power_w(
     iswarm = log["T"] >3
 
     # Avoid rounding errors
-    isnosbpi = (sbpi <5) 
+    isnosbpi = (sbpi <=5) 
     sbpi[isnosbpi] = 0
 
     # Simultate low irradiance
-    issbpi = (sbpi >0) & (sbpi <=35)
+    issbpi = (sbpi >5) & (sbpi <=35)
     sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm]
     
     # Simultate grey irradiance
     issbpi = (sbpi >35) & (sbpi <=100)
-    sbpo[issbpi] = sbpi[issbpi]
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm]
 
     # constrain high irradiance
     issbpi = (sbpi > 800)
-    sbpi[issbpi] = 800
+    sbpi[issbpi & iswarm] = 800
 
     # Simultate grey irradiance
     issbpi = (sbpi >600)
     sbpb[issbpi & iswarm] = -600
-    sbpo[issbpi] = sbpi[issbpi]-sbpb[issbpi]
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - sbpb[issbpi & iswarm]
     
     # Simultate bright irradiance
     issbpi = (sbpi >100) & (sbpi <=600)
     sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm] + 100
-    sbpo[issbpi] = sbpi[issbpi] - sbpb[issbpi]
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - sbpb[issbpi & iswarm]
 
 
 """
@@ -394,7 +396,7 @@ async def simulate_inverter_w(
 
     ivp1[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
     ivp2[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
-
+        
     #Otherwise keep IVP as is
 
 
@@ -406,15 +408,13 @@ async def simulate_home_plug_w(
         log: pd.DataFrame,
         loss: f64
 ):
+    sbpi = log["SBPI"]
     spph = log["SPPH"]
-    isspph = spph >0
-    if isspph.any():
-        log.info("The home smart plug is present")
 
-        # Keep samples not set in IVP!
-        # Use simulated samples of IVP! 
-        ivp = log["IVP1"] + log["IVP2"]
-        spph[:] = loss*ivp
+    # Keep samples not set in IVP!
+    # Use simulated samples of IVP! 
+    ivp = log["IVP1"] + log["IVP2"]
+    spph[:] = loss*(ivp if ivp.any() else sbpi)
 
         
 """
@@ -467,7 +467,6 @@ async def simulate_system(
     await simulate_inverter_w(
         log, inv_loss
     )
-
 
     #Update home plug power
     await simulate_home_plug_w(
@@ -580,14 +579,29 @@ async def predict_naive_today(
     restlog = castlog.loc[caststart:].copy() # Cast last hour of today
     restlog.loc[:,"SBPI"] *= realfactor
 
+    realsbpo = todaylog.loc[:realstop, "SBPO"].iloc[-1]
+    realsbposum = realsbpo.sum()
+    logger.info(f'Real bank watts is "{realsbposum:.0f}"')
+    
+    realivp = todaylog.loc[:realstop, ["IVP1","IVP2"]].iloc[-1]
+    realivpsum = realivp.sum().sum()
+    logger.info(f'Real inverter watts is "{realivpsum:.0f}"')
+
+    realspph = todaylog.loc[:realstop, "SPPH"].iloc[-1]
+    realspphsum = realspph.sum()
+    logger.info(f'Real plug watts is "{realspphsum:.0f}"')
+
     #Predict the system
     await simulate_system(
-        restlog, realsoc
+        restlog, realsoc,
+        inv_loss = (realivpsum+1)/(realsbposum+1),
+        plug_loss = realspphsum/(realivpsum+1) # Avoid div by zero
     )
+
     
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog[:realstop],restlog])
-
+    
     return today, castlog, realstop, caststart
 
 
