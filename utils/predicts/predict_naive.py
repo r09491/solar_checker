@@ -42,7 +42,7 @@ from brightsky import (
     Sky
 )
 
-K = 1.0 # Ratio amplifier
+K = 1.1 # Ratio amplifier
 KK = 50 # Ratio truncator
 
 async def skyadaptor(
@@ -104,7 +104,6 @@ async def get_hour_sky_info(
             [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
         )
         pastsky = pastskys.groupby(pastskys.index).mean()
-
 
         today_cloud_free = 100.0 - todaysky["cloud_cover"].values
         past_cloud_free = 100.0 - pastsky["cloud_cover"].values
@@ -178,24 +177,36 @@ async def get_hour_sample_logs(
         usecols = POWER_NAMES[:-4] # Skip plugs!
     )
 
-    logger.info(f'Cast based on "{len(logdays)}" days.')
+    logger.info(f'Cast initially based on "{len(logdays)}" days.')
 
-    # Make hour logs from the the minute logs
-    logs = [l.set_index('TIME').resample(
-        'h', label='left', closed='left'
-    ).mean() for l in logs]
+    # Make hour logs from the minute logs with irridiance
+    logs = [
+        l.set_index('TIME').resample(
+            'h', label='left', closed='left'
+        ).mean() for l in logs if (
+            'SBPI' in l and l['SBPI'].any()
+        ) or (
+            'IVP1' in l and l['IVP1'].any()
+        ) or (
+            'IVP2' in l and l['IVP2'].any()
+        )]
+    logger.info(f'"{len(logs)}" days left after irridiance check.')
 
+    logdays = [l.index[0].strftime("%y%m%d") for l in logs]
+    logger.info(f'Cast finally based on "{len(logdays)}" days.')
+    
     # Get rid of frozrn SBPI samples
     for l in logs:
         await fix_sbpi_frozen(l) 
 
-    # The forcastday is at the end of the list
-    todaylog = logs[-1]
-
-    # Make a single log from the many passed logs
-
+    todaylog = None
     pastlog = None
     if len(logs)> 1:
+        # The forcastday is at the end of the list
+        todaylog = logs[-1]
+
+        # Make a single log from the many passed logs
+
         pastlogs = pd.concat(
             [l.reset_index(drop=True) for l in logs[:-1]]
         )
@@ -210,8 +221,7 @@ async def get_hour_sample_logs(
 
         # Proper working Solix shall be ensured
         await fix_sbpi_lazy(pastlog)
-
-    await fix_sbpi_lazy(todaylog)
+        await fix_sbpi_lazy(todaylog)
 
     return logdays, pastlog, todaylog
 
@@ -596,7 +606,7 @@ async def predict_naive_today(
     #Predict the system
     await simulate_system(
         restlog, realsoc,
-        inv_loss = (realivpsum+1)/(realsbposum+1),
+        inv_loss = (realivpsum+1)/(realsbposum+1), # Avoid div by zero
         plug_loss = realspphsum/(realivpsum+1) # Avoid div by zero
     )
 
