@@ -163,6 +163,7 @@ async def fix_sbpi_frozen(
 
         
 LOGWINDOWSIZE = 2
+LOGDAYFORMAT="%y%m%d"
 async def get_hour_sample_logs(
         logprefix: str,
         logdir: str,
@@ -179,49 +180,66 @@ async def get_hour_sample_logs(
 
     logger.info(f'Cast initially based on "{len(logdays)}" days.')
 
-    # Make hour logs from the minute logs with irridiance
+    # Reample logs from minutes to hour resolution
     logs = [
         l.set_index('TIME').resample(
             'h', label='left', closed='left'
-        ).mean() for l in logs if (
-            'SBPI' in l and l['SBPI'].any()
-        ) or (
-            'IVP1' in l and l['IVP1'].any()
-        ) or (
-            'IVP2' in l and l['IVP2'].any()
-        )]
-    logger.info(f'"{len(logs)}" days left after irridiance check.')
-
-    logdays = [l.index[0].strftime("%y%m%d") for l in logs]
-    logger.info(f'Cast finally based on "{len(logdays)}" days.')
+        ).mean() for l in logs
+    ]
     
+    # The day for the forcast is at the end of the list
+    today = logdays[-1]
+    todaylog = logs[-1]
+
+    # Fix todaylog
+    await fix_sbpi_frozen(todaylog) 
+    await fix_sbpi_lazy(todaylog)
+
+    
+    # Remove logs without sun in the past
+    _pastlogs = [
+        l for l in logs[:-1] if (
+            'SBPI' in l and l['SBPI'].any()
+        ) or ((
+            'IVP1' in l and l['IVP1'].any()
+        ) and (
+            'IVP2' in l and l['IVP2'].any()
+        ))
+    ]
+    if not _pastlogs:
+        logger.error("No logs with irridiance in the past")
+        return [today], None, todaylog
+
+    # Logs have irridiance
+
+    logger.info(f'"{len(_pastlogs)}" past days left after sun check.')
+
     # Get rid of frozrn SBPI samples
-    for l in logs:
+    for l in _pastlogs:
         await fix_sbpi_frozen(l) 
 
-    todaylog = None
-    pastlog = None
-    if len(logs)> 1:
-        # The forcastday is at the end of the list
-        todaylog = logs[-1]
+    # Make the  single log from the many passed logs
+    
+    pastlogs = pd.concat(
+        [l.reset_index(drop=True) for l in _pastlogs]
+    )
+    
+    pastlog = pastlogs.groupby(pastlogs.index).mean()   
 
-        # Make a single log from the many passed logs
+    pastlog.index = pd.date_range(
+        todaylog.index[0].date(),
+        periods=len(pastlog),
+        freq="h"
+    ).set_names('TIME')
 
-        pastlogs = pd.concat(
-            [l.reset_index(drop=True) for l in logs[:-1]]
-        )
-        
-        pastlog = pastlogs.groupby(pastlogs.index).mean()
-        
-        pastlog.index = pd.date_range(
-            todaylog.index[0].date(),
-            periods=len(pastlog),
-            freq="h"
-        ).set_names('TIME')
-
-        # Proper working Solix shall be ensured
-        await fix_sbpi_lazy(pastlog)
-        await fix_sbpi_lazy(todaylog)
+    await fix_sbpi_lazy(pastlog)
+    
+    # Fix logdays
+    logdays = [
+        l.index[0].strftime(LOGDAYFORMAT) for l in _pastlogs
+    ] + [today]
+    
+    logger.info(f'Cast finally based on "{len(logdays)}" days.')
 
     return logdays, pastlog, todaylog
 
@@ -230,67 +248,67 @@ async def get_predict_tables(
         casthours: pd.DataFrame
 ) -> (pd.DataFrame, pd.DataFrame):
 
-    if "IVP1" in casthours and "IVP2" in casthours:
-        casthours["INV"] = casthours["IVP1"] + casthours["IVP2"] 
-        casthours.drop("IVP1", inplace=True, axis=1)
-        casthours.drop("IVP2", inplace=True, axis=1)
+    c1h = casthours
+    if "IVP1" in c1h and "IVP2" in c1h:
+        c1h["INV"] = c1h["IVP1"] + c1h["IVP2"] 
+        c1h.drop("IVP1", inplace=True, axis=1)
+        c1h.drop("IVP2", inplace=True, axis=1)
 
-    if "SMP" in casthours:
-        casthours[">SMP"] = casthours["SMP"]
-        casthours.loc[casthours["SMP"]>0, ">SMP"]= 0
-        casthours["SMP>"] = casthours["SMP"]
-        casthours.loc[casthours["SMP"]<0,"SMP>"] = 0
-        casthours.drop("SMP", inplace=True, axis=1)
+    if "SMP" in c1h:
+        c1h[">SMP"] = c1h["SMP"]
+        c1h.loc[c1h["SMP"]>0, ">SMP"]= 0
+        c1h["SMP>"] = c1h["SMP"]
+        c1h.loc[c1h["SMP"]<0,"SMP>"] = 0
+        c1h.drop("SMP", inplace=True, axis=1)
 
-    if "SBPB" in casthours:        
-        casthours[">SBPB"] = casthours["SBPB"]
-        casthours.loc[casthours["SBPB"]>0,">SBPB"] = 0
-        casthours["SBPB>"] = casthours["SBPB"]
-        casthours.loc[casthours["SBPB"]<0, "SBPB>"] = 0
-        casthours.drop("SBPB", inplace=True, axis=1)
+    if "SBPB" in c1h:        
+        c1h[">SBPB"] = c1h["SBPB"]
+        c1h.loc[c1h["SBPB"]>0,">SBPB"] = 0
+        c1h["SBPB>"] = c1h["SBPB"]
+        c1h.loc[c1h["SBPB"]<0, "SBPB>"] = 0
+        c1h.drop("SBPB", inplace=True, axis=1)
 
-    casthours = casthours.resample(
+    c3h = c1h.resample(
         '3h', label='left', closed='left'
     ).mean()
 
     sbsb_df = None
-    if "SBSB" in casthours:
-        sbsb_df = casthours["SBSB"]
+    if "SBSB" in c3h:
+        sbsb_df = c3h["SBSB"]
         sbsb_df.reset_index(inplace=True, drop=True)    
-        casthours.drop("SBSB", inplace=True, axis=1)
+        c3h.drop("SBSB", inplace=True, axis=1)
 
     t_df = None
-    if "T" in casthours:
-        t_df = casthours["T"]
+    if "T" in c3h:
+        t_df = c3h["T"]
         t_df.reset_index(inplace=True, drop=True)    
-        casthours.drop("T", inplace=True, axis=1)
+        c3h.drop("T", inplace=True, axis=1)
 
-    if "SBPO" in casthours and not casthours["SBPO"].any():
-        casthours.drop("SBPO", inplace=True, axis=1)        
-    if "SPPH" in casthours and not casthours["SPPH"].any():
-        casthours.drop("SPPH", inplace=True, axis=1)
-    if ">SMP" in casthours and not casthours[">SMP"].any():
-        casthours.drop(">SMP", inplace=True, axis=1)
-    if ">SBPB" in casthours and not casthours[">SBPB"].any():
-        casthours.drop(">SBPB", inplace=True, axis=1)
-    if "SBPB>" in casthours and not casthours["SBPB>"].any():
-        casthours.drop("SBPB>", inplace=True, axis=1)
+    if "SBPO" in c3h and not c3h["SBPO"].any():
+        c3h.drop("SBPO", inplace=True, axis=1)        
+    if "SPPH" in c3h and not c3h["SPPH"].any():
+        c3h.drop("SPPH", inplace=True, axis=1)
+    if ">SMP" in c3h and not c3h[">SMP"].any():
+        c3h.drop(">SMP", inplace=True, axis=1)
+    if ">SBPB" in c3h and not c3h[">SBPB"].any():
+        c3h.drop(">SBPB", inplace=True, axis=1)
+    if "SBPB>" in c3h and not c3h["SBPB>"].any():
+        c3h.drop("SBPB>", inplace=True, axis=1)
     
-    casthours.rename(columns=PARTITION_2_VIEW, inplace=True)
-    neworder = [c for c in VIEW_NAMES if c in casthours.columns]
-    casthours.columns = neworder
+    c3h.rename(columns=PARTITION_2_VIEW, inplace=True)
+    c3h = pd.concat([c3h[c] for c in VIEW_NAMES if c in c3h.columns], axis=1)
 
-    starts = casthours.index.strftime("%H:00")
-    stops = casthours.index.shift(1).strftime("%H:00")
+    starts = c3h.index.strftime("%H:00")
+    stops = c3h.index.shift(1).strftime("%H:00")
     start_stop_df = pd.DataFrame({"START":starts, "STOP":stops})
-    casthours.reset_index(inplace=True, drop=True)
+    c3h.reset_index(inplace=True, drop=True)
     
     watts_table = pd.concat(
-        [start_stop_df, casthours],
+        [start_stop_df, c3h],
         axis=1
     )
     energy_table = pd.concat(
-        [start_stop_df, 3*casthours.cumsum()],
+        [start_stop_df, 3*c3h.cumsum()],
         axis=1
     )
 
@@ -301,6 +319,7 @@ async def get_predict_tables(
     
     return (watts_table, energy_table)
 
+T_WARM = 3
 
 """
 Simulates the Anker Solix generation 1 power part
@@ -319,7 +338,7 @@ async def simulate_solix_1_power_w(
 
     
     # No battery if cold
-    iswarm = log["T"] >3
+    iswarm = log["T"] >T_WARM
 
     # Avoid rounding errors
     isnosbpi = (sbpi <=5) 
@@ -335,7 +354,7 @@ async def simulate_solix_1_power_w(
 
     # constrain high irradiance
     issbpi = (sbpi > 800)
-    sbpi[issbpi & iswarm] = 800
+    sbpi[issbpi] = 800
 
     # Simultate grey irradiance
     issbpi = (sbpi >600)
@@ -345,7 +364,7 @@ async def simulate_solix_1_power_w(
     # Simultate bright irradiance
     issbpi = (sbpi >100) & (sbpi <=600)
     sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm] + 100
-    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - sbpb[issbpi & iswarm]
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] + sbpb[issbpi & iswarm]
 
 
 """
@@ -423,7 +442,6 @@ async def simulate_home_plug_w(
     sbpi = log["SBPI"]
     spph = log["SPPH"]
 
-    # Keep samples not set in IVP!
     # Use simulated samples of IVP! 
     ivp = log["IVP1"] + log["IVP2"]
     spph[:] = loss*(ivp if ivp.any() else sbpi)
@@ -514,7 +532,10 @@ async def predict_naive_today(
     )
 
     # today is the last list entry
-    today = days[-1]
+    today = days[-1] if days is not None else None
+    if today is None:
+        logger.error(f'Irridiance not available for any day')
+        return None, None, None, None
 
     # Read the sky ratios from the pastlog to today. The sky ratio
     # mulitplied with the today sky factor returns the today
@@ -526,7 +547,7 @@ async def predict_naive_today(
     # Abort if skyratios are not avalable
     if skyratios is None:
         logger.error(f'Skyratios not available')
-        return today, todaylog, None, None
+        return None, None, None, None
 
     # Add the temperatures to the frames
     todaylog.insert(todaylog.shape[1], "T", temperatures[:len(todaylog)])

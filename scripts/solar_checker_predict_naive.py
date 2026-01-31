@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 __doc__="""
-Writes a prediction table for the rest of today estimating the irridance and using a solarbank model dependent on the irridiance.
+Writes a table for the rest of today estimating the irridance of a PV site
 """
 
 __version__ = "0.0.0"
@@ -46,10 +46,10 @@ async def output_hour(
     predicttables = await get_predict_tables(casthours)
 
     w = predicttables[0]
-    print(f"\nRelative Watts [W] Cast @ {caststart} for {castday}")
+    print(f"\nPower [W] Cast @ {caststart} for {castday}")
     print(w)
 
-    print(f"\nAbsolute Watts [Wh] Cast @ {caststart} for {castday}")
+    print(f"\nEnergy [Wh] Cast @ {caststart} for {castday}")
     wh =  predicttables[1]
     print(wh)
     
@@ -100,6 +100,7 @@ if __name__ == '__main__':
     async def main(args: Script_Arguments) -> int:
 
         if args.castday is None:
+        
             cast = await predict_naive_today(
                 args.lat,
                 args.lon,

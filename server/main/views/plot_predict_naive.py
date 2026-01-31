@@ -63,18 +63,21 @@ async def plot_predict_naive(request: web.Request) -> dict:
         cast = await predict_naive_castday(
             castday, lat, lon, logprefix, logdir
         )
-        
-    if cast is None:
+
+    if cast == (None, None, None, None):
         return aiohttp_jinja2.render_template(
             "error.html", request,
-            {"error" : f'Log files for "{castday}" not found or not valid or other'}
+            {"error" : f'No log files found or no irridiance'}
         )
 
-    if castday is None:   
-        _, casthours, realstop, caststart = cast
-    else:
-        castday, casthours, realstop, caststart = cast
-    
+    _, casthours, realstop, caststart = cast
+
+    if casthours is None:
+        return aiohttp_jinja2.render_template(
+            "error.html", request,
+            {"error" : f'No log files found or no irridiance'}
+        )
+
     time = np.array(casthours.index)
     sbpi = np.array(casthours['SBPI']) if 'SBPI' in casthours else None
     sbpo = np.array(casthours['SBPO']) if 'SBPO' in casthours else None
