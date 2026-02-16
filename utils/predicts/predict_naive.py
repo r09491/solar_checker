@@ -425,8 +425,8 @@ async def simulate_inverter_w(
     ivp1 = log["IVP1"]
     ivp2 = log["IVP2"]
 
-    ivp1[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
-    ivp2[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
+    ivp1[:] = 0.49*(loss*sbpo if sbpo.any() else sbpi)
+    ivp2[:] = 0.49*(loss*sbpo if sbpo.any() else sbpi)
         
     #Otherwise keep IVP as is
 
@@ -502,12 +502,11 @@ async def simulate_system(
     await simulate_home_plug_w(
         log, plug_loss
     )
-
+    
     #Update grid power
     await simulate_grid_w(
         log
     )
-
     
 @dataclass
 class Script_Arguments:
@@ -624,11 +623,15 @@ async def predict_naive_today(
     realspphsum = realspph.sum()
     logger.info(f'Real plug watts is "{realspphsum:.0f}"')
 
+    # If addapted the losses maybe > 1 before simulation
+    inv_loss = min(1.0, (realivpsum+1)/(realsbposum+1))
+    plug_loss = min(1.0, realspphsum/(realivpsum+1))
+    
     #Predict the system
     await simulate_system(
         restlog, realsoc,
-        inv_loss = (realivpsum+1)/(realsbposum+1), # Avoid div by zero
-        plug_loss = realspphsum/(realivpsum+1) # Avoid div by zero
+        inv_loss = inv_loss, # Avoid div by zero
+        plug_loss = plug_loss # Avoid div by zero
     )
 
     
