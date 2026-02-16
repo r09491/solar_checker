@@ -180,8 +180,8 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f"constraint proposal is '{estimate}W'")
 
     if (sbpi[-1] > 0) and  (estimate > (sbpi[-1]-sbpb[-1])): #Bypass/Charge
-        logger.warning(f"Cannot comply! Go for burst anyhow!")
-        estimate = 999
+        logger.warning(f"Cannot comply!")
+        ##estimate = 999
         
     return  estimate # My solix only uses one channel
 
