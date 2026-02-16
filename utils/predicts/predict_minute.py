@@ -311,11 +311,11 @@ def get_predict_table(partitions: dict) -> pd.DataFrame:
         ], sort=False, axis=1)
     swattphases.set_index('PHASE', inplace=True)
 
-
+    swattphases['IVP'] = swattphases['IVP1'] + swattphases['IVP2']
+    
     startstop = swattphases.loc[:, ['START', 'STOP']]
     watts = swattphases.loc[:, PARTITION_NAMES]
     relative_watts = pd.concat([startstop, watts], axis=1)
-
 
     bat_soc_start =  0 if partitions['prewatts'].empty else partitions['prewatts'].iloc[0,:]['SBPB>']
         
