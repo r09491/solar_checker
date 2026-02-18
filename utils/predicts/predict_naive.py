@@ -186,7 +186,7 @@ async def get_hour_sample_logs(
             'h', label='left', closed='left'
         ).mean() for l in logs
     ]
-    
+
     # The day for the forcast is at the end of the list
     today = logdays[-1]
     todaylog = logs[-1]
@@ -196,15 +196,21 @@ async def get_hour_sample_logs(
     await fix_sbpi_lazy(todaylog)
 
     
-    # Remove logs without sun in the past
+    # Remove logs without sun in the past or missing entries
     _pastlogs = [
         l for l in logs[:-1] if (
-            'SBPI' in l and l['SBPI'].any()
-        ) or ((
-            'IVP1' in l and l['IVP1'].any()
+            len(l) == 24
         ) and (
-            'IVP2' in l and l['IVP2'].any()
-        ))
+            (
+                'SBPI' in l and l['SBPI'].any()
+            ) or (
+                (
+                    'IVP1' in l and l['IVP1'].any()
+                ) and (
+                    'IVP2' in l and l['IVP2'].any()
+                )
+            )
+        )
     ]
     if not _pastlogs:
         logger.error("No logs with irridiance in the past")
@@ -239,7 +245,7 @@ async def get_hour_sample_logs(
         l.index[0].strftime(LOGDAYFORMAT) for l in _pastlogs
     ] + [today]
     
-    logger.info(f'Cast finally based on "{len(logdays)}" days.')
+    logger.info(f'Cast finally based on "{len(logdays)-1}" days.')
 
     return logdays, pastlog, todaylog
 
@@ -603,7 +609,7 @@ async def predict_naive_today(
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
 
     # No div by zero, produces "1" for small values!
-    realfactor = K*np.sqrt((realsbpisum//KK+1)/(castsbpisum//KK+1))
+    realfactor = K*np.sqrt((realsbpisum//KK+0.01)/(castsbpisum//KK+0.01))
     logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
 
     # Adapt the rest of the log to the live factor
@@ -624,8 +630,8 @@ async def predict_naive_today(
     logger.info(f'Real plug watts is "{realspphsum:.0f}"')
 
     # If addapted the losses maybe > 1 before simulation
-    inv_loss = min(1.0, (realivpsum+1)/(realsbposum+1))
-    plug_loss = min(1.0, realspphsum/(realivpsum+1))
+    inv_loss = min(1.0, (realivpsum+0.01)/(realsbposum+0.01))
+    plug_loss = min(1.0, realspphsum/(realivpsum+0.01))
     
     #Predict the system
     await simulate_system(
