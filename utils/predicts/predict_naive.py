@@ -158,7 +158,7 @@ async def fix_sbpi_frozen(
     sbpidiff = sbpi[issbpion].diff()
     sbpifreeze = sbpidiff[sbpidiff==0]
     if not sbpifreeze.all():
-        logger.info("Solix has frozen- Replace all SBPI by IVP")
+        logger.info("Solix has frozen: Replace all SBPI by IVP")
         sbpi[issbpion] = ivp1[issbpion] +ivp2[issbpion]
 
         
@@ -325,10 +325,17 @@ async def get_predict_tables(
     
     return (watts_table, energy_table)
 
+
 T_WARM = 3
 
+P_NOISE = 5
+P_MIN = 0
+P_LOW = 35
+P_HIGH = 100
+P_MAX = 880
+
 """
-Simulates the Anker Solix generation 1 power part
+Simulates the ideal Anker Solix generation 1 power part
 """
 async def simulate_solix_1_power_w(
         log: pd.DataFrame
@@ -343,35 +350,39 @@ async def simulate_solix_1_power_w(
     sbpo[:] = 0.0
 
     
+    # Avoid rounding errors
+    isnosbpi = (sbpi <=P_NOISE) 
+    sbpi[isnosbpi] = P_MIN
+
+    # Constrain high irradiance
+    issbpi = (sbpi > P_MAX)
+    sbpi[issbpi] = P_MAX
+
+
     # No battery if cold
     iswarm = log["T"] >T_WARM
-
-    # Avoid rounding errors
-    isnosbpi = (sbpi <=5) 
-    sbpi[isnosbpi] = 0
-
+    
     # Simultate low irradiance
-    issbpi = (sbpi >5) & (sbpi <=35)
+    issbpi = (sbpi >P_MIN) & (sbpi <=P_LOW)
     sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm]
+    sbpo[issbpi & ~iswarm] = sbpi[issbpi & ~iswarm]
     
     # Simultate grey irradiance
-    issbpi = (sbpi >35) & (sbpi <=100)
-    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm]
+    issbpi = (sbpi >P_LOW) & (sbpi <=P_HIGH)
+    #sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm]
+    sbpo[issbpi] = sbpi[issbpi] # Bypass
 
-    # constrain high irradiance
-    issbpi = (sbpi > 800)
-    sbpi[issbpi] = 800
-
-    # Simultate grey irradiance
-    issbpi = (sbpi >600)
-    sbpb[issbpi & iswarm] = -600
-    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - sbpb[issbpi & iswarm]
-    
-    # Simultate bright irradiance
-    issbpi = (sbpi >100) & (sbpi <=600)
-    sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm] + 100
-    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] + sbpb[issbpi & iswarm]
-
+    # Simultate blue irradiance
+    issbpi = (sbpi >P_HIGH)
+    sbpb[issbpi & iswarm] = -P_HIGH
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - P_HIGH
+    sbpo[issbpi & ~iswarm] = sbpi[issbpi & ~iswarm]
+        
+    # Simultate white irradiance
+    issbpi = (sbpi >P_LOW) & (sbpi <=P_HIGH)
+    sbpb[issbpi & iswarm] = -sbpi[issbpi & iswarm] + P_LOW
+    sbpo[issbpi & iswarm] = sbpi[issbpi & iswarm] - P_LOW
+    sbpo[issbpi & ~iswarm] = sbpi[issbpi & ~iswarm]
 
 """
 Simulates the Anker Solix generation 1 energy part
@@ -431,9 +442,9 @@ async def simulate_inverter_w(
     ivp1 = log["IVP1"]
     ivp2 = log["IVP2"]
 
-    ivp1[:] = 0.49*(loss*sbpo if sbpo.any() else sbpi)
-    ivp2[:] = 0.49*(loss*sbpo if sbpo.any() else sbpi)
-        
+    ivp1[:] = 0.49*loss*sbpi #(sbpo if sbpo.any() else sbpi)
+    ivp2[:] = 0.49*loss*sbpi #(sbpo if sbpo.any() else sbpi)
+
     #Otherwise keep IVP as is
 
 
@@ -450,7 +461,7 @@ async def simulate_home_plug_w(
 
     # Use simulated samples of IVP! 
     ivp = log["IVP1"] + log["IVP2"]
-    spph[:] = loss*(ivp if ivp.any() else sbpi)
+    spph[:] = loss*ivp # (ivp if ivp.any() else sbpi)
 
         
 """
