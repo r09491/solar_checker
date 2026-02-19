@@ -42,18 +42,23 @@ from brightsky import (
     Sky
 )
 
-K = 1.1 # Ratio amplifier
-KK = 50 # Ratio truncator
 
-async def skyadaptor(
-        ratios: np.ndarray
+K = 0.01 
+KK = 0.75
+""" Returns a list of ratios to calculate power values from source
+power values (adapted from formula by NASA) """
+async def power_ratios(
+        to_covers: np.ndarray, # 0 to 100
+        from_covers: np.ndarray # 0 to 100
 ) -> np.ndarray:
-    return np.sqrt(ratios*K)
-
+    return (
+        ( (1.0-KK*(K*to_covers)**3) + K ) /
+        ( (1.0-KK*(K*from_covers)**3) + K )
+    )
 
 SKY_TZ='Europe/Berlin'
-""" Returns the sky for each hour in the castday """
-async def get_hour_sky_pool(
+""" Returns all sky data for each hour in the castday """
+async def get_sky_pool_24h(
         castday: str,
         lat: float,
         lon: float,
@@ -68,9 +73,9 @@ async def get_hour_sky_pool(
     return df
 
 
-""" Return the ratio of sky% for each hour from the
-castday to today """
-async def get_hour_sky_info(
+""" Return the power ratio of the sky in % for each hour from the
+castday to today and the temeperatures of today """
+async def get_sky_info_24h(
         castdays: List[str],
         lat: f64,
         lon: f64,
@@ -78,7 +83,7 @@ async def get_hour_sky_info(
 )  -> (f64s,f64s):
 
     skytasks = [asyncio.create_task(
-        get_hour_sky_pool(
+        get_sky_pool_24h(
             cd, lat, lon, tz
         )
     ) for cd in castdays]
@@ -105,9 +110,10 @@ async def get_hour_sky_info(
         )
         pastsky = pastskys.groupby(pastskys.index).mean()
 
-        today_cloud_free = 100.0 - todaysky["cloud_cover"].values
-        past_cloud_free = 100.0 - pastsky["cloud_cover"].values
-        ratios = (today_cloud_free + 1) / (past_cloud_free + 1) # No div by zero!
+        ratios = await power_ratios(
+            todaysky["cloud_cover"].values,
+            pastsky["cloud_cover"].values
+        )
 
         # The weather for today is better (more irridiance) with ratios > 1
         # The weather for today is worse (less irridiance) with ratios < 1
@@ -161,10 +167,10 @@ async def fix_sbpi_frozen(
         logger.info("Solix has frozen: Replace all SBPI by IVP")
         sbpi[issbpion] = ivp1[issbpion] +ivp2[issbpion]
 
-        
+
 LOGWINDOWSIZE = 2
 LOGDAYFORMAT="%y%m%d"
-async def get_hour_sample_logs(
+async def get_sample_logs_24h(
         logprefix: str,
         logdir: str,
         logwindow: int = LOGWINDOWSIZE
@@ -542,7 +548,7 @@ async def predict_naive_today(
 
     # Read the samples for today and the mean of a number of past
     # days. The logs have hour resolution.
-    days, pastlog, todaylog = await get_hour_sample_logs(
+    days, pastlog, todaylog = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -556,7 +562,7 @@ async def predict_naive_today(
     # Read the sky ratios from the pastlog to today. The sky ratio
     # mulitplied with the today sky factor returns the today
     # irridiance.
-    skyratios, temperatures = await get_hour_sky_info(
+    skyratios, temperatures = await get_sky_info_24h(
         days, lat, lon
     )
 
@@ -599,28 +605,22 @@ async def predict_naive_today(
         # No cast without redicted irridiance
         return today, pastlog, realstop, caststart
 
-
     # The sky cast starts with the pastlog to be scaled with sky
     # factors for the whole day. 
     castlog = pastlog
-    skyfactor = await skyadaptor(skyratios)
-    castlog.loc[:, "SBPI"] *= skyfactor
+    castlog.loc[:, "SBPI"] *= skyratios
 
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1] if len(todaylog)>0 else None
 
     # Calc the real to cast ratio
     
-    realsbpi = todaylog.loc[:realstop,"SBPI"].iloc[-1]
-    realsbpisum = realsbpi.sum()
+    realsbpisum = todaylog.loc[:realstop,"SBPI"].sum()
     logger.info(f'Real irridiance is "{realsbpisum:.0f}"')
-
-    castsbpi = castlog.loc[:realstop,"SBPI"].iloc[-1]
-    castsbpisum = castsbpi.sum()
+    castsbpisum = castlog.loc[:realstop,"SBPI"].sum()
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
-
     # No div by zero, produces "1" for small values!
-    realfactor = K*np.sqrt((realsbpisum//KK+0.01)/(castsbpisum//KK+0.01))
+    realfactor = (realsbpisum)/(castsbpisum +0.01)
     logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
 
     # Adapt the rest of the log to the live factor
@@ -628,25 +628,23 @@ async def predict_naive_today(
     restlog = castlog.loc[caststart:].copy() # Cast last hour of today
     restlog.loc[:,"SBPI"] *= realfactor
 
-    realsbpo = todaylog.loc[:realstop, "SBPO"].iloc[-1]
-    realsbposum = realsbpo.sum()
+    realsbposum = todaylog.loc[:realstop, "SBPO"].sum()
     logger.info(f'Real bank watts is "{realsbposum:.0f}"')
     
-    realivp = todaylog.loc[:realstop, ["IVP1","IVP2"]].iloc[-1]
-    realivpsum = realivp.sum().sum()
+    realivpsum = todaylog.loc[:realstop, ["IVP1","IVP2"]].sum().sum()
     logger.info(f'Real inverter watts is "{realivpsum:.0f}"')
 
-    realspph = todaylog.loc[:realstop, "SPPH"].iloc[-1]
-    realspphsum = realspph.sum()
+    realspphsum = todaylog.loc[:realstop, "SPPH"].sum()
     logger.info(f'Real plug watts is "{realspphsum:.0f}"')
 
     # If addapted the losses maybe > 1 before simulation
-    inv_loss = min(1.0, (realivpsum+0.01)/(realsbposum+0.01))
-    plug_loss = min(1.0, realspphsum/(realivpsum+0.01))
+    inv_loss = min(1.0, (realivpsum+K)/(realsbposum+K))
+    plug_loss = min(1.0, realspphsum/(realivpsum+K))
     
     #Predict the system
     await simulate_system(
-        restlog, realsoc,
+        restlog,
+        realsoc,
         inv_loss = inv_loss, # Avoid div by zero
         plug_loss = plug_loss # Avoid div by zero
     )
@@ -670,7 +668,7 @@ async def predict_naive_castday(
     # Read the 24 predicted samples for the model day. The later are
     # calculated from the window selected logs. The logs have hour
     # resolution. Today samples are ignored.
-    days, pastlog, _ = await get_hour_sample_logs(
+    days, pastlog, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -690,7 +688,7 @@ async def predict_naive_castday(
 
 
     # Read the sky ratios from the pastlog to the castday
-    skyratios, temperatures = await get_hour_sky_info(
+    skyratios, temperatures = await get_sky_info_24h(
         days[:-1] + [castday], lat, lon
     )
     if skyratios is None:
@@ -705,8 +703,7 @@ async def predict_naive_castday(
     
         # Update the irridiance past day average to expected aky
         # conditions
-        skyfactor = await skyadaptor(skyratios)
-        pastlog.loc[:,"SBPI"] *= skyfactor
+        pastlog.loc[:,"SBPI"] *= skyratios
 
         # Keep SOC
         pastsoc = pastlog["SBSB"].iloc[0]
