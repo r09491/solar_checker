@@ -44,7 +44,7 @@ from brightsky import (
 
 
 K = 0.01 
-KK = 0.75
+KK = 0.90 #0.75
 """ Returns a list of ratios to calculate power values from source
 power values (adapted from formula by NASA) """
 async def power_ratios(
@@ -620,7 +620,7 @@ async def predict_naive_today(
     castsbpisum = castlog.loc[:realstop,"SBPI"].sum()
     logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
     # No div by zero, produces "1" for small values!
-    realfactor = (realsbpisum)/(castsbpisum +0.01)
+    realfactor = (realsbpisum + K)/(castsbpisum + K)
     logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
 
     # Adapt the rest of the log to the live factor
