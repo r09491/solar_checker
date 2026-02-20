@@ -503,8 +503,8 @@ Simulates the system
 async def simulate_system(
         log: pd.DataFrame,
         soc: f64,
-        inv_loss: f64 = 0.9,
-        plug_loss: f64 = 0.9,
+        inv_ratio: f64 = 0.9,
+        plug_ratio: f64 = 0.9,
 ):
     #Predict the samples
     await simulate_solix_1_power_w(
@@ -518,12 +518,12 @@ async def simulate_system(
 
     #Update inverter power
     await simulate_inverter_w(
-        log, inv_loss
+        log, inv_ratio
     )
 
     #Update home plug power
     await simulate_home_plug_w(
-        log, plug_loss
+        log, plug_ratio
     )
     
     #Update grid power
@@ -614,39 +614,38 @@ async def predict_naive_today(
     realsoc = todaylog["SBSB"].iloc[-1] if len(todaylog)>0 else None
 
     # Calc the real to cast ratio
-    
     realsbpisum = todaylog.loc[:realstop,"SBPI"].sum()
-    logger.info(f'Real irridiance is "{realsbpisum:.0f}"')
-    castsbpisum = castlog.loc[:realstop,"SBPI"].sum()
-    logger.info(f'Cast irridiance is "{castsbpisum:.0f}"')
-    # No div by zero, produces "1" for small values!
-    realfactor = (realsbpisum + K)/(castsbpisum + K)
-    logger.info(f'Real/Cast ratio is "{realfactor:.2f}"')
+    logger.info(f'Real irridiance is {realsbpisum:.0f} Wh')
+    realsbpisum += castlog.loc[caststart:,"SBPI"].sum()
+    logger.info(f'Expected irridiance is {realsbpisum:.0f} Wh')
+    castsbpisum = castlog.loc[:,"SBPI"].sum()
+    logger.info(f'Cast irridiance is {castsbpisum:.0f} Wh')
+    realfactor = (
+        realsbpisum / castsbpisum
+    ) if (
+        realsbpisum >0 and castsbpisum >0
+    ) else 1
+    logger.info(f'REAL/CAST ratio is "{realfactor:.2f}"')
 
     # Adapt the rest of the log to the live factor
-
     restlog = castlog.loc[caststart:].copy() # Cast last hour of today
     restlog.loc[:,"SBPI"] *= realfactor
 
     realsbposum = todaylog.loc[:realstop, "SBPO"].sum()
-    logger.info(f'Real bank watts is "{realsbposum:.0f}"')
-    
     realivpsum = todaylog.loc[:realstop, ["IVP1","IVP2"]].sum().sum()
-    logger.info(f'Real inverter watts is "{realivpsum:.0f}"')
-
     realspphsum = todaylog.loc[:realstop, "SPPH"].sum()
-    logger.info(f'Real plug watts is "{realspphsum:.0f}"')
 
-    # If addapted the losses maybe > 1 before simulation
-    inv_loss = min(1.0, (realivpsum+K)/(realsbposum+K))
-    plug_loss = min(1.0, realspphsum/(realivpsum+K))
+    inv_ratio = min(1.0, (realivpsum+K)/(realsbposum+K))
+    logger.info(f'IVP/SBPO ratio is "{inv_ratio:.2f}"')
+    plug_ratio = min(1.0, realspphsum/(realivpsum+K))
+    logger.info(f'SPPH/IVP ratio is "{plug_ratio:.2f}"')
     
     #Predict the system
     await simulate_system(
         restlog,
         realsoc,
-        inv_loss = inv_loss, # Avoid div by zero
-        plug_loss = plug_loss # Avoid div by zero
+        inv_ratio = inv_ratio, # Avoid div by zero
+        plug_ratio = plug_ratio # Avoid div by zero
     )
 
     
