@@ -448,8 +448,13 @@ async def simulate_inverter_w(
     ivp1 = log["IVP1"]
     ivp2 = log["IVP2"]
 
-    ivp1[:] = 0.49*loss*sbpi #(sbpo if sbpo.any() else sbpi)
-    ivp2[:] = 0.49*loss*sbpi #(sbpo if sbpo.any() else sbpi)
+    issbpo = sbpo>0
+    #ivp1[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
+    #ivp2[:] = 0.49*loss*(sbpo if sbpo.any() else sbpi)
+    ivp1[issbpo] = 0.5*loss*sbpo[issbpo]
+    ivp2[issbpo] = 0.5*loss*sbpo[issbpo]
+    ivp1[~issbpo] = 0.5*loss*sbpi[~issbpo]
+    ivp2[~issbpo] = 0.5*loss*sbpi[~issbpo]
 
     #Otherwise keep IVP as is
 
