@@ -53,7 +53,7 @@ class Smartmeter:
 
     async def get_status_sns(self) -> Optional[Return_Status_SNS]:
         try:
-            response = await self._request(command = "status", para = "8")
+            response = await self._request(command = "status", para = "10")
         except:
             respone = None
         status_sns =  response["StatusSNS"] if response else None
