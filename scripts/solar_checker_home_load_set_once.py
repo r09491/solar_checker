@@ -80,9 +80,6 @@ async def get_home_load_estimate(samples: int) -> int:
     if sbpo.size != samples:
         logger.error(f'wrong number of solarbank records "{sbpo.size}"')
         return -13
-    if sbpo[-1] == 0:
-        logger.error(f'Solarbank has no output.')
-        return -14
     sbpo_mean = int(sbpo.mean())
     
     """ The normalised solarbank power output """
@@ -116,29 +113,14 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f'{sbpo} sbpo')
     logger.info(f'{ivp} ivp')
     logger.info(f'{smp} smp')
-    logger.info(f'{np.diff(sbpi)} sbpi diff')
-    logger.info(f'{np.diff(sbpb)} sbpb diff')
-    logger.info(f'{np.diff(sbpo)} sbpo diff')
-    logger.info(f'{np.diff(ivp)} ivp diff')
-    logger.info(f'{np.diff(smp)} smp diff')
-    logger.info(f'{np.diff(smp)+np.diff(ivp)} diff smp ivp')
-    logger.info(f'{np.diff(smp)+np.diff(sbpi)} diff smp sbpi')
-
-    if (int(smp[-1]) > 999): # Only during BYPASS/DISCHARGE
-        estimate = 300 if int(sbpb[-1]) > 0 else 999
-        logger.info(f'Burst required "{estimate}"')
-        return estimate
-
-    """
-    During the home load setting the solarbank output and the inverter
-    output may become inconsistent. The inverter output is more
-    current since it is local. The solarbank output is late since it
-    updated in the cloud. Let a previous trial settle first!
-    """
-    if not sbpi.any() and (ivp > sbpo).any():
-        logger.error(f"SBPO and IVP samples are not consistend yet!")
-        return -19
-
+    # logger.info(f'{np.diff(sbpi)} sbpi diff')
+    # logger.info(f'{np.diff(sbpb)} sbpb diff')
+    # logger.info(f'{np.diff(sbpo)} sbpo diff')
+    # logger.info(f'{np.diff(ivp)} ivp diff')
+    # logger.info(f'{np.diff(smp)} smp diff')
+    # logger.info(f'{np.diff(smp)+np.diff(ivp)} diff smp ivp')
+    # logger.info(f'{np.diff(smp)+np.diff(sbpi)} diff smp sbpi')
+    
     if sbpb[-1] > 0: 
         logger.info(f'bank in DISCHARGE.')
     elif sbpb[-1] < 0: 
@@ -147,6 +129,32 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.info(f'bank in BYPASS')
     else:
         logger.info(f'bank in STANDBY')
+
+        
+    if sbpo[-1] == 0: # CHARGE , no BYPASS
+        logger.error(f'Solarbank has no output! Keep setting!')
+        return -14
+
+    """
+    During the home load setting the solarbank output and the inverter
+    output may become inconsistent. The inverter output is more
+    current since it is local. The solarbank output is late since it
+    updated in the cloud. Let the previous trial settle first!
+    """
+    
+    if not sbpi.any() and (ivp > sbpo).any():
+        logger.error(f"IVP > SBPO!  Keep setting!")
+        return -19
+
+    if ((sbpb>0) & (sbpb<90)).any():
+        logger.error(f"SBPB volatile! Keep setting!")
+        return -23
+
+    
+    if (smp > 800).any(): # Only during BYPASS/DISCHARGE
+        estimate = 200 if int(sbpb[-1]) > 0 else 800
+        logger.info(f'Burst required "{estimate}"')
+        return estimate
 
     """
     Do not change home load if irradiance changes are too high. The
@@ -157,32 +165,32 @@ async def get_home_load_estimate(samples: int) -> int:
     if  abs(np.diff(sbpi)[-1]) > 20:
         logger.error(f"SBPI large! Keep setting!")
         return -22
-    logger.info(f"SBPI stable!")
                     
     if abs(smp[-1])<10:
         logger.info(f"SMP small! Keep setting!")
         return -21
+
         
-    KP, KI, KD = 0.75, 0.30, 0.35
+    #KP, KI, KD = 0.75, 0.30, 0.35
+    #KP, KI, KD = 1.0, 0.0, 0.0
+    KP, KI, KD = 0.75, 0.35, 0.0
     logger.info(f"KP={KP}, KI={KI}, KD={KD}")
     P, I, D = KP*smp[-1], KI*smp.sum(), KD*(smp[-1]-smp[0])
     logger.info(f"P={P:.0f}, I={I:.0f}, D={D:.0f} -> PID={P+I+D:.0f}")    
         
     estimate = (ivp[-1] if ivp[-1]>0 else  sbpo[-1]) + P + I + D
-    logger.info(f"home load proposal is '{estimate:.0f}W'")
     if estimate < 100:
         logger.info(f"Plug devices to minimize power export!")
 
     """ Limit discharge """
-    ubound = 250 if sbpb_mean > 0 else 999
-    
-    estimate = 10*(int(min(max(estimate,100), ubound)/10))
-    logger.info(f"constraint proposal is '{estimate}W'")
+    ubound = 200 if sbpb_mean > 0 else 800
+    estimate = int(min(max(estimate,100), ubound))
+    logger.info(f"Proposal is '{estimate}W'")
 
     if (sbpi[-1] > 0) and  (estimate > (sbpi[-1]-sbpb[-1])): #Bypass/Charge
         logger.warning(f"Cannot comply!")
-        ##estimate = 999
-        
+        #estimate = int(sbpi[-1])
+
     return  estimate # My solix only uses one channel
 
 
@@ -196,7 +204,8 @@ async def main(sb: Solarbank, samples: int) -> int:
     is_done = await anker_home_load_set(sb, estimate)
     logger.info(f"home load goal is {'set' if is_done else 'kept'}")
 
-    return 0 if is_done else 1
+    # After a burst post actions shall occur immediately 
+    return 0 if (is_done and estimate<800) else 1
 
 
 @dataclass
