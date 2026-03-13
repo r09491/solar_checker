@@ -44,7 +44,7 @@ from brightsky import (
 
 
 K = 0.01 
-KK = 0.90 #0.75
+KK = 0.75
 """ Returns a list of ratios to calculate power values from source
 power values (adapted from formula by NASA) """
 async def power_ratios(
@@ -117,7 +117,7 @@ async def get_sky_info_24h(
 
         # The weather for today is better (more irridiance) with ratios > 1
         # The weather for today is worse (less irridiance) with ratios < 1
-    
+
     return ratios[:-1] if ratios is not None else None, temperatures[:-1]
 
 
@@ -245,7 +245,7 @@ async def get_sample_logs_24h(
     ).set_names('TIME')
 
     await fix_sbpi_lazy(pastlog)
-    
+
     # Fix logdays
     logdays = [
         l.index[0].strftime(LOGDAYFORMAT) for l in _pastlogs
@@ -626,7 +626,7 @@ async def predict_naive_today(
     castsbpisum = castlog.loc[:,"SBPI"].sum()
     logger.info(f'Cast irridiance is {castsbpisum:.0f} Wh')
     realfactor = (
-        realsbpisum / castsbpisum
+        (realsbpisum / castsbpisum) ** (1/3)
     ) if (
         realsbpisum >0 and castsbpisum >0
     ) else 1
