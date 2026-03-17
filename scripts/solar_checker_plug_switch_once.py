@@ -88,33 +88,29 @@ async def main(
         logger.error(f'Samples from stdin are not valid')
         return -10
 
+    spp =  c[SPP]
+    logger.info(f'"{SPP}" power total (energy) is "{spp.sum()/60:.0f}Wh"')
+    sppon = spp[(spp >0) & (spp <800)][-10:]
+    sppon_mean = sppon.mean() if sppon.size > 0 else 0.0
+    logger.info(f'"{SPP}" power mean is "{sppon_mean:.0f}W"')
+
     smp = c['SMP'][-2:]
     if abs(smp[-1]) <10:
         logger.info(f'"SMP" small! No action!')
         return 3
     smp_mean = smp.mean()
-    logger.info(f'"SMP" power mean "{smp_mean:.0f}W"')
 
     sbpb = c['SBPB'][-2:]
     sbpb_mean = sbpb.mean()
-    logger.info(f'"SBPB" power mean "{sbpb_mean:.0f}W"')
-    
-    spp =  c[SPP]
-    sppon = spp[(spp >0) & (spp <800)]
-    sppon_mean = sppon.mean() if sppon.size > 0 else 0.0
-    logger.info(f'"{SPP}" power mean is "{sppon_mean:.0f}W"')
-    logger.info(f'"{SPP}" power total (energy) is "{spp.sum()/60:.0f}Wh"')
-
     
     sppon_open = max(0.2*sppon_mean,10)
-    logger.info(f"Open power is {sppon_open:.0f}W")
+    logger.info(f'"{SPP}" OPEN power is {sppon_open:.0f}W')
     sppon_closed = max(min(0.8*sppon_mean,200),5) 
-    logger.info(f"Closed power is {-sppon_closed:.0f}W")
+    logger.info(f'"{SPP}" CLOSED power is {-sppon_closed:.0f}W')
     if sbpb_mean < smp_mean < 0: # Internal to external charge
         logger.info(f"Closed power adapted for charge/import")
         sppon_closed = max(sppon_closed + smp_mean, 5)
-        logger.info(f"Adapted closed power is {-sppon_closed:.0f}W")
-
+        logger.info(f'Adapted "{SPP}" CLOSED power is {-sppon_closed:.0f}W')
     
 
     # Switch to be Open if above the import average or a burst
