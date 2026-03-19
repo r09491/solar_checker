@@ -100,7 +100,7 @@ async def get_logdays(
 
 """ Return the logdays from the windows in each year relative from
 'today'.  'today' is the last item in the retuned list """
-async def get_windowed_logdays(
+async def get_tunnel_logdays(
         logwindow:int,
         logprefix: str,
         logdir: str
@@ -156,7 +156,12 @@ def _get_log(
 
     # TIME must not be index!
     
-    return concat([time,columns], axis=1).drop_duplicates('TIME', keep='first')
+    return concat(
+        [time,columns], axis=1
+    ).drop_duplicates(
+        'TIME', keep='first'
+    )
+
 
 @cache
 async def get_log(
@@ -188,6 +193,7 @@ async def get_sample_log(
     log = log[list(set(log.columns) & set(SAMPLE_NAMES))]
     return log
 
+
 async def get_power_log(
         logday: str = None,
         logprefix: str = None,
@@ -202,6 +208,7 @@ async def get_power_log(
     
     log = log[list(set(log.columns) & set(POWER_NAMES))]
     return log
+
 
 async def get_predict_power_log(
         logday: str = None,
@@ -253,7 +260,7 @@ async def get_logs(
 
 """ Get the list of logdays and the list of dataframes with the
 required recordings """
-async def get_windowed_logs(
+async def get_tunnel_logs(
         logwindow: int,
         logprefix: str,
         logdir: str,
@@ -261,7 +268,7 @@ async def get_windowed_logs(
 ) -> (List[str], List[DataFrame]):
 
     """ Get the list of logdays """
-    logdays = await get_windowed_logdays(
+    logdays = await get_tunnel_logdays(
         logwindow,
         logprefix,
         logdir,
@@ -302,16 +309,16 @@ async def get_logs_df(
     return concat(logs, keys=days)
 
 
-""" Get the dataframe with the list of windowed logdays and the list
+""" Get the dataframe with the list of tunnel logdays and the list
 of dataframes with the required recordings """
-async def get_windowed_logs_df(
+async def get_tunnel_logs_df(
         logwindow: int,
         logprefix: str,
         logdir: str,
         usecols:str = POWER_NAMES,
 ) -> DataFrame:
 
-    days, logs = await get_windowed_logs(
+    days, logs = await get_tunnel_logs(
         logwindow,
         logprefix,
         logdir,

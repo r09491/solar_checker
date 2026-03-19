@@ -36,7 +36,7 @@ from ..common import(
     PARTITION_2_VIEW
 )
 from ..csvlog import(
-    get_windowed_logs
+    get_tunnel_logs
 )
 from brightsky import (
     Sky
@@ -177,7 +177,7 @@ async def get_sample_logs_24h(
 ) -> (pd.DataFrame, pd.DataFrame):
 
     # Get the logs close to the forecast day
-    logdays, logs = await get_windowed_logs(
+    logdays, logs = await get_tunnel_logs(
         logwindow = logwindow,
         logprefix = logprefix,
         logdir = logdir,

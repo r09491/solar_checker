@@ -25,7 +25,7 @@ from utils.typing import (
 )
 
 from utils.csvlog import (
-    get_windowed_logdays
+    get_tunnel_logdays
 )
 
 from utils.samples import (
@@ -233,7 +233,7 @@ async def get_train_pools(
 ) -> Optional[pd.DataFrame]:
 
     """ Get the list of logdays """
-    logdays = (await get_windowed_logdays(
+    logdays = (await get_tunnel_logdays(
         logwindow=logwindow,
         logdir=logdir,
         logprefix=logprefix,

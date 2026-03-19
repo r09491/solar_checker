@@ -7,7 +7,7 @@ from .csvlog import (
     get_predict_power_log,
     get_logs,
     get_logs_df,
-    get_windowed_logdays,
-    get_windowed_logs,
-    get_windowed_logs_df
+    get_tunnel_logdays,
+    get_tunnel_logs,
+    get_tunnel_logs_df
 )
