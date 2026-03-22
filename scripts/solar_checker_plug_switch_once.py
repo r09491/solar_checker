@@ -56,12 +56,10 @@ async def tuya_smartplug_switch_set(
 async def tuya_smartplug_switch_get(
         sp: Smartplug) -> Switch_Status:
 
-    logger.info(f'get "{sp.name}" started')
     is_closed = await sp.is_switch_closed()
     if is_closed is None: return None    
     ss_result = Switch_Status(
         'Closed' if is_closed else 'Open')
-    logger.info(f'get "{sp.name}" done: "{ss_result}"')        
     return ss_result
 
 
@@ -90,7 +88,10 @@ async def main(
 
     spp =  c[SPP]
     logger.info(f'"{SPP}" power total (energy) is "{spp.sum()/60:.0f}Wh"')
-    sppon = spp[(spp >0) & (spp <800)][-10:]
+    #sppon = spp[(spp >0) & (spp <800)][-10:]
+    #sppon = spp[(spp <800)][-30:]
+    sppon = spp[-30:]
+    logger.info(sppon[-6:])
     sppon_mean = sppon.mean() if sppon.size > 0 else 0.0
     logger.info(f'"{SPP}" power mean is "{sppon_mean:.0f}W"')
 
@@ -98,36 +99,39 @@ async def main(
     if abs(smp[-1]) <10:
         logger.info(f'"SMP" small! No action!')
         return 3
+    if  ((abs(np.diff(smp)[-1]) >80) and
+         (abs(np.diff(smp)[-1]) <500)):
+        logger.info(f"SMP change large (no burst)! No action!")
+        return 4
     smp_mean = smp.mean()
 
     sbpb = c['SBPB'][-2:]
     sbpb_mean = sbpb.mean()
     
     sppon_open = max(0.2*sppon_mean,10)
-    logger.info(f'"{SPP}" OPEN power is {sppon_open:.0f}W')
+    logger.info(f'"{SPP}" open power is {sppon_open:.0f}W')
     sppon_closed = max(min(0.8*sppon_mean,200),5) 
-    logger.info(f'"{SPP}" CLOSED power is {-sppon_closed:.0f}W')
+    logger.info(f'"{SPP}" closed power is {-sppon_closed:.0f}W')
     if sbpb_mean < smp_mean < 0: # Internal to external charge
         logger.info(f"Closed power adapted for charge/import")
         sppon_closed = max(sppon_closed + smp_mean, 5)
-        logger.info(f'Adapted "{SPP}" CLOSED power is {-sppon_closed:.0f}W')
-    
+        logger.info(f'Adapted "{SPP}" closed power is {-sppon_closed:.0f}W')
 
     # Switch to be Open if above the import average or a burst
     is_to_open =  ((smp_mean > sppon_open) or
-                   (smp[-1] >800) or
-                   (spp[-1] >800))
+                   ##(smp[-1] >500) or
+                   (sppon >800).any())
     # Switch to be Closed if below export average and not a burst
     is_to_closed =  ((smp_mean < -sppon_closed) and
-                     (smp[-1] <=800) and
-                     (spp[-1] <=800))
+                     ##(smp[-1] <=500) and
+                     (sppon <=800).all())
 
     ss_actual = await tuya_smartplug_switch_get(sp)
     if ss_actual is None:
         logger.info(f'"{sp.name}" is not plugged in')
         return 2
     
-    logger.info(f'"{sp.name}" currently is "{ss_actual}"')
+    logger.info(f'== == "{SPP}" IS "{str(ss_actual).upper()}" == ==')
 
     # What has to be done now?
     ss_desired = Switch_Status('Open' if is_to_open else
@@ -135,7 +139,7 @@ async def main(
     
     if ((ss_actual == ss_desired) or
         (Switch_Status('Null') == ss_desired)):
-        logger.info(f'No action for "{sp.name}"')
+        logger.info(f'== == NO ACTION FOR "{SPP}" == ==')
         return 1
 
     

@@ -42,7 +42,7 @@ async def anker_home_load_set(sb: Solarbank, home_load: int) -> bool:
     if is_done:
         logger.info("home load is set.")
     else:
-        logger.warning("home load is not set.")
+        logger.warning("home load is rejected.")
     return is_done
 
 
@@ -106,9 +106,9 @@ async def get_home_load_estimate(samples: int) -> int:
     logger.info(f'{ivp} ivp')
     logger.info(f'{smp} smp')
         
-    if (smp > 800).any(): # Only during BYPASS/DISCHARGE
+    if (smp > 500).any(): # Only during BYPASS/DISCHARGE
         estimate = 200 if int(sbpb[-1]) > 0 else 800
-        logger.info(f'Burst required "{estimate}"')
+        logger.info(f'Burst (SMP >500) required!')
         return estimate
 
     if abs(smp[-1]) <10:
@@ -116,17 +116,8 @@ async def get_home_load_estimate(samples: int) -> int:
         return -20
 
     if  abs(np.diff(smp)[-1]) >40:
-        logger.info(f"SMP large! Keep setting!")
+        logger.info(f"SMP change large! Keep setting!")
         return -21
-
-    """ Do not change home load if irradiance changes are too
-    high. The solix may not be able to follow via cloud. Irradiance
-    changes the battery compenstates by addapting charge/discharge
-    power. Home load setting mainly changes if grid power changes.
-    """
-    if  abs(np.diff(sbpi)[-1]) >40:
-        logger.info(f"SBPI large! Keep setting!")
-        return -22
 
     """
     During the home load setting the solarbank output and the inverter
@@ -134,15 +125,38 @@ async def get_home_load_estimate(samples: int) -> int:
     current since it is local. The solarbank output is late since it
     updated in the cloud. Let the previous trial settle first!
     """
-    if (ivp > sbpo).any():
-        logger.info(f"IVP > SBPO!  Keep setting!")
+    if  abs(np.diff(ivp)[-1]) >40:
+        logger.info(f"IVP change large (no burst)! Keep setting!")
+        return -22
+
+    # if  (not ivp.any()) and abs(np.diff(sbpo)[-1]) >40:
+    #     logger.info(f"SBPO change large! Keep setting!")
+    #     return -23
+    if  abs(np.diff(sbpo)[-1]) >40:
+        logger.info(f"SBPO change large (no burst)! Keep setting!")
         return -23
+    
+    if (not ivp.any()) and (ivp > sbpo).any(): 
+        logger.info(f"IVP > SBPO!  Keep setting!")
+        return -24
+    
+    """ Do not change home load if irradiance changes are too
+    high. The solix may not be able to follow via cloud. Irradiance
+    changes the battery compenstates by addapting charge/discharge
+    power. Home load setting mainly changes if grid power changes.
+    """
+    if  abs(np.diff(sbpi)[-1]) >40:
+        logger.info(f"SBPI change large! Keep setting!")
+        return -25
 
     if ((sbpb>0) & (sbpb<90)).any():
         logger.info(f"SBPB volatile! Keep setting!")
-        return -24                
+        return -26                
 
-    estimate = (sbpo[-1] if sbpo[-1]>0 else  ivp[-1]) + smp[-1]
+    estimate =  + smp[-1] + (sbpo[-1] if sbpo[-1]>0 else ivp[-1])
+    # estimate =  smp[-1] + (ivp[-1] if ((ivp[-1] >0) and
+    #                                    (sbpi>0).all()
+    #                                    ) else sbpo[-1])
     if estimate < 100:
         logger.info(f"Plug devices to minimize power export!")
 
