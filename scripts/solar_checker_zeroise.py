@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
 
-__doc__="""Tries to zeroise the power from the grid and to the grid
+__doc__="""Tries to zeroise the power import from the grid and the
+export to the grid
 
 A HITCHI infrared sensor polls the electricity provider's grid power
-sensor of a house with PV.  A positive value indicates the current
+sensor in a house with aPV.  A positive value indicates the current
 import from the grid, a negative one the current export to the
-grid. Ideally the value is zero. The big advantage is data are from
-the local net. This means low latency compared to cloud aquisition.
+grid. Ideally the value is zero. The big advantage is the data are
+from the local net. This means low latency compared to cloud
+aquisition.
 
 An Apsystems EZ1-M inverter puts the power into the house net. The big
-advantage is data are from the local net. This means low latency
+advantage is zhe data are from the local net. This means low latency
 compared to cloud aquisition.
 
 An Anker Solix 1 solarbank delivers power from the PV panels or
 battery to the inverter.  The big disadvantage is data are from the
 cloud. This means high latency compared to local aquisition. It shows
-that changes in the solarbank are deteted upto four minutes earlier
-using the smartmeter and the inverter. As a result they are out of
-scope. However setting the data like 'home load' occurs immediately
-though the associated data show this minutes later.
+that changes in the solarbank are detected upto four minutes earlier
+later by the smartmeter than by the inverter. However setting the data
+like 'home load' occurs immediately though the associated data show
+up minutes later after they have found their way back from China.
 
-This allows to implment zeroising (within 10W) in the low seconds
-range at least if the power source are the PVpanels.
-
-The battery discharge is another story. Here it takes up to four
-minutes to bring the solarbank output into the commanded range.
+Short latency allows to implment zeroising (within 10W) in the low
+seconds range at least if the power source are the PV panels. The
+battery discharge is another story. Here it takes up to four minutes
+to bring the solarbank output into the commanded range.
 """
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -48,6 +49,14 @@ from apsystems import Inverter
 from pooranker import Solarbank
 
 SAMPLE_N = 4
+
+SMP_OK = 10
+SMP_STEP = 40
+
+SBPL_MIN = 100
+SBPL_MAX = 800        
+SBPL_WIN = 1.0 # 1.05
+
 
 async def get_grid_power(
         q: asyncio.Queue,
@@ -101,16 +110,6 @@ async def get_inverter_power(
         await asyncio.sleep(iv_delay)
 
 
-SMP_OK = 10
-SMP_STEP = 50
-
-IVP_ZERO = 0
-IVP_STEP = 40
-
-SBPL_MIN = 100
-SBPL_MAX = 800        
-SBPL_WIN = 1.05
-
 async def get_estimate(
         smp_new: int,
         ivp_new: int,
@@ -122,11 +121,11 @@ async def get_estimate(
     logger.info(f'SMP_OLD {smp_old:4.0f} {ivp_old:4.0f}   IVP_OLD')
     
     if (smp_new >SBPL_MAX) and (smp_old <SBPL_MAX):
-        logger.info(f'SMP burst! Set immediately')
+        logger.info(f'SMP burst started! Set immediately')
         return SBPL_MAX
 
     if (smp_new >SBPL_MAX) and (smp_old >SBPL_MAX):
-        logger.info(f'SMP burst! No setting!')
+        logger.info(f'SMP burst continued! No setting!')
         return None
 
     if abs(smp_new) <SMP_OK:
@@ -137,15 +136,10 @@ async def get_estimate(
         logger.info(f'SMP change large! No setting!')
         return None
 
-    if (abs((smp_new + ivp_new) < SBPL_MIN) and
-            ((smp_old + ivp_old) < SBPL_MIN)):
-        logger.info(f'SMP/IVP stable! No setting!')
-        return None
-    
     ivp_goal = int(ivp_new)
     sbp_goal = int(SBPL_WIN*(smp_new+ivp_goal))
     sbp_load = min(max(sbp_goal, SBPL_MIN), SBPL_MAX)
-    logger.info(f'Load estimate SBPL: "{sbp_load}W"')
+    logger.info(f'SBPL estimate SBPL {sbp_load}W')
     return sbp_load
 
 
@@ -157,25 +151,62 @@ async def set_home_load_load(
     
     sb = Solarbank()
 
-    smp_new, ivp_new = SBPL_MAX, SBPL_MAX 
+    smp_new, ivp_new, sbp_load = SBPL_MAX, SBPL_MAX, SBPL_MAX
+    
+    cycle, sbp_load_cycle, ivp_cycle_sum, smp_cycle_sum = 0, SBPL_MIN, 0, 0
 
     while True:
         smp_old, ivp_old = smp_new, ivp_new
         
         logger.debug(f'Waiting for power values')
         smp_new, ivp_new = await asyncio.gather(sm_q.get(), iv_q.get())
-        logger.debug(f'dequeued SMP "{smp_new}W", IVP "{ivp_new}W"')
+        logger.debug(f'dequeued SMP {smp_new}W, IVP {ivp_new}W')
 
+        #Update cycle statistics
+        cycle +=1
+
+        # The IVP error is negative if the SB cannot provide the power
+        # the load was set to. Obviously one reason may be the home
+        # load is set to high. Or the PV panels do not provide enough
+        # power due to cloud cover etc.
+        #
+        ivp_cycle_sum += ivp_new
+        ivp_cycle_mean = int(ivp_cycle_sum/cycle)
+        ivp_cycle_error = ivp_cycle_mean - sbp_load_cycle 
+        logger.info(f'IVP cyle error {ivp_cycle_error}W @ {cycle}')
+        
+        # The SMP error is negative if power is exported to the
+        # grid. The SMP error is positive if power is imported from
+        # the grid. The goal is to make the SMP error zero by
+        # mainpulting the home load
+        #
+        smp_cycle_sum += smp_new
+        smp_cycle_mean = int(smp_cycle_sum/cycle)
+        smp_cycle_error = smp_cycle_mean
+        logger.info(f'SMP cyle error {smp_cycle_error}W @ {cycle}')
+        
+        # Both errors indicate losses if the observed power outputs do
+        # not meet the logic correct requested load
+        
         sbp_load = await get_estimate(smp_new, ivp_new, smp_old, ivp_old)
         if sbp_load is None:
-            continue # SBPL setting canceled
-
-        # Set the new home load
-        logger.info(f'SBPL "{sbp_load}W" sent to solarbank')
-        is_done = await sb.set_home_load(sbp_load)
-        logger.info(f'SBPL {"set" if is_done else "kept"} in solarbank')
+            continue
+        if abs(sbp_load - sbp_load_cycle) < SMP_OK:
+            logger.info(f'SBPL old! No setting!')
+            continue
         
-        logger.info(f'granting the solarbank "{sb_delay}s" to settle')
+        # Set the new home load
+        logger.info(f'SBPL "{sbp_load}W" sent to SB')
+        is_done = await sb.set_home_load(sbp_load)
+        logger.info(f'SBPL {"set" if is_done else "kept"} in SB')
+
+        # Reset the statistics
+        cycle, sbp_load_cycle, ivp_cycle_sum, smp_cycle_sum = 0, sbp_load, 0, 0
+        
+        if not is_done:
+            continue
+
+        logger.info(f'SB is granted "{sb_delay}s" to settle')
         await asyncio.sleep(sb_delay)
 
 
