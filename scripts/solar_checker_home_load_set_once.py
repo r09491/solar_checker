@@ -119,6 +119,11 @@ async def get_home_load_estimate(samples: int) -> int:
         logger.info(f"SMP change large! Keep setting!")
         return -21
 
+    if  ((abs(smp[-1]-smp[-2]) >10) and
+         abs((sbpo[-1]+smp[-1]) - (sbpo[-2]+smp[-2])) <10):
+        logger.info(f"SBPO+SMP small! Keep setting!")
+        return -24
+    
     """
     During the home load setting the solarbank output and the inverter
     output may become inconsistent. The inverter output is more
@@ -127,18 +132,15 @@ async def get_home_load_estimate(samples: int) -> int:
     """
     if  abs(np.diff(ivp)[-1]) >40:
         logger.info(f"IVP change large (no burst)! Keep setting!")
-        return -22
+        return -25
 
-    # if  (not ivp.any()) and abs(np.diff(sbpo)[-1]) >40:
-    #     logger.info(f"SBPO change large! Keep setting!")
-    #     return -23
     if  abs(np.diff(sbpo)[-1]) >40:
         logger.info(f"SBPO change large (no burst)! Keep setting!")
-        return -23
+        return -26
     
     if (not ivp.any()) and (ivp > sbpo).any(): 
         logger.info(f"IVP > SBPO!  Keep setting!")
-        return -24
+        return -27
     
     """ Do not change home load if irradiance changes are too
     high. The solix may not be able to follow via cloud. Irradiance
@@ -147,11 +149,11 @@ async def get_home_load_estimate(samples: int) -> int:
     """
     if  abs(np.diff(sbpi)[-1]) >40:
         logger.info(f"SBPI change large! Keep setting!")
-        return -25
+        return -28
 
     if ((sbpb>0) & (sbpb<90)).any():
         logger.info(f"SBPB volatile! Keep setting!")
-        return -26                
+        return -29                
 
     estimate =  + smp[-1] + (sbpo[-1] if sbpo[-1]>0 else ivp[-1])
     # estimate =  smp[-1] + (ivp[-1] if ((ivp[-1] >0) and
