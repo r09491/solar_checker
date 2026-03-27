@@ -92,13 +92,13 @@ async def get_sky_info_24h(
     skys = await asyncio.gather(*skytasks)
     if skys is None:
         logger.error(f'Unable to retrieve sky pools')
-        return None
+        return None, None
 
     # Todays always the last in the list
     todaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
     if todaysky is None:
-        logger.error(f'Unable to retrieve sky for "{castday}"')
-        return None
+        logger.error(f'Unable to retrieve sky data')
+        return None, None
     
     temperatures = todaysky["temperature"].values
 
@@ -110,10 +110,14 @@ async def get_sky_info_24h(
         )
         pastsky = pastskys.groupby(pastskys.index).mean()
 
-        ratios = await power_ratios(
-            todaysky["cloud_cover"].values,
-            pastsky["cloud_cover"].values
-        )
+        try:
+            ratios = await power_ratios(
+                todaysky["cloud_cover"].values,
+                pastsky["cloud_cover"].values
+            )
+        except:
+            logger.error(f'Illegal sky data')
+            return None, None
 
         # The weather for today is better (more irridiance) with ratios > 1
         # The weather for today is worse (less irridiance) with ratios < 1
@@ -697,7 +701,7 @@ async def predict_naive_castday(
     )
     if skyratios is None:
         logger.error(f'Skyratios are not available')
-        return None
+        return None, None, None, None
 
     # Add the temperature column
     pastlog.insert(pastlog.shape[1], "T", temperatures)
