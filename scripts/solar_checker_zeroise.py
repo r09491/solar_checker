@@ -4,11 +4,10 @@ __doc__="""Tries to zeroise the power import from the grid and the
 export to the grid
 
 A HITCHI infrared sensor polls the electricity provider's grid power
-sensor in a house with a PV.  A positive value indicates the current
-import from the grid, a negative one the current export to the
-grid. Ideally the value is zero. The big advantage is the data are
-on the local net. This means low latency compared to cloud
-aquisition.
+sensor.  A positive value indicates the current import from the grid,
+a negative one the current export to the grid. Ideally the value is
+zero. The big advantage is the data are on the local net. This means
+low latency compared to cloud aquisition.
 
 An Apsystems EZ1-M inverter puts the power into the grid. The big
 advantage is the data are on the local net. This means low latency
@@ -42,6 +41,7 @@ import sys
 import argparse
 import asyncio
 import time
+import datetime
 
 from dataclasses import dataclass
 
@@ -49,10 +49,10 @@ from tasmota import Smartmeter
 from apsystems import Inverter
 from pooranker import Solarbank
 
-SAMPLE_N = 6
-LOADS_N = 24
+SAMPLE_N = 5
+LOADS_N = 5 # Number of samples for the load average
 
-SMP_OK = 10
+SMP_ZERO = 10
 SMP_STEP = 40
 
 IVP_ZERO = 3 # Cancel noise
@@ -61,6 +61,12 @@ SBPL_MIN = 100
 SBPL_MAX = 800
 SBPL_WIN = 1.07 # 1.05
 
+SBPL_BURST = 800
+
+SBPL_PANEL_DAY_START = datetime.time(6, 0)
+SBPL_PANEL_DAY_END = datetime.time(18, 0)
+SBPL_PANEL_DELAY = 30
+SBPL_BATTERY_DELAY = 120
 
 async def get_grid_power(
         q: asyncio.Queue,
@@ -118,37 +124,71 @@ async def get_inverter_power(
         await asyncio.sleep(later-now)
 
 
+def get_home_load_delay() -> int:
+    # It is assumed that battery is discharged in the night only
+    now = datetime.datetime.now().time()
+    is_day = SBPL_PANEL_DAY_START <= now < SBPL_PANEL_DAY_END
+    sbpl_delay = SBPL_PANEL_DELAY if is_day else SBPL_BATTERY_DELAY 
+    logger.info(f'SBPL delay {sbpl_delay}s')
+    return sbpl_delay
+
 async def set_home_load_power(
-        q: asyncio.Queue,
-        sb_delay:int
+        q: asyncio.Queue
 ) -> None:
 
     sb = Solarbank()
 
-    sbpl_set = SBPL_MAX
+    sbpl_set, sbpl_old = SBPL_MIN, SBPL_MIN
+    is_done = False
     
     while True:
         logger.debug(f'Waiting for home load')
         sbpl_new = await q.get()
+        if sbpl_new is None:
+            logger.warning(f'SBPL illegal value')
+            continue
         logger.debug(f'dequeued solarbank SBPL {sbpl_new}W')
 
-        if sbpl_new is None: # Robustness
-            sbpl_new = SBPL_MIN
-        
-        elif abs(sbpl_new - sbpl_set) <SMP_OK:
-            logger.info(f'SBPL old! No setting!')
-            continue
-
-        logger.info(f'SBPL {sbpl_new}W sent to SB')
-        is_done = await sb.set_home_load(sbpl_new)
-        logger.info(f'SBPL {"set" if is_done else "kept"} in SB')
-
         await q.put(sbpl_new) # Block
-        if is_done:
-            logger.info(f'SB is granted "{sb_delay}s" to settle')
-            await asyncio.sleep(sb_delay)
-        sbpl_set = await q.get() # Unblock
 
+        logger.info(f'=========== {sbpl_new}, {sbpl_old}, {sbpl_set}')
+        # is_load = (((abs(sbpl_new - sbpl_set) >SMP_ZERO) and
+        #            (abs(sbpl_old - sbpl_set) >SMP_ZERO)) or # New load
+        #            (sbpl_new >=SBPL_MAX)) # Burst load
+        is_load = (((abs(sbpl_new - sbpl_set) >SMP_ZERO) and
+                   (abs(sbpl_new - sbpl_old) >SMP_ZERO)) or # New load
+                   (sbpl_new >=SBPL_MAX)) # Burst load
+        # is_load = ((abs(sbpl_new - sbpl_set) >SMP_ZERO) or # New load
+        #            (sbpl_new >=SBPL_MAX)) # Burst load
+        if is_load:
+            logger.info(f'SBPL {sbpl_new}W sent to SB')
+            is_done = await sb.set_home_load(sbpl_new)
+            logger.info(f'SBPL {"set" if is_done else "kept"} in SB')
+
+        else:
+            logger.info(f'SBPL {sbpl_new}W load skipped')
+            sbpl_new = sbpl_set # Keep the first
+            logger.info(f'SBPL {sbpl_new}W load fixed')
+
+        sbpl_old = sbpl_new
+            
+        # Block a recall for the given time. The solarbank needs the
+        # time to actually implment the requested load internally. if
+        # the power is delivered from the MPPT this is a matter of
+        # seconds. If the power originates from the battery it is a
+        # matter of minutes and a recall is required to extend the
+        # delay.
+
+        if is_done:
+            sbpl_delay = get_home_load_delay() 
+            logger.info(f'--> Block setting "{sbpl_delay}s"')
+            await asyncio.sleep(sbpl_delay) #Wait
+            logger.info(f'<-- Unblock setting "{sbpl_delay}s"')
+            sbpl_set = sbpl_new
+            is_done = False
+        
+        await q.get() # Unblock
+        
 async def schedule(
         sm_q: asyncio.Queue,
         iv_q: asyncio.Queue,
@@ -183,14 +223,16 @@ async def schedule(
             (ivp_old <= IVP_ZERO)):
             logger.info(f'IVP zero continued! No setting!')
 
-        elif (smp_new >SBPL_MAX) or (smp_old >SBPL_MAX):
-            logger.info(f'SMP burst started! Set immediately')
+        elif (smp_new >SBPL_BURST) and (smp_old <SBPL_BURST):
+            cycle = 0
+            logger.info(f'SMP burst started @ {cycle}! Set immediately')
             sbp_load = SBPL_MAX
 
-        # elif (smp_new >SBPL_MAX) and (smp_old >SBPL_MAX):
-        #     logger.info(f'SMP burst continued! No setting!')
-
-        elif abs(smp_new) <SMP_OK:
+#        elif (smp_new >SBPL_BURST) and (smp_old >SBPL_BURST):
+#             cycle +=1
+#             logger.info(f'SMP burst continued @ {cycle}! No setting!')
+# 
+        elif abs(smp_new) <SMP_ZERO:
             logger.info(f'SMP small! No setting! Is {sbp_load_cycle}W! Bravo!')
 
             ### The goals is achieved ###
@@ -218,8 +260,8 @@ async def schedule(
             # Both errors indicate losses if the observed power
             # outputs do not meet the logic correct requested load
 
-        elif (abs(smp_new - smp_old) >SMP_STEP):
-            logger.info(f'SMP change large! No setting!')
+        # elif (abs(smp_new - smp_old) >SMP_STEP):
+        #     logger.info(f'SMP change large! No setting!')
 
         else:
             ivp_goal = int(ivp_new)
@@ -260,7 +302,6 @@ async def zeroise(
         iv_ip: str,
         iv_port: int,
         iv_delay:int,
-        sb_delay:int,
         cycle_delay:int
 ) -> None:
 
@@ -282,8 +323,7 @@ async def zeroise(
             sm_delay
         ),
         set_home_load_power(
-            sb_queue,
-            sb_delay
+            sb_queue
         ),
         schedule(
             sm_queue,
@@ -300,14 +340,10 @@ class Script_Arguments:
     sm_port: int
     iv_ip: str
     iv_port: int
-    sb_delay: int
     cycle_delay: int
 
 async def main(args: Script_Arguments) -> int:
 
-    if not 0 <= args.sb_delay <= 480:
-        logger.error(f'Solarbank sun delay illegal value "{args.sb_delay}"')
-        return -1
     if not 6 <= args.cycle_delay <= 480:
         logger.error(f'Cycle delay illegal value "{args.cycle_delay}"')
         return -2
@@ -319,7 +355,6 @@ async def main(args: Script_Arguments) -> int:
         args.iv_ip,
         args.iv_port,
         args.cycle_delay,
-        args.sb_delay,
         args.cycle_delay
     )
     
@@ -348,10 +383,7 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--iv_port', type = int, default = 8050,
                         help = "IP port of the Apsystems inverter")
     
-    parser.add_argument('--sb_delay', type = int, default = 60,
-                        help = "Delay after the setting of the home load")
-    
-    parser.add_argument('--cycle_delay', type = int, default = 6,
+    parser.add_argument('--cycle_delay', type = int, default = 10,
                         help = "Delay for calculating the home load")
 
     args = parser.parse_args()
@@ -361,7 +393,6 @@ def parse_arguments() -> Script_Arguments:
         args.sm_port,
         args.iv_ip,
         args.iv_port,
-        args.sb_delay,
         args.cycle_delay
     )
 
