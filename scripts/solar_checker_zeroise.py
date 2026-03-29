@@ -49,10 +49,10 @@ from tasmota import Smartmeter
 from apsystems import Inverter
 from pooranker import Solarbank
 
-SAMPLE_N = 5
-LOADS_N = 5 # Number of samples for the load average
+SAMPLE_N = 2 # Number of sensor samples to calc mean of samples
+LOADS_N = 2  # Number of samples to calc mean of load average
 
-SMP_ZERO = 10
+SMP_ZERO = 10 # Threshold which considers system as zeroised
 SMP_STEP = 40
 
 IVP_ZERO = 3 # Cancel noise
@@ -63,8 +63,8 @@ SBPL_WIN = 1.07 # 1.05
 
 SBPL_BURST = 800
 
-SBPL_PANEL_DAY_START = datetime.time(6, 0)
-SBPL_PANEL_DAY_END = datetime.time(18, 0)
+SBPL_PANEL_DAY_START = datetime.time(7, 0)
+SBPL_PANEL_DAY_END = datetime.time(19, 0)
 SBPL_PANEL_DELAY = 60
 SBPL_BATTERY_DELAY = 210
 
@@ -88,7 +88,7 @@ async def get_grid_power(
         if q.full():
             await q.get()
         await q.put(smp_mean)
-        logger.debug(f'queued grid SMP {smp_mean}W')
+        logger.debug(f'SMP {smp_mean}W queued')
 
         now = time.time()
         later = sm_delay*(int(now/sm_delay) + 1)
@@ -117,7 +117,7 @@ async def get_inverter_power(
         if q.full():
             await q.get()
         await q.put(ivp_mean)
-        logger.debug(f'queued grid IVP "{ivp_mean}W"')
+        logger.debug(f'IVP "{ivp_mean}W" queued')
 
         now = time.time()
         later = iv_delay*(int(now/iv_delay) + 1)
@@ -147,7 +147,7 @@ async def set_home_load_power(
         if sbpl_new is None:
             logger.warning(f'SBPL illegal value')
             continue
-        logger.debug(f'dequeued solarbank SBPL {sbpl_new}W')
+        logger.debug(f'SBPL {sbpl_new}W dequeued')
 
         await q.put(sbpl_new) # Block
 
@@ -203,7 +203,7 @@ async def schedule(
         
         logger.debug(f'Waiting for power values')
         smp_new, ivp_new = await asyncio.gather(sm_q.get(), iv_q.get())
-        logger.debug(f'dequeued SMP {smp_new}W, IVP {ivp_new}W')
+        logger.debug(f'SMP {smp_new}W, IVP {ivp_new}W dequeued ')
 
         logger.info(f'SMP_NEW  {smp_new:4.0f}  {ivp_new:4.0f}  IVP_NEW')
         logger.info(f'SMP_OLD  {smp_old:4.0f}  {ivp_old:4.0f}  IVP_OLD')
