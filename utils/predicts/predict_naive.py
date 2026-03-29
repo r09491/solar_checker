@@ -82,45 +82,54 @@ async def get_sky_info_24h(
         tz: str = SKY_TZ
 )  -> (f64s,f64s):
 
-    skytasks = [asyncio.create_task(
-        get_sky_pool_24h(
-            cd, lat, lon, tz
-        )
-    ) for cd in castdays]
+    skytasks = [
+        asyncio.create_task(
+            get_sky_pool_24h(
+                cd, lat, lon, tz
+            )
+        ) for cd in castdays]
     
     """ Get the list of associated columns """
     skys = await asyncio.gather(*skytasks)
     if skys is None:
-        logger.error(f'Unable to retrieve sky pools')
-        return None, None
+        logger.warning(f'Unable to retrieve sky pools! Returning defaults')
+        return 24*[1.0], 24*[15.0]
 
     # Todays always the last in the list
     todaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
     if todaysky is None:
-        logger.error(f'Unable to retrieve sky data')
-        return None, None
+        logger.error(f'Unable to retrieve sky data! Returning defaults')
+        return 24*[1.0], 24*[15.0]
     
     temperatures = todaysky["temperature"].values
 
     ratios = None
     if len(skys) >1:
-        # Reduce past days
+        # Calc the mean of the past days without today
         pastskys = pd.concat(
             [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
         )
         pastsky = pastskys.groupby(pastskys.index).mean()
 
+        # Calc the ratios per hour of today. Based on the mean sun
+        # power day calculated from the set of the past days the
+        # values of today may be predicted for each hour by
+        # multiplying with these ratios. If all ratios are 1.0 then
+        # the power of today will be the same as the mean power day
+        # and believed to have the same weather.
+
+        # The weather is better (less clouds) with ratios >1. The
+        # weather is worse (more clouds) with ratios <1
+        
         try:
             ratios = await power_ratios(
                 todaysky["cloud_cover"].values,
                 pastsky["cloud_cover"].values
             )
         except:
-            logger.error(f'Illegal sky data')
-            return None, None
-
-        # The weather for today is better (more irridiance) with ratios > 1
-        # The weather for today is worse (less irridiance) with ratios < 1
+            # Switch daylight saving time in spring and autumn
+            logger.warning(f'Illegal sky data format! Returning defaults')
+            return 24*[1.0], 24*[15.0]
 
     return ratios[:-1] if ratios is not None else None, temperatures[:-1]
 
@@ -370,7 +379,7 @@ async def simulate_solix_1_power_w(
 
 
     # No battery if cold
-    iswarm = log["T"] >T_WARM
+    iswarm = (log["T"] >T_WARM) if "T" in log else True
     
     # Simultate low irradiance
     issbpi = (sbpi >P_MIN) & (sbpi <=P_LOW)
@@ -575,11 +584,16 @@ async def predict_naive_today(
         days, lat, lon
     )
 
-    # Abort if skyratios are not avalable
+    # Default if skyratios are not avalable (eg time switch)
     if skyratios is None:
-        logger.error(f'Skyratios not available')
+        logger.error(f'Skyratios are not available! Abort!')
         return None, None, None, None
 
+    # Default if temperatures are not avalable (eg time switch)
+    if temperatures is None:
+        logger.warning(f'Temperatures are not available! Abort!')
+        return None, None, None, None
+        
     # Add the temperatures to the frames
     todaylog.insert(todaylog.shape[1], "T", temperatures[:len(todaylog)])
 
@@ -699,13 +713,19 @@ async def predict_naive_castday(
     skyratios, temperatures = await get_sky_info_24h(
         days[:-1] + [castday], lat, lon
     )
+
+    # Default if skyratios are not avalable (eg time switch)
     if skyratios is None:
-        logger.error(f'Skyratios are not available')
-        return None, None, None, None
+        logger.warning(f'Skyratios are not available! Defaulting!')
+        return None, None
+
+    # Default if temperatures are not avalable (eg time switch)
+    if temperatures is None:
+        logger.warning(f'Skyratios are not available! Defaulting!')
+        return None, None
 
     # Add the temperature column
     pastlog.insert(pastlog.shape[1], "T", temperatures)
-
 
     if (("SBPI" in pastlog)):
     
@@ -721,3 +741,39 @@ async def predict_naive_castday(
         )
 
     return castday, pastlog, None, pastlog.index[0]
+
+
+""" Simulate the radiation without sky info  """
+async def predict_naive_mean(
+        logprefix: str,
+        logdir: str,
+) -> (List, pd.DataFrame, pd.Timestamp, pd.Timestamp):
+
+    # Read the sampless for the mean day. The logs have hour
+    # resolution. Today samples are ignored.
+    days, pastlog, _ = await get_sample_logs_24h(
+        logprefix = logprefix,
+        logdir = logdir
+    )
+
+    if days is None or pastlog is None:
+        logger.info(f'Nothing is in the past')
+        return None
+
+    if len(pastlog) < 24:
+        logger.error(f'The provided past log is illegal')
+        return None
+
+    if not ("SBPI" in pastlog):
+        logger.error(f'The provided past log has no sun power')
+        return None
+    
+    # Keep SOC
+    pastsoc = pastlog["SBSB"].iloc[0]
+            
+    await simulate_system(
+        pastlog, pastsoc
+    )
+
+    return days[:-1], pastlog, None, pastlog.index[0]
+

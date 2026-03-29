@@ -26,14 +26,13 @@ from utils.plots import (
     get_kwh_line,
 )
 from utils.predicts import (
-    predict_naive_today,
-    predict_naive_castday,
+    predict_naive_mean,
     get_predict_tables
 )
 
 
-@aiohttp_jinja2.template('plot_predict_naive.html')
-async def plot_predict_naive(request: web.Request) -> dict:
+@aiohttp_jinja2.template('plot_predict_naive_mean.html')
+async def plot_predict_naive_mean(request: web.Request) -> dict:
 
     conf = request.app['conf']
 
@@ -46,33 +45,21 @@ async def plot_predict_naive(request: web.Request) -> dict:
     logprefix = conf['logprefix']
     logdayformat = conf['logdayformat']
 
-    lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
-
     today = datetime.strftime(datetime.now(), logdayformat)
 
-    try:
-        castday = request.match_info['castday']
-    except KeyError:
-        castday = None
-    
-    if castday is None:
-        cast = await predict_naive_today(
-            lat, lon, logprefix, logdir
-        )
-    else:
-        cast = await predict_naive_castday(
-            castday, lat, lon, logprefix, logdir
-        )
+    cast = await predict_naive_mean(
+        logprefix, logdir
+    )
 
-    _, casthours, realstop, caststart = cast if cast  is not None else 4*(None)        
+    pastdays, casthours, realstop, caststart = cast if cast is not None else 4*(None)        
     if (casthours is None) or (caststart is None):
         return aiohttp_jinja2.render_template(
             "plot_predict_naive_error.html", request,
             {'today': today,
-             'castday': castday,
-             'casttomorrow': ymd_tomorrow(castday if castday is not None else today),
-             'castyesterday': ymd_yesterday(castday if castday is not None else today),
-             "error" : f'No log files found or no irridiance'}
+             'castday': today,
+             'casttomorrow': ymd_tomorrow(today if today is not None else today),
+             'castyesterday': ymd_yesterday(today if today is not None else today),
+             "error" : f'No valid log files or weather available'}
         )
 
     time = np.array(casthours.index)
@@ -127,7 +114,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
             sbsb*full_kwh if sbsb is not None else None,
             empty_kwh,
             full_kwh,
-            price[castday[:2] if castday is not None else today[:2]],
+            price[today[:2]],
             tphases = tphases
         )
     )
@@ -137,16 +124,16 @@ async def plot_predict_naive(request: web.Request) -> dict:
         return aiohttp_jinja2.render_template(
             "plot_predict_naive_error.html", request,
             {'today': today,
-             'castday': castday,
-             'casttomorrow': ymd_tomorrow(castday if castday is not None else today),
-             'castyesterday': ymd_yesterday(castday if castday is not None else today),
-             "error" : f'Cannot output predict tables for "{castday}"'}
+             'castday': today,
+             'casttomorrow': ymd_tomorrow(today),
+             'castyesterday': ymd_yesterday(today),
+             "error" : f'Cannot output predict tables for "{today}"'}
         )
 
     return {'today': today,
-            'castday': castday,
-            'casttomorrow': ymd_tomorrow(castday if castday is not None else today),
-            'castyesterday': ymd_yesterday(castday if castday is not None else today),
+            'pastdays': pastdays,
+            'casttomorrow': ymd_tomorrow(today),
             'w': w,
             'kwh': kwh,
-            'predicttables': predicttables}
+            'predicttables': predicttables
+            }

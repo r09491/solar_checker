@@ -1,60 +1,37 @@
-{% if castday is none %}
-{% set title = 'P12 Cast Naive Live' + ' . ' + today %}
-{% else %}
-{% set title = 'P12 Cast Naive Cloud' + ' . ' + castday %}
-{% endif %}
+{% set title = 'P12 Mean Cloud' %}
 
 {% extends 'base.html' %}
 
 {% block content %}
 
 <div style='display:flex;justify-content:center;'>
-  {% if castday is none %}
-  <a href='/plot_predict_naive/{{ today }}'>Today Naive Cloud</a>&nbsp;&nbsp
-  {% else %}
   <a href='/plot_predict_naive'>Today Naive Live</a>&nbsp;&nbsp
-  {% endif %}
   <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp
-  {% if castday is none %}
+
   <a href='/plot_predict/{{ today }}/today'>Today Cast</a>&nbsp;&nbsp
   <a href='/plot_predict/{{ today }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
   <a href='/plot_predict/{{ today }}/total'>Total Cast</a>
-  {% else %}
-  <a href='/plot_predict/{{ castday }}/today'>Today Cast</a>&nbsp;&nbsp
-  <a href='/plot_predict/{{ castday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ castday }}/total'>Total Cast</a>
-  {% endif %}
 </div>
 
 <div style='display:flex;justify-content:center;'>
   <div style='margin:30px;width:90px;text-align:center;'>
-    {% if castday is none or castday == today%}
-    &nbsp;&nbsp
-    {% else %}
-    <a href='/plot_predict_naive/{{castyesterday}}'><1</a>
-    {% endif %}
   </div>
 
   <div style='display:flex;justify-content:center;'>
-    {% if castday is none %}
-    <h1 style='margin:4px;'>Cast Naive Live {{today}}</h1>
-    {% else %}
-    <h1 style='margin:4px;'>Cast Naive Cloud {{castday}}</h1>
-    {% endif %}
+    <h1 style='margin:4px;'>Mean Cloud Day</h1>
   </div>
 
   <div style='margin:30px;width:90px;text-align:center;'> 
-    {% if castday is none %}
-    &nbsp;&nbsp
-    {% else %}
     <a href='/plot_predict_naive/{{casttomorrow}}'>1></a>
-    {% endif %}
   </div>
 </div>
 
 <div style='display:flex;justify-content:center;'>
-  <div style='margin:1px;width:120px;text-align:center;'>
-    <a href='/plot_predict_naive_mean'>Mean Cloud Day</a>
+  <div style='margin:1px;width:480px;text-align:center;'>
+  Tunnel Days: 
+  {% for pd in pastdays | sort | reverse | batch(36) | first %}
+     <a href='/plot_day/{{pd}}' >{{pd}}</a>
+  {% endfor %}
   </div>
 </div>
 
