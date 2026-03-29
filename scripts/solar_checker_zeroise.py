@@ -32,7 +32,7 @@ __author__ = "r09491@gmail.com"
 import logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    format='%(asctime)s %(levelname)s %(message)s',
     datefmt='%H:%M:%S',)
 logger = logging.getLogger(__name__)
 
@@ -65,8 +65,8 @@ SBPL_BURST = 800
 
 SBPL_PANEL_DAY_START = datetime.time(6, 0)
 SBPL_PANEL_DAY_END = datetime.time(18, 0)
-SBPL_PANEL_DELAY = 30
-SBPL_BATTERY_DELAY = 120
+SBPL_PANEL_DELAY = 60
+SBPL_BATTERY_DELAY = 210
 
 async def get_grid_power(
         q: asyncio.Queue,
@@ -151,24 +151,20 @@ async def set_home_load_power(
 
         await q.put(sbpl_new) # Block
 
-        logger.info(f'=========== {sbpl_new}, {sbpl_old}, {sbpl_set}')
-        # is_load = (((abs(sbpl_new - sbpl_set) >SMP_ZERO) and
-        #            (abs(sbpl_old - sbpl_set) >SMP_ZERO)) or # New load
-        #            (sbpl_new >=SBPL_MAX)) # Burst load
         is_load = (((abs(sbpl_new - sbpl_set) >SMP_ZERO) and
                    (abs(sbpl_new - sbpl_old) >SMP_ZERO)) or # New load
                    (sbpl_new >=SBPL_MAX)) # Burst load
-        # is_load = ((abs(sbpl_new - sbpl_set) >SMP_ZERO) or # New load
-        #            (sbpl_new >=SBPL_MAX)) # Burst load
         if is_load:
             logger.info(f'SBPL {sbpl_new}W sent to SB')
             is_done = await sb.set_home_load(sbpl_new)
             logger.info(f'SBPL {"set" if is_done else "kept"} in SB')
 
-        else:
+        else: #Avoid future 'kept' messages
             logger.info(f'SBPL {sbpl_new}W load skipped')
             sbpl_new = sbpl_set # Keep the first
             logger.info(f'SBPL {sbpl_new}W load fixed')
+
+            logger.info(f'Cannot zeroise! Manage devices!')
 
         sbpl_old = sbpl_new
             
@@ -295,6 +291,7 @@ async def schedule(
         await asyncio.sleep(later-now)
 
 
+
 async def zeroise(
         sm_ip: str,
         sm_port: int,
@@ -308,8 +305,8 @@ async def zeroise(
     sm_queue = asyncio.Queue(maxsize = 1)
     iv_queue = asyncio.Queue(maxsize = 1)
     sb_queue = asyncio.Queue(maxsize = 1)
-    
-    await asyncio.gather(
+
+    zeroise_tasks =[
         get_inverter_power(
             iv_queue,
             iv_ip,
@@ -331,8 +328,10 @@ async def zeroise(
             sb_queue,
             cycle_delay
         )
+    ]
+    await asyncio.gather(
+        *zeroise_tasks
     )
-
 
 @dataclass
 class Script_Arguments:
@@ -344,17 +343,17 @@ class Script_Arguments:
 
 async def main(args: Script_Arguments) -> int:
 
-    if not 6 <= args.cycle_delay <= 480:
+    if not 10 <= args.cycle_delay <= 60:
         logger.error(f'Cycle delay illegal value "{args.cycle_delay}"')
-        return -2
+        return -1
 
     await zeroise(
         args.sm_ip,
         args.sm_port,
-        args.cycle_delay,
+        args.cycle_delay/2,
         args.iv_ip,
         args.iv_port,
-        args.cycle_delay,
+        args.cycle_delay/2,
         args.cycle_delay
     )
     
