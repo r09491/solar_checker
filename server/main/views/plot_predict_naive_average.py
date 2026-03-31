@@ -26,13 +26,13 @@ from utils.plots import (
     get_kwh_line,
 )
 from utils.predicts import (
-    predict_naive_mean,
+    predict_naive_average,
     get_predict_tables
 )
 
 
-@aiohttp_jinja2.template('plot_predict_naive_mean.html')
-async def plot_predict_naive_mean(request: web.Request) -> dict:
+@aiohttp_jinja2.template('plot_predict_naive_average.html')
+async def plot_predict_naive_average(request: web.Request) -> dict:
 
     conf = request.app['conf']
 
@@ -47,7 +47,7 @@ async def plot_predict_naive_mean(request: web.Request) -> dict:
 
     today = datetime.strftime(datetime.now(), logdayformat)
 
-    cast = await predict_naive_mean(
+    cast = await predict_naive_average(
         logprefix, logdir
     )
 

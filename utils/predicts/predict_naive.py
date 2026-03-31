@@ -2,7 +2,7 @@ __doc__=""" Estimates the irridiance of an Anker Solix 1 powerstation
 system for the rest of today or a given castday dependend on the
 averages of samples of some past days close to the prediction
 day. Battery charging/discharging is predicted using a simulation with
-the irridiance as input. Grid import/export is the mean of the passed
+the irridiance as input. Grid import/export is the median of the passed
 days. """
 
 __version__ = "0.0.0"
@@ -105,17 +105,17 @@ async def get_sky_info_24h(
 
     ratios = None
     if len(skys) >1:
-        # Calc the mean of the past days without today
+        # Calc the median of the past days without today
         pastskys = pd.concat(
             [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
         )
-        pastsky = pastskys.groupby(pastskys.index).mean()
+        pastsky = pastskys.groupby(pastskys.index).median()
 
-        # Calc the ratios per hour of today. Based on the mean sun
+        # Calc the ratios per hour of today. Based on the median sun
         # power day calculated from the set of the past days the
         # values of today may be predicted for each hour by
         # multiplying with these ratios. If all ratios are 1.0 then
-        # the power of today will be the same as the mean power day
+        # the power of today will be the same as the median power day
         # and believed to have the same weather.
 
         # The weather is better (less clouds) with ratios >1. The
@@ -203,7 +203,7 @@ async def get_sample_logs_24h(
     logs = [
         l.set_index('TIME').resample(
             'h', label='left', closed='left'
-        ).mean() for l in logs
+        ).median() for l in logs
     ]
 
     # The day for the forcast is at the end of the list
@@ -249,7 +249,7 @@ async def get_sample_logs_24h(
         [l.reset_index(drop=True) for l in _pastlogs]
     )
     
-    pastlog = pastlogs.groupby(pastlogs.index).mean()   
+    pastlog = pastlogs.groupby(pastlogs.index).median()   
 
     pastlog.index = pd.date_range(
         todaylog.index[0].date(),
@@ -295,7 +295,7 @@ async def get_predict_tables(
 
     c3h = c1h.resample(
         '3h', label='left', closed='left'
-    ).mean()
+    ).median()
 
     sbsb_df = None
     if "SBSB" in c3h:
@@ -564,7 +564,7 @@ async def predict_naive_today(
         logdir: str
 ) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
 
-    # Read the samples for today and the mean of a number of past
+    # Read the samples for today and the median of a number of past
     # days. The logs have hour resolution.
     days, pastlog, todaylog = await get_sample_logs_24h(
         logprefix = logprefix,
@@ -744,12 +744,12 @@ async def predict_naive_castday(
 
 
 """ Simulate the radiation without sky info  """
-async def predict_naive_mean(
+async def predict_naive_average(
         logprefix: str,
         logdir: str,
 ) -> (List, pd.DataFrame, pd.Timestamp, pd.Timestamp):
 
-    # Read the sampless for the mean day. The logs have hour
+    # Read the sampless for the average day. The logs have hour
     # resolution. Today samples are ignored.
     days, pastlog, _ = await get_sample_logs_24h(
         logprefix = logprefix,
