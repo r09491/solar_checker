@@ -52,8 +52,8 @@ from pooranker import Solarbank
 SAMPLE_N = 2 # Number of sensor samples to calc mean of samples
 LOADS_N = 2  # Number of samples to calc mean of load average
 
-SMP_ZERO = 10 # Threshold which considers system as zeroised
-SMP_STEP = 40
+SMP_ZERO = 15 # Threshold which considers system as zeroised
+SMP_STEP = 50
 
 IVP_ZERO = 3 # Cancel noise
 
@@ -140,7 +140,8 @@ async def set_home_load_power(
 
     sbpl_set, sbpl_old = SBPL_MIN, SBPL_MIN
     is_done = False
-    
+
+    recall = 0
     while True:
         logger.debug(f'Waiting for home load')
         sbpl_new = await q.get()
@@ -150,21 +151,23 @@ async def set_home_load_power(
         logger.debug(f'SBPL {sbpl_new}W dequeued')
 
         await q.put(sbpl_new) # Block
+        logger.info(f'SBPL {sbpl_new}W load received')
 
         is_load = (((abs(sbpl_new - sbpl_set) >SMP_ZERO) and
-                   (abs(sbpl_new - sbpl_old) >SMP_ZERO)) or # New load
-                   (sbpl_new >=SBPL_MAX)) # Burst load
+                   (abs(sbpl_new - sbpl_old) >SMP_ZERO))) # New load
         if is_load:
+            recall = 0
             logger.info(f'SBPL {sbpl_new}W sent to SB')
             is_done = await sb.set_home_load(sbpl_new)
             logger.info(f'SBPL {"set" if is_done else "kept"} in SB')
 
         else: #Avoid future 'kept' messages
+            recall += 1
             logger.info(f'SBPL {sbpl_new}W load skipped')
             sbpl_new = sbpl_set # Keep the first
-            logger.info(f'SBPL {sbpl_new}W load fixed')
+            logger.info(f'SBPL {sbpl_new}W load refixed')
 
-            logger.info(f'Cannot zeroise! Manage devices!')
+            logger.info(f'Cannot zeroise @ {recall}! Manage devices!')
 
         sbpl_old = sbpl_new
             
@@ -207,27 +210,18 @@ async def schedule(
 
         logger.info(f'SMP_NEW  {smp_new:4.0f}  {ivp_new:4.0f}  IVP_NEW')
         logger.info(f'SMP_OLD  {smp_old:4.0f}  {ivp_old:4.0f}  IVP_OLD')
-
+        
         sbp_load = None
         
-        if ((ivp_new <= IVP_ZERO) and
-            (ivp_old > IVP_ZERO)):
-            logger.info(f'IVP zero start! Reset!')
+        if ((ivp_new <= IVP_ZERO) or
+            (ivp_old <=IVP_ZERO)):
+            logger.info(f'IVP zero! Oh no!')
             sbp_load = SBPL_MIN
 
-        elif ((ivp_new <= IVP_ZERO) and
-            (ivp_old <= IVP_ZERO)):
-            logger.info(f'IVP zero continued! No setting!')
-
-        elif (smp_new >SBPL_BURST) and (smp_old <SBPL_BURST):
-            cycle = 0
-            logger.info(f'SMP burst started @ {cycle}! Set immediately')
+        elif (smp_new >SBPL_BURST) or (smp_old >SBPL_BURST):
+            logger.info(f'SMP burst! Caution!')
             sbp_load = SBPL_MAX
 
-#        elif (smp_new >SBPL_BURST) and (smp_old >SBPL_BURST):
-#             cycle +=1
-#             logger.info(f'SMP burst continued @ {cycle}! No setting!')
-# 
         elif abs(smp_new) <SMP_ZERO:
             logger.info(f'SMP small! No setting! Is {sbp_load_cycle}W! Bravo!')
 
@@ -256,8 +250,8 @@ async def schedule(
             # Both errors indicate losses if the observed power
             # outputs do not meet the logic correct requested load
 
-        # elif (abs(smp_new - smp_old) >SMP_STEP):
-        #     logger.info(f'SMP change large! No setting!')
+        elif (abs(smp_new - smp_old) >SMP_STEP):
+            logger.info(f'SMP change large! Delay setting!')
 
         else:
             ivp_goal = int(ivp_new)
