@@ -226,7 +226,8 @@ async def schedule(
             logger.info(f'IVP zero! Oh no!')
             sbp_load = SBPL_MIN
 
-        elif (smp_new >SBPL_BURST) or (smp_old >SBPL_BURST):
+        elif ((smp_new >SBPL_BURST) or
+              (smp_old >SBPL_BURST)):
             logger.info(f'SMP burst! Caution!')
             sbp_load = SBPL_MAX
 
@@ -296,7 +297,6 @@ async def schedule(
 
         later = cycle_delay*(int(now/cycle_delay) + 1)
         await asyncio.sleep(later-now)
-
 
 
 async def zeroise(
