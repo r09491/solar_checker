@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
 
-__doc__="""Tries to zeroise the power import from the grid and the
-export to the grid
+__doc__="""Tries to zeroise the power imported from the grid against
+exported to the grid.
 
-A HITCHI infrared sensor polls the electricity provider's grid power
-sensor.  A positive value indicates the current import from the grid,
-a negative one the current export to the grid. Ideally the value is
-zero. The big advantage is the data are on the local net. This means
-low latency compared to cloud aquisition.
+\nA HITCHI infrared sensor polls the electricity provider's smartmeter.
+A positive value indicates the import from the grid, a negative one
+the export to the grid. Ideally the value is zero. The big advantage
+is the data are on the local net. This means low latency compared to
+cloud aquisition.
 
-An Apsystems EZ1-M inverter puts the power into the grid. The big
-advantage is the data are on the local net. This means low latency
-compared to cloud aquisition.
+\nAn Apsystems EZ1-M inverter outputs the power to the grid. The big
+advantage is the powerv value is available on the local net. This
+means low latency compared to cloud aquisition.
 
-An Anker Solix 1 solarbank delivers power from the PV panels or
+\nAn Anker Solix 1 solarbank delivers power from the PV panels or
 battery to the inverter.  The big disadvantage is data are on the
-cloud. This means high latency compared to local aquisition. It shows
-that changes in the solarbank are reporteded upto four minutes later
-by the smartmeter than by the inverter. However setting the data like
-'home load' occurs immediately though the associated data show up
-minutes later after they have found their way back from China.
+cloud only. This means high latency. The funny thing is that changes
+in the solarbank are reported upto four minutes later than by the
+smartmeter and the inverter. However setting the data like 'home load'
+occurs immediately though the associated data show up minutes later
+after they have found their way back from China.
 
-Short latency allows to implment zeroising (within 10W) in the low
-seconds range at least if the power source are the PV panel and the
+\nShort latency allows to implment zeroising (within 10W) in the low
+seconds range. At least if the power comes the PV panels and the
 sun. The battery discharge is another story. Here it takes up to four
-minutes to bring the solarbank output into the commanded range.
+minutes to bring the solarbank output into the commanded range. But
+this is an hardware issue and not a software issue.
+
+\nThis script was tested on my system only.
 """
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -80,6 +83,8 @@ async def get_grid_power(
     sm = Smartmeter(sm_ip, sm_port)
 
     while True:
+        now = time.time()
+        
         sm_status = await sm.get_status_sns()
         smp = 0 if sm_status is None else sm_status.power
         smps = smps[1:] + [smp]
@@ -90,7 +95,6 @@ async def get_grid_power(
         await q.put(smp_mean)
         logger.debug(f'SMP {smp_mean}W queued')
 
-        now = time.time()
         later = sm_delay*(int(now/sm_delay) + 1)
         await asyncio.sleep(later-now)
 
@@ -107,6 +111,8 @@ async def get_inverter_power(
     iv = Inverter(iv_ip, iv_port)
 
     while True:
+        now = time.time()
+        
         output = await iv.get_output_data()
         ivp1 = 0 if output is None else output.p1
         ivp2 = 0 if output is None else output.p2
@@ -119,7 +125,6 @@ async def get_inverter_power(
         await q.put(ivp_mean)
         logger.debug(f'IVP "{ivp_mean}W" queued')
 
-        now = time.time()
         later = iv_delay*(int(now/iv_delay) + 1)
         await asyncio.sleep(later-now)
 
@@ -192,7 +197,8 @@ async def schedule(
         sm_q: asyncio.Queue,
         iv_q: asyncio.Queue,
         sb_q: asyncio.Queue,
-        cycle_delay:int
+        cycle_delay: int,
+        show_samples: bool
 ) -> None:
 
     sbp_loads = []
@@ -202,6 +208,8 @@ async def schedule(
     cycle, sbp_load_cycle, ivp_cycle_sum, smp_cycle_sum = 0, SBPL_MIN, 0, 0
 
     while True:
+        now = time.time()
+                
         smp_old, ivp_old = smp_new, ivp_new
         
         logger.debug(f'Waiting for power values')
@@ -236,7 +244,7 @@ async def schedule(
             smp_cycle_sum += smp_new
             smp_cycle_mean = int(smp_cycle_sum/cycle)
             smp_cycle_error = smp_cycle_mean
-            logger.info(f'SMP cyle error {smp_cycle_error}W @ {cycle}')
+            logger.info(f'SMP cyle delta {smp_cycle_error}W @ {cycle}')
 
             # The IVP error is negative if the SB cannot provide the
             # power the load was set to. Obviously one reason may be
@@ -245,7 +253,7 @@ async def schedule(
             ivp_cycle_sum += ivp_new
             ivp_cycle_mean = int(ivp_cycle_sum/cycle)
             ivp_cycle_error = ivp_cycle_mean - sbp_load_cycle 
-            logger.info(f'IVP cyle error {ivp_cycle_error}W @ {cycle}')
+            logger.info(f'IVP cyle delta {ivp_cycle_error}W @ {cycle}')
 
             # Both errors indicate losses if the observed power
             # outputs do not meet the logic correct requested load
@@ -278,9 +286,14 @@ async def schedule(
         else:
             # Reset the loads list
             sbp_loads = []
-            
+
+        if show_samples:
+            now_str = time.strftime("%H:%M:%S", time.localtime(now))
+            sys.stdout.write(f'{now_str} {smp_new} {ivp_new} {sbp_load_cycle} {cycle}\n')
+            sys.stdout.flush()
+        
         # Delay without thrift
-        now = time.time()
+
         later = cycle_delay*(int(now/cycle_delay) + 1)
         await asyncio.sleep(later-now)
 
@@ -293,7 +306,8 @@ async def zeroise(
         iv_ip: str,
         iv_port: int,
         iv_delay:int,
-        cycle_delay:int
+        cycle_delay:int,
+        show_samples: bool
 ) -> None:
 
     sm_queue = asyncio.Queue(maxsize = 1)
@@ -320,7 +334,8 @@ async def zeroise(
             sm_queue,
             iv_queue,
             sb_queue,
-            cycle_delay
+            cycle_delay,
+            show_samples
         )
     ]
     await asyncio.gather(
@@ -334,6 +349,7 @@ class Script_Arguments:
     iv_ip: str
     iv_port: int
     cycle_delay: int
+    show_samples: bool
 
 async def main(args: Script_Arguments) -> int:
 
@@ -348,7 +364,8 @@ async def main(args: Script_Arguments) -> int:
         args.iv_ip,
         args.iv_port,
         args.cycle_delay/2,
-        args.cycle_delay
+        args.cycle_delay,
+        args.show_samples
     )
     
     return 0
@@ -379,6 +396,9 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--cycle_delay', type = int, default = 10,
                         help = "Delay for calculating the home load")
 
+    parser.add_argument('--show_samples', type = bool, default = True,
+                        help = "Control the output of power samples")
+
     args = parser.parse_args()
 
     return Script_Arguments(
@@ -386,7 +406,8 @@ def parse_arguments() -> Script_Arguments:
         args.sm_port,
         args.iv_ip,
         args.iv_port,
-        args.cycle_delay
+        args.cycle_delay,
+        args.show_samples
     )
 
 
