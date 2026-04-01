@@ -45,6 +45,7 @@ from brightsky import (
 
 K = 0.01 
 KK = 0.75
+KKK = 0.80
 """ Returns a list of ratios to calculate power values from source
 power values (adapted from formula by NASA) """
 async def power_ratios(
@@ -52,8 +53,8 @@ async def power_ratios(
         from_covers: np.ndarray # 0 to 100
 ) -> np.ndarray:
     return (
-        ( (1.0-KK*(K*to_covers)**3) + K ) /
-        ( (1.0-KK*(K*from_covers)**3) + K )
+        KKK * (( (1.0-KK*(K*to_covers)**3) + K ) /
+               ( (1.0-KK*(K*from_covers)**3) + K ))
     )
 
 SKY_TZ='Europe/Berlin'
@@ -93,13 +94,13 @@ async def get_sky_info_24h(
     skys = await asyncio.gather(*skytasks)
     if skys is None:
         logger.warning(f'Unable to retrieve sky pools! Returning defaults')
-        return 24*[99.0], 24*[0.0], 24*[0.0] 
+        return 24*[100], 24*[100], 24*[100] 
 
     # The cast day the last in the list
     castdaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
     if castdaysky is None:
         logger.error(f'Unable to retrieve sky data! Returning defaults')
-        return 24*[99.0], 24*[0.0], 24*[0.0] 
+        return 24*[100], 24*[100], 24*[100] 
 
     
     # Based on the ratio of 'castdaycover' and 'tunnelskycover* the power
@@ -119,7 +120,7 @@ async def get_sky_info_24h(
     castdayskycover = castdayskycover[:min(len(castdayskycover),24)]
 
     # The average covers of the tunneldays
-    tunnelskycover = 24*[0.0]
+    tunnelskycover = 24*[100]
     if len(skys)>1:
         # Calc the median of the tunnel days without castday
         tunnelskys = pd.concat(
@@ -680,9 +681,11 @@ async def predict_naive_today(
     return today, castlog, realstop, caststart
 
 
-""" Predict the radiation for the castday soley on the set of the tunneldays """
-async def predict_naive_castday(
+""" Predicts the system for today with the provided cloud coverage
+instead of the predicted cloud coverage """
+async def predict_naive_custom(
         castday: str,
+        cover: f64s,
         lat: f64,
         lon: f64,
         logprefix: str,
@@ -701,20 +704,28 @@ async def predict_naive_castday(
         logger.info(f'Nothing is in the tunnel')
         return None
 
-    today = days[-1]
-    if castday < today:
-        logger.error(f'"{castday}" is in the tunnel')
-        return None
-
     if len(tunneldaylog) < 24:
         logger.error(f'The provided tunnel log is illegal')
         return None
 
-    # Read the temeratures, the cloud cover for the tunneldaylog (average
+    today = days[-1]
+    if castday is None:
+        logger.info(f'Using {today} as castday')
+        castday = today
+
+    if castday < today:
+        logger.error(f'"{castday}" cannot be in the past')
+        return None
+
+    # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
     temperatures, tunnelskycover, castdayskycover = await get_sky_info_24h(
         days[:-1] + [castday], lat, lon
     )
+
+    if cover is not None:
+        logger.info(f'Using custom cloud coverage')
+        castdayskycover = cover
 
     # Calculate the ratios for prediction. The sky ratio
     # mulitplied with the today sky factor returns the today
@@ -743,7 +754,8 @@ async def predict_naive_castday(
     return castday, tunneldaylog, None, tunneldaylog.index[0]
 
 
-""" Returns the tunnelday as the average(median) of the tuneldays """
+""" Returns the pure tunnelday as the average(median) of the days in the
+tunnel without any scaling """
 async def predict_naive_average(
         logprefix: str,
         logdir: str,
@@ -777,3 +789,77 @@ async def predict_naive_average(
 
     return days[:-1], tunneldaylog, None, tunneldaylog.index[0]
 
+
+""" Predict the system for the castday based on the sky information
+only without any live data for days in the future """
+async def predict_naive_castday(
+        castday: str,
+        lat: f64,
+        lon: f64,
+        logprefix: str,
+        logdir: str,
+) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
+
+    return await predict_naive_custom(
+        castday = castday,
+        cover = None,
+        lat = lat,
+        lon = lon,
+        logprefix = logprefix,
+        logdir = logdir)
+
+""" Predict the system for today based in the provided coverage rather
+than the forcast """
+async def predict_naive_cover(
+        cover: f64s,
+        lat: f64,
+        lon: f64,
+        logprefix: str,
+        logdir: str,
+) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
+
+    return await predict_naive_custom(
+        castday = None, #today
+        cover = cover,
+        lat = lat ,
+        lon = lon,
+        logprefix = logprefix,
+        logdir = logdir)
+
+
+""" Predict the system for today based on the blue coverage of the
+clear sky """
+async def predict_naive_blue(
+        lat: f64,
+        lon: f64,
+        logprefix: str,
+        logdir: str,
+) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
+
+    return await predict_naive_custom(
+        castday = None, #today
+        cover = 24*[0.0],
+        lat = lat,
+        lon = lon,
+        logprefix = logprefix,
+        logdir = logdir)
+
+
+""" Predict the system for today based on the dark coverage of the
+completely cloud covered sky """
+async def predict_naive_dark(
+        lat: f64,
+        lon: f64,
+        logprefix: str,
+        logdir: str,
+) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
+
+    return await predict_naive_custom(
+        castday = None, #today
+        cover = 24*[1.0],
+        lat = lat,
+        lon = lon,
+        logprefix = logprefix,
+        logdir = logdir)
+
+    

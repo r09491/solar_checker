@@ -10,9 +10,9 @@
 
 <div style='display:flex;justify-content:center;'>
   {% if castday is none %}
-  <a href='/plot_predict_naive/{{ today }}'>Today Naive Cloud</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive/{{ today }}'>Today Cloud</a>&nbsp;&nbsp
   {% else %}
-  <a href='/plot_predict_naive'>Today Naive Live</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive'>Today Live</a>&nbsp;&nbsp
   {% endif %}
   <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp
   {% if castday is none %}
@@ -37,9 +37,15 @@
 
   <div style='display:flex;justify-content:center;'>
     {% if castday is none %}
-    <h1 style='margin:4px;'>Cast Naive Live {{today}}</h1>
+    <h1 style='margin:4px;'>Cast Live {{today}}</h1>
+    {% elif cover == 'blue' %}
+    <h1 style='margin:4px;'>Blue Day {{castday}}</h1>
+    {% elif cover == 'white' %}
+    <h1 style='margin:4px;'>White Day {{castday}}</h1>
+    {% elif cover == 'grey' %}
+    <h1 style='margin:4px;'>Grey Day {{castday}}</h1>
     {% else %}
-    <h1 style='margin:4px;'>Cast Naive Cloud {{castday}}</h1>
+    <h1 style='margin:4px;'>Cast Cloud {{castday}}</h1>
     {% endif %}
   </div>
 
@@ -53,8 +59,19 @@
 </div>
 
 <div style='display:flex;justify-content:center;'>
-  <div style='margin:1px;width:120px;text-align:center;'>
-    <a href='/plot_predict_naive_average'>Average Cloud Day</a>
+  <div style='margin:1px;width:360px;text-align:center;'>
+    {% if castday is not none %}
+    <a href='/plot_predict_naive_average'>Average Day</a>&nbsp;&nbsp&nbsp;&nbsp
+    {% if cover != 'blue' %}
+    <a href='/plot_predict_naive/{{ castday }}/blue'>Blue Day</a>&nbsp;&nbsp&nbsp;&nbsp
+    {% endif %}
+    {% if cover != 'white' %}
+    <a href='/plot_predict_naive/{{ castday }}/white'>White Day</a>&nbsp;&nbsp&nbsp;&nbsp
+    {% endif %}
+    {% if cover != 'blaxk' %}
+    <a href='/plot_predict_naive/{{ castday }}/grey'>Grey Day</a>&nbsp;&nbsp&nbsp;&nbsp
+    {% endif %}
+    {% endif %}
   </div>
 </div>
 

@@ -27,7 +27,7 @@ from utils.plots import (
 )
 from utils.predicts import (
     predict_naive_today,
-    predict_naive_castday,
+    predict_naive_custom,
     get_predict_tables
 )
 
@@ -54,14 +54,31 @@ async def plot_predict_naive(request: web.Request) -> dict:
         castday = request.match_info['castday']
     except KeyError:
         castday = None
+
+    try:
+        cover = request.match_info['cover']
+    except KeyError:
+        cover = None
+
+    cover_24 = (np.array(24*[0]) if cover == 'blue' else \
+                np.array(24*[60]) if cover == 'white' else
+                np.array(24*[100]) if cover == 'grey' else None)
     
     if castday is None:
         cast = await predict_naive_today(
-            lat, lon, logprefix, logdir
+            lat = lat,
+            lon = lon,
+            logprefix = logprefix,
+            logdir = logdir
         )
     else:
-        cast = await predict_naive_castday(
-            castday, lat, lon, logprefix, logdir
+        cast = await predict_naive_custom(
+            castday = castday,
+            cover = cover_24,
+            lat = lat,
+            lon = lon,
+            logprefix = logprefix,
+            logdir = logdir
         )
 
     _, casthours, realstop, caststart = cast if cast  is not None else 4*(None)        
@@ -144,6 +161,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
         )
 
     return {'today': today,
+            'cover': cover,
             'castday': castday,
             'casttomorrow': ymd_tomorrow(castday if castday is not None else today),
             'castyesterday': ymd_yesterday(castday if castday is not None else today),
