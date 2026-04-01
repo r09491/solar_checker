@@ -80,7 +80,7 @@ async def get_sky_info_24h(
         lat: f64,
         lon: f64,
         tz: str = SKY_TZ
-)  -> (f64s,f64s):
+)  -> (f64s, f64s, f64s):
 
     skytasks = [
         asyncio.create_task(
@@ -93,45 +93,50 @@ async def get_sky_info_24h(
     skys = await asyncio.gather(*skytasks)
     if skys is None:
         logger.warning(f'Unable to retrieve sky pools! Returning defaults')
-        return 24*[1.0], 24*[15.0]
+        return 24*[99.0], 24*[0.0], 24*[0.0] 
 
-    # Todays always the last in the list
-    todaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
-    if todaysky is None:
+    # The cast day the last in the list
+    castdaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
+    if castdaysky is None:
         logger.error(f'Unable to retrieve sky data! Returning defaults')
-        return 24*[1.0], 24*[15.0]
-    
-    temperatures = todaysky["temperature"].values
+        return 24*[99.0], 24*[0.0], 24*[0.0] 
 
-    ratios = None
-    if len(skys) >1:
-        # Calc the median of the past days without today
-        pastskys = pd.concat(
+    
+    # Based on the ratio of 'castdaycover' and 'tunnelskycover* the power
+    # values of castday may be predicted by aopplying the following
+    # formula if the average power day is given
+        
+    #     ratios = await power_ratios(
+    #         castdayskyscover,
+    #         tunnelskycover
+    #     )
+
+    # The weather is better (less clouds) with ratios >1. The weather
+    # is worse (more clouds) with ratios <1
+
+    # The covers of castday
+    castdayskycover = castdaysky["cloud_cover"].values
+    castdayskycover = castdayskycover[:min(len(castdayskycover),24)]
+
+    # The average covers of the tunneldays
+    tunnelskycover = 24*[0.0]
+    if len(skys)>1:
+        # Calc the median of the tunnel days without castday
+        tunnelskys = pd.concat(
             [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
         )
-        pastsky = pastskys.groupby(pastskys.index).median()
 
-        # Calc the ratios per hour of today. Based on the median sun
-        # power day calculated from the set of the past days the
-        # values of today may be predicted for each hour by
-        # multiplying with these ratios. If all ratios are 1.0 then
-        # the power of today will be the same as the median power day
-        # and believed to have the same weather.
+        tunnelsky = tunnelskys.groupby(tunnelskys.index).median()
+        if len(tunnelsky) == 25:  # Only 24h
+            tunnelskycover = tunnelsky["cloud_cover"].values[:-1]
 
-        # The weather is better (less clouds) with ratios >1. The
-        # weather is worse (more clouds) with ratios <1
+    #The temperatures of castday
+    temperatures = castdaysky["temperature"].values
+    temperatures = temperatures[:-1] if len(temperatures) == 25 else 24*[15,0]
         
-        try:
-            ratios = await power_ratios(
-                todaysky["cloud_cover"].values,
-                pastsky["cloud_cover"].values
-            )
-        except:
-            # Switch daylight saving time in spring and autumn
-            logger.warning(f'Illegal sky data format! Returning defaults')
-            return 24*[1.0], 24*[15.0]
-
-    return ratios[:-1] if ratios is not None else None, temperatures[:-1]
+    return (np.array(temperatures),
+            np.array(tunnelskycover),
+            np.array(castdayskycover))
 
 
 """
@@ -207,16 +212,16 @@ async def get_sample_logs_24h(
     ]
 
     # The day for the forcast is at the end of the list
-    today = logdays[-1]
-    todaylog = logs[-1]
+    castday = logdays[-1]
+    castdaylog = logs[-1]
 
-    # Fix todaylog
-    await fix_sbpi_frozen(todaylog) 
-    await fix_sbpi_lazy(todaylog)
+    # Fix castdaylog
+    await fix_sbpi_frozen(castdaylog) 
+    await fix_sbpi_lazy(castdaylog)
 
     
-    # Remove logs without sun in the past or missing entries
-    _pastlogs = [
+    # Remove logs without sun in the tunnel or missing entries
+    _tunneldaylogs = [
         l for l in logs[:-1] if (
             len(l) == 24
         ) and (
@@ -231,42 +236,42 @@ async def get_sample_logs_24h(
             )
         )
     ]
-    if not _pastlogs:
-        logger.error("No logs with irridiance in the past")
-        return [today], None, todaylog
+    if not _tunneldaylogs:
+        logger.error("No logs with irridiance in the tunnel")
+        return [castday], None, castdaylog
 
     # Logs have irridiance
 
-    logger.info(f'"{len(_pastlogs)}" past days left after sun check.')
+    logger.info(f'"{len(_tunneldaylogs)}" tunnel days left after sun check.')
 
     # Get rid of frozrn SBPI samples
-    for l in _pastlogs:
+    for l in _tunneldaylogs:
         await fix_sbpi_frozen(l) 
 
     # Make the  single log from the many passed logs
     
-    pastlogs = pd.concat(
-        [l.reset_index(drop=True) for l in _pastlogs]
+    tunneldaylogs = pd.concat(
+        [l.reset_index(drop=True) for l in _tunneldaylogs]
     )
     
-    pastlog = pastlogs.groupby(pastlogs.index).median()   
+    tunneldaylog = tunneldaylogs.groupby(tunneldaylogs.index).median()   
 
-    pastlog.index = pd.date_range(
-        todaylog.index[0].date(),
-        periods=len(pastlog),
+    tunneldaylog.index = pd.date_range(
+        castdaylog.index[0].date(),
+        periods=len(tunneldaylog),
         freq="h"
     ).set_names('TIME')
 
-    await fix_sbpi_lazy(pastlog)
+    await fix_sbpi_lazy(tunneldaylog)
 
     # Fix logdays
     logdays = [
-        l.index[0].strftime(LOGDAYFORMAT) for l in _pastlogs
-    ] + [today]
+        l.index[0].strftime(LOGDAYFORMAT) for l in _tunneldaylogs
+    ] + [castday]
     
     logger.info(f'Cast finally based on "{len(logdays)-1}" days.')
 
-    return logdays, pastlog, todaylog
+    return logdays, tunneldaylog, castdaylog
 
 
 async def get_predict_tables(
@@ -564,9 +569,9 @@ async def predict_naive_today(
         logdir: str
 ) -> (str, pd.DataFrame, pd.Timestamp, pd.Timestamp):
 
-    # Read the samples for today and the median of a number of past
-    # days. The logs have hour resolution.
-    days, pastlog, todaylog = await get_sample_logs_24h(
+    # Read the samples for today and the tunnel. Today is the castday.
+    # The logs have hour resolution.
+    days, tunneldaylog, todaylog = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -577,60 +582,57 @@ async def predict_naive_today(
         logger.error(f'Irridiance not available for any day')
         return None, None, None, None
 
-    # Read the sky ratios from the pastlog to today. The sky ratio
-    # mulitplied with the today sky factor returns the today
-    # irridiance.
-    skyratios, temperatures = await get_sky_info_24h(
+    # Read the temeratures of today, the cloud cover for the tunneldaylog
+    # (average day) and today. Default values are returned for
+    # detected errors.
+    temperatures, tunnelskycover, todayskycover = await get_sky_info_24h(
         days, lat, lon
     )
 
-    # Default if skyratios are not avalable (eg time switch)
-    if skyratios is None:
-        logger.error(f'Skyratios are not available! Abort!')
-        return None, None, None, None
+    # Calculate the ratios for the prediction. The tunnel sky factors
+    # mulitplied with the today sky factor returns the today
+    # irridiance.
+    skyratios = await power_ratios(
+        todayskycover,
+        tunnelskycover
+    )
 
-    # Default if temperatures are not avalable (eg time switch)
-    if temperatures is None:
-        logger.warning(f'Temperatures are not available! Abort!')
-        return None, None, None, None
-        
     # Add the temperatures to the frames
-    todaylog.insert(todaylog.shape[1], "T", temperatures[:len(todaylog)])
+    todaylog.insert(
+        todaylog.shape[1], "T", temperatures[:len(todaylog)]
+    )
 
-    # Abort if there is nothing in the past
-    if pastlog is None:
-        logger.error(f'There are no logs in the past')
-        return today, todaylog, None, None
-        
     # Abort if a cast is not possible (at the end of today)
-    if len(todaylog) >= len(pastlog):
+    if len(todaylog) >= len(tunneldaylog):
         return today, todaylog, None, None
 
-    # Abort if pastlog is not 24h
-    if len(pastlog) <24:
+    # Abort if tunneldaylog is not 24h
+    if len(tunneldaylog) <24:
         return today, todaylog, None, None
     
-    pastlog.insert(pastlog.shape[1], "T", temperatures)
+    tunneldaylog.insert(
+        tunneldaylog.shape[1], "T", temperatures
+    )
     
     # For the last hour not all samples aremeasured yet. Therefore the
     # last hour is part of the casting and excluded from the
     # calculating of the ratio.
-    realstop = pastlog.index[len(todaylog)-1]
+    realstop = tunneldaylog.index[len(todaylog)-1]
     logger.info(f'Real stop at end of "{realstop}"')
-    caststart = pastlog.index[len(todaylog)]
+    caststart = tunneldaylog.index[len(todaylog)]
     logger.info(f'Cast start at beginning of "{caststart}"')
 
     if not (("SBPI" in todaylog)):
         # No cast without real irridiance
-        return today, pastlog, realstop, caststart
+        return today, tunneldaylog, realstop, caststart
 
-    if not (("SBPI" in pastlog)):
+    if not (("SBPI" in tunneldaylog)):
         # No cast without redicted irridiance
-        return today, pastlog, realstop, caststart
+        return today, tunneldaylog, realstop, caststart
 
-    # The sky cast starts with the pastlog to be scaled with sky
+    # The sky cast starts with the tunneldaylog to be scaled with sky
     # factors for the whole day. 
-    castlog = pastlog
+    castlog = tunneldaylog
     castlog.loc[:, "SBPI"] *= skyratios
 
     # Keep SOC
@@ -678,7 +680,7 @@ async def predict_naive_today(
     return today, castlog, realstop, caststart
 
 
-""" Predict the radiation for the castday soley on the set of the pastdays """
+""" Predict the radiation for the castday soley on the set of the tunneldays """
 async def predict_naive_castday(
         castday: str,
         lat: f64,
@@ -690,60 +692,58 @@ async def predict_naive_castday(
     # Read the 24 predicted samples for the model day. The later are
     # calculated from the window selected logs. The logs have hour
     # resolution. Today samples are ignored.
-    days, pastlog, _ = await get_sample_logs_24h(
+    days, tunneldaylog, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
 
-    if days is None or pastlog is None:
-        logger.info(f'Nothing is in the past')
+    if days is None or tunneldaylog is None:
+        logger.info(f'Nothing is in the tunnel')
         return None
 
     today = days[-1]
     if castday < today:
-        logger.error(f'"{castday}" is in the past')
+        logger.error(f'"{castday}" is in the tunnel')
         return None
 
-    if len(pastlog) < 24:
-        logger.error(f'The provided past log is illegal')
+    if len(tunneldaylog) < 24:
+        logger.error(f'The provided tunnel log is illegal')
         return None
 
-
-    # Read the sky ratios from the pastlog to the castday
-    skyratios, temperatures = await get_sky_info_24h(
+    # Read the temeratures, the cloud cover for the tunneldaylog (average
+    # day) and today. Default values are returned for detected errors.
+    temperatures, tunnelskycover, castdayskycover = await get_sky_info_24h(
         days[:-1] + [castday], lat, lon
     )
 
-    # Default if skyratios are not avalable (eg time switch)
-    if skyratios is None:
-        logger.warning(f'Skyratios are not available! Defaulting!')
-        return None, None
-
-    # Default if temperatures are not avalable (eg time switch)
-    if temperatures is None:
-        logger.warning(f'Skyratios are not available! Defaulting!')
-        return None, None
+    # Calculate the ratios for prediction. The sky ratio
+    # mulitplied with the today sky factor returns the today
+    # irridiance.
+    skyratios = await power_ratios(
+        castdayskycover,
+        tunnelskycover
+    )
 
     # Add the temperature column
-    pastlog.insert(pastlog.shape[1], "T", temperatures)
+    tunneldaylog.insert(tunneldaylog.shape[1], "T", temperatures)
 
-    if (("SBPI" in pastlog)):
+    if (("SBPI" in tunneldaylog)):
     
-        # Update the irridiance past day average to expected aky
+        # Update the irridiance tunnel day average to expected aky
         # conditions
-        pastlog.loc[:,"SBPI"] *= skyratios
+        tunneldaylog.loc[:,"SBPI"] *= skyratios
 
         # Keep SOC
-        pastsoc = pastlog["SBSB"].iloc[0]
+        tunnelsoc = tunneldaylog["SBSB"].iloc[0]
             
         await simulate_system(
-            pastlog, pastsoc
+            tunneldaylog, tunnelsoc
         )
 
-    return castday, pastlog, None, pastlog.index[0]
+    return castday, tunneldaylog, None, tunneldaylog.index[0]
 
 
-""" Simulate the radiation without sky info  """
+""" Returns the tunnelday as the average(median) of the tuneldays """
 async def predict_naive_average(
         logprefix: str,
         logdir: str,
@@ -751,29 +751,29 @@ async def predict_naive_average(
 
     # Read the sampless for the average day. The logs have hour
     # resolution. Today samples are ignored.
-    days, pastlog, _ = await get_sample_logs_24h(
+    days, tunneldaylog, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
 
-    if days is None or pastlog is None:
-        logger.info(f'Nothing is in the past')
+    if days is None or tunneldaylog is None:
+        logger.info(f'Nothing is in the tunnel')
         return None
 
-    if len(pastlog) < 24:
-        logger.error(f'The provided past log is illegal')
+    if len(tunneldaylog) < 24:
+        logger.error(f'The provided tunnel log is illegal')
         return None
 
-    if not ("SBPI" in pastlog):
-        logger.error(f'The provided past log has no sun power')
+    if not ("SBPI" in tunneldaylog):
+        logger.error(f'The provided tunnel log has no sun power')
         return None
     
     # Keep SOC
-    pastsoc = pastlog["SBSB"].iloc[0]
+    tunnelsoc = tunneldaylog["SBSB"].iloc[0]
             
     await simulate_system(
-        pastlog, pastsoc
+        tunneldaylog, tunnelsoc
     )
 
-    return days[:-1], pastlog, None, pastlog.index[0]
+    return days[:-1], tunneldaylog, None, tunneldaylog.index[0]
 
