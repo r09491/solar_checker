@@ -45,7 +45,7 @@ from brightsky import (
 
 K = 0.01 
 KK = 0.75
-KKK = 0.80
+KKK = 1.0
 """ Returns a list of ratios to calculate power values from source
 power values (adapted from formula by NASA) """
 async def power_ratios(
@@ -127,7 +127,7 @@ async def get_sky_info_24h(
             [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
         )
 
-        tunnelsky = tunnelskys.groupby(tunnelskys.index).median()
+        tunnelsky = tunnelskys.groupby(tunnelskys.index).mean()
         if len(tunnelsky) == 25:  # Only 24h
             tunnelskycover = tunnelsky["cloud_cover"].values[:-1]
 
@@ -209,7 +209,7 @@ async def get_sample_logs_24h(
     logs = [
         l.set_index('TIME').resample(
             'h', label='left', closed='left'
-        ).median() for l in logs
+        ).mean() for l in logs
     ]
 
     # The day for the forcast is at the end of the list
@@ -255,7 +255,7 @@ async def get_sample_logs_24h(
         [l.reset_index(drop=True) for l in _tunneldaylogs]
     )
     
-    tunneldaylog = tunneldaylogs.groupby(tunneldaylogs.index).median()   
+    tunneldaylog = tunneldaylogs.groupby(tunneldaylogs.index).mean()   
 
     tunneldaylog.index = pd.date_range(
         castdaylog.index[0].date(),
@@ -301,7 +301,7 @@ async def get_predict_tables(
 
     c3h = c1h.resample(
         '3h', label='left', closed='left'
-    ).median()
+    ).mean()
 
     sbsb_df = None
     if "SBSB" in c3h:
