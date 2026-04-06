@@ -64,7 +64,7 @@ SBPL_MIN = 100
 SBPL_MAX = 800
 SBPL_WIN = 1.07 # 1.05
 
-SBPL_BURST = 600
+SBPL_BURST = 500
 
 SBPL_PANEL_DAY_START = datetime.time(7, 0)
 SBPL_PANEL_DAY_END = datetime.time(19, 0)
@@ -83,8 +83,6 @@ async def get_grid_power(
     sm = Smartmeter(sm_ip, sm_port)
 
     while True:
-        now = time.time()
-        
         sm_status = await sm.get_status_sns()
         smp = 0 if sm_status is None else sm_status.power
         smps = smps[1:] + [smp]
@@ -95,6 +93,7 @@ async def get_grid_power(
         await q.put(smp_mean)
         logger.debug(f'SMP {smp_mean}W queued')
 
+        now = time.time()
         later = sm_delay*(int(now/sm_delay) + 1)
         await asyncio.sleep(later-now)
 
@@ -111,8 +110,6 @@ async def get_inverter_power(
     iv = Inverter(iv_ip, iv_port)
 
     while True:
-        now = time.time()
-        
         output = await iv.get_output_data()
         ivp1 = 0 if output is None else output.p1
         ivp2 = 0 if output is None else output.p2
@@ -125,6 +122,7 @@ async def get_inverter_power(
         await q.put(ivp_mean)
         logger.debug(f'IVP "{ivp_mean}W" queued')
 
+        now = time.time()
         later = iv_delay*(int(now/iv_delay) + 1)
         await asyncio.sleep(later-now)
 
@@ -198,7 +196,7 @@ async def schedule(
         iv_q: asyncio.Queue,
         sb_q: asyncio.Queue,
         cycle_delay: int,
-        show_samples: bool
+        show_samples: int
 ) -> None:
 
     sbpl_news = []
@@ -208,9 +206,9 @@ async def schedule(
     cycle, sbpl_old, ivp_sum, smp_sum = 0, SBPL_MIN, 0, 0
 
     while True:
-        now = time.time()
-                
         smp_old, ivp_old = smp_new, ivp_new
+
+        now = time.time()
         
         logger.debug(f'Waiting for power values')
         smp_new, ivp_new = await asyncio.gather(sm_q.get(), iv_q.get())
@@ -219,12 +217,35 @@ async def schedule(
         logger.info(f'SMP_NEW  {smp_new:4.0f}  {ivp_new:4.0f}  IVP_NEW')
         logger.info(f'SMP_OLD  {smp_old:4.0f}  {ivp_old:4.0f}  IVP_OLD')
 
+        
+        cycle += 1 
+
+        # The SMP error is negative if power is exported to the
+        # grid. The SMP error is positive if power is imported
+        # from the grid. The goal is to make the SMP error zero by
+        # mainpulting the home load
+        smp_sum += smp_new
+        smp_cycle_mean = int(smp_sum/cycle)
+        smp_cycle_error = smp_cycle_mean
+        logger.info(f'SMP cyle delta {smp_cycle_error}W @ {cycle}')
+
+        # The IVP error is negative if the SB cannot provide the
+        # power the load was set to. Obviously one reason may be
+        # the home load is set to high. Or the PV panels do not
+        # provide enough power due to cloud cover etc.
+        ivp_sum += ivp_new
+        ivp_cycle_mean = int(ivp_sum/cycle)
+        ivp_cycle_error = ivp_cycle_mean - sbpl_old 
+        logger.info(f'IVP cyle delta {ivp_cycle_error}W @ {cycle}')
+
+        # Both errors indicate losses if the observed power
+        # outputs do not meet the logic correct requested load
+
+        
         sbpl_new = None
         
         if (ivp_new <= IVP_ZERO):
-            cycle = 0
-            if ((ivp_old >IVP_ZERO) and
-                (sbpl_old >IVP_ZERO)):
+            if ((sbpl_old >IVP_ZERO)):
                 logger.info(f'IVP zero! Oh no!')
                 sbpl_new = SBPL_MIN
                 sbp_news = [] # Use load! No Average
@@ -232,9 +253,7 @@ async def schedule(
                 logger.info(f'IVP rezero! No setting!')
 
         elif (smp_new >SBPL_BURST):
-            cycle = 0
-            if ((smp_old < SBPL_BURST) and
-                (sbpl_old < SBPL_BURST)):
+            if ((sbpl_old < SBPL_BURST)):
                 logger.info(f'SMP burst! Caution!')
                 sbpl_new = SBPL_MAX
                 sbp_news = [] # Use load! No Average
@@ -245,34 +264,6 @@ async def schedule(
             logger.info(f'SMP small! No setting! Is {sbpl_old}W! Bravo!')
 
             ### The goals is achieved ###
-
-            cycle += 1 
-
-            # The SMP error is negative if power is exported to the
-            # grid. The SMP error is positive if power is imported
-            # from the grid. The goal is to make the SMP error zero by
-            # mainpulting the home load
-            smp_sum += smp_new
-            smp_cycle_mean = int(smp_sum/cycle)
-            smp_cycle_error = smp_cycle_mean
-            logger.info(f'SMP cyle delta {smp_cycle_error}W @ {cycle}')
-
-            # The IVP error is negative if the SB cannot provide the
-            # power the load was set to. Obviously one reason may be
-            # the home load is set to high. Or the PV panels do not
-            # provide enough power due to cloud cover etc.
-            ivp_sum += ivp_new
-            ivp_cycle_mean = int(ivp_sum/cycle)
-            ivp_cycle_error = ivp_cycle_mean - sbpl_old 
-            logger.info(f'IVP cyle delta {ivp_cycle_error}W @ {cycle}')
-
-            # Both errors indicate losses if the observed power
-            # outputs do not meet the logic correct requested load
-
-            # if smp_cycle_mean > SMP_ZERO:
-            #     # Runaway: SMP and IVP are incremented equal
-            #     logger.info(f'SMP runaway! New setting!')
-            #     sbpl_new = sbpl_old + smp_cycle_mean
 
         elif (abs(ivp_new - ivp_old) >IVP_STEP):
             logger.info(f'IVP change large! Delay setting!')
@@ -287,6 +278,10 @@ async def schedule(
             sbpl_news = (sbpl_news + [sbpl_new])[-LOADS_N:] 
             sbpl_new = int(sum(sbpl_news)/len(sbpl_news))
             logger.info(f'SBPL new ==> {sbpl_new}W @ {len(sbpl_news)}')
+
+            if abs(sbpl_new - sbpl_old) < SMP_ZERO:
+                logger.info(f'SBPL small! No setting!')
+                sbpl_new = None
 
         if sbpl_new is not None:
             logger.info(f'SBPL last ==> {sbpl_new}W')
@@ -303,14 +298,19 @@ async def schedule(
         else:
             # Reset the loads list
             sbpl_news = []
-
-        if show_samples:
+            sbpl_new = sbpl_old
+            
+        if show_samples >0:
             now_str = time.strftime("%H:%M:%S", time.localtime(now))
-            sys.stdout.write(f'{now_str} {smp_new} {ivp_new} {sbpl_old} {cycle}\n')
+            text = f'{now_str}'
+            text += f'  {smp_new} {ivp_new}  '
+            text += f'  {smp_cycle_error} {ivp_cycle_error}'
+            text += f'  {sbpl_old}'
+            text += f'  {cycle}'
+            sys.stdout.write(text+'\n')
             sys.stdout.flush()
         
         # Delay without thrift
-
         later = cycle_delay*(int(now/cycle_delay) + 1)
         await asyncio.sleep(later-now)
 
@@ -323,7 +323,7 @@ async def zeroise(
         iv_port: int,
         iv_delay:int,
         cycle_delay:int,
-        show_samples: bool
+        show_samples: int
 ) -> None:
 
     sm_queue = asyncio.Queue(maxsize = 1)
@@ -365,7 +365,7 @@ class Script_Arguments:
     iv_ip: str
     iv_port: int
     cycle_delay: int
-    show_samples: bool
+    show_samples: int
 
 async def main(args: Script_Arguments) -> int:
 
@@ -412,7 +412,7 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--cycle_delay', type = int, default = 10,
                         help = "Delay for calculating the home load")
 
-    parser.add_argument('--show_samples', type = bool, default = True,
+    parser.add_argument('--show_samples', type = int, default = 1,
                         help = "Control the output of power samples")
 
     args = parser.parse_args()
