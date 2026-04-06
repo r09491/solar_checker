@@ -42,20 +42,22 @@ from brightsky import (
     Sky
 )
 
-
-K = 0.01 
-KK = 0.75
-KKK = 1.0
+EPS = 0.01      # 0.1, 0.01 ..
+SCALE = 0.85    # 0.6, 0.75, 1.00
+EXPONENT = 2.0  # 1.0, 2.0, 3.0
+PERCENT = 0.01 
 """ Returns a list of ratios to calculate power values from source
 power values (adapted from formula by NASA) """
 async def power_ratios(
-        to_covers: np.ndarray, # 0 to 100
-        from_covers: np.ndarray # 0 to 100
+        to: np.ndarray, # 0 to 100
+        frm: np.ndarray, # 0 to 100
+        exponent: float = 2.0,
+        scale: float = SCALE,
+        eps: float = EPS 
 ) -> np.ndarray:
-    return (
-        KKK * (( (1.0-KK*(K*to_covers)**3) + K ) /
-               ( (1.0-KK*(K*from_covers)**3) + K ))
-    )
+    return (((1.0-scale*( PERCENT*to )**exponent) + eps) /
+            ((1.0-scale*( PERCENT*frm )**exponent) + eps))
+
 
 SKY_TZ='Europe/Berlin'
 """ Returns all sky data for each hour in the castday """
@@ -187,12 +189,12 @@ async def fix_sbpi_frozen(
         sbpi[issbpion] = ivp1[issbpion] +ivp2[issbpion]
 
 
-LOGWINDOWSIZE = 2
+LOGTUNNELSIZE = 3
 LOGDAYFORMAT="%y%m%d"
 async def get_sample_logs_24h(
         logprefix: str,
         logdir: str,
-        logwindow: int = LOGWINDOWSIZE
+        logwindow: int = LOGTUNNELSIZE
 ) -> (pd.DataFrame, pd.DataFrame):
 
     # Get the logs close to the forecast day
@@ -647,7 +649,7 @@ async def predict_naive_today(
     castsbpisum = castlog.loc[:,"SBPI"].sum()
     logger.info(f'Cast irridiance is {castsbpisum:.0f} Wh')
     realfactor = (
-        (realsbpisum / castsbpisum) ** (1/3)
+        (realsbpisum / castsbpisum) ** (1/ EXPONENT)
     ) if (
         realsbpisum >0 and castsbpisum >0
     ) else 1
@@ -661,9 +663,9 @@ async def predict_naive_today(
     realivpsum = todaylog.loc[:realstop, ["IVP1","IVP2"]].sum().sum()
     realspphsum = todaylog.loc[:realstop, "SPPH"].sum()
 
-    inv_ratio = min(1.0, (realivpsum+K)/(realsbposum+K))
+    inv_ratio = min(1.0, (realivpsum+EPS)/(realsbposum+EPS))
     logger.info(f'IVP/SBPO ratio is "{inv_ratio:.2f}"')
-    plug_ratio = min(1.0, realspphsum/(realivpsum+K))
+    plug_ratio = min(1.0, realspphsum/(realivpsum+EPS))
     logger.info(f'SPPH/IVP ratio is "{plug_ratio:.2f}"')
     
     #Predict the system

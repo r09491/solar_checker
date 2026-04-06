@@ -61,7 +61,7 @@ async def plot_predict_naive(request: web.Request) -> dict:
         cover = None
 
     cover_24 = (np.array(24*[0]) if cover == 'blue' else \
-                np.array(24*[60]) if cover == 'white' else
+                np.array(24*[50]) if cover == 'white' else
                 np.array(24*[100]) if cover == 'grey' else None)
     
     if castday is None:

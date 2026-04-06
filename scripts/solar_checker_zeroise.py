@@ -56,15 +56,15 @@ SAMPLE_N = 2 # Number of sensor samples to calc mean of samples
 LOADS_N = 2  # Number of samples to calc mean of load average
 
 SMP_ZERO = 15 # Threshold which considers system as zeroised
-SMP_STEP = 50
+SMP_STEP = 50 # Rapid grid changes
 
-IVP_ZERO = 3 # Cancel noise
-
+IVP_ZERO = 5 # Cancel noise
+IVP_STEP = 50 # Rapid radiation changes
 SBPL_MIN = 100
 SBPL_MAX = 800
 SBPL_WIN = 1.07 # 1.05
 
-SBPL_BURST = 800
+SBPL_BURST = 600
 
 SBPL_PANEL_DAY_START = datetime.time(7, 0)
 SBPL_PANEL_DAY_END = datetime.time(19, 0)
@@ -201,11 +201,11 @@ async def schedule(
         show_samples: bool
 ) -> None:
 
-    sbp_loads = []
+    sbpl_news = []
     
-    smp_new, ivp_new, sbp_load = SBPL_MAX, SBPL_MAX, SBPL_MAX
+    smp_new, ivp_new, sbpl_new = SBPL_MAX, SBPL_MAX, SBPL_MAX
     
-    cycle, sbp_load_cycle, ivp_cycle_sum, smp_cycle_sum = 0, SBPL_MIN, 0, 0
+    cycle, sbpl_old, ivp_sum, smp_sum = 0, SBPL_MIN, 0, 0
 
     while True:
         now = time.time()
@@ -218,21 +218,31 @@ async def schedule(
 
         logger.info(f'SMP_NEW  {smp_new:4.0f}  {ivp_new:4.0f}  IVP_NEW')
         logger.info(f'SMP_OLD  {smp_old:4.0f}  {ivp_old:4.0f}  IVP_OLD')
-        
-        sbp_load = None
-        
-        if ((ivp_new <= IVP_ZERO) or
-            (ivp_old <=IVP_ZERO)):
-            logger.info(f'IVP zero! Oh no!')
-            sbp_load = SBPL_MIN
 
-        elif ((smp_new >SBPL_BURST) or
-              (smp_old >SBPL_BURST)):
-            logger.info(f'SMP burst! Caution!')
-            sbp_load = SBPL_MAX
+        sbpl_new = None
+        
+        if (ivp_new <= IVP_ZERO):
+            cycle = 0
+            if ((ivp_old >IVP_ZERO) and
+                (sbpl_old >IVP_ZERO)):
+                logger.info(f'IVP zero! Oh no!')
+                sbpl_new = SBPL_MIN
+                sbp_news = [] # Use load! No Average
+            else:
+                logger.info(f'IVP rezero! No setting!')
 
+        elif (smp_new >SBPL_BURST):
+            cycle = 0
+            if ((smp_old < SBPL_BURST) and
+                (sbpl_old < SBPL_BURST)):
+                logger.info(f'SMP burst! Caution!')
+                sbpl_new = SBPL_MAX
+                sbp_news = [] # Use load! No Average
+            else:
+                logger.info(f'SMP reburst! No setting!')
+            
         elif abs(smp_new) <SMP_ZERO:
-            logger.info(f'SMP small! No setting! Is {sbp_load_cycle}W! Bravo!')
+            logger.info(f'SMP small! No setting! Is {sbpl_old}W! Bravo!')
 
             ### The goals is achieved ###
 
@@ -242,8 +252,8 @@ async def schedule(
             # grid. The SMP error is positive if power is imported
             # from the grid. The goal is to make the SMP error zero by
             # mainpulting the home load
-            smp_cycle_sum += smp_new
-            smp_cycle_mean = int(smp_cycle_sum/cycle)
+            smp_sum += smp_new
+            smp_cycle_mean = int(smp_sum/cycle)
             smp_cycle_error = smp_cycle_mean
             logger.info(f'SMP cyle delta {smp_cycle_error}W @ {cycle}')
 
@@ -251,13 +261,21 @@ async def schedule(
             # power the load was set to. Obviously one reason may be
             # the home load is set to high. Or the PV panels do not
             # provide enough power due to cloud cover etc.
-            ivp_cycle_sum += ivp_new
-            ivp_cycle_mean = int(ivp_cycle_sum/cycle)
-            ivp_cycle_error = ivp_cycle_mean - sbp_load_cycle 
+            ivp_sum += ivp_new
+            ivp_cycle_mean = int(ivp_sum/cycle)
+            ivp_cycle_error = ivp_cycle_mean - sbpl_old 
             logger.info(f'IVP cyle delta {ivp_cycle_error}W @ {cycle}')
 
             # Both errors indicate losses if the observed power
             # outputs do not meet the logic correct requested load
+
+            # if smp_cycle_mean > SMP_ZERO:
+            #     # Runaway: SMP and IVP are incremented equal
+            #     logger.info(f'SMP runaway! New setting!')
+            #     sbpl_new = sbpl_old + smp_cycle_mean
+
+        elif (abs(ivp_new - ivp_old) >IVP_STEP):
+            logger.info(f'IVP change large! Delay setting!')
 
         elif (abs(smp_new - smp_old) >SMP_STEP):
             logger.info(f'SMP change large! Delay setting!')
@@ -265,32 +283,30 @@ async def schedule(
         else:
             ivp_goal = int(ivp_new)
             sbp_goal = int(SBPL_WIN*(smp_new+ivp_goal))
-            sbp_load = min(max(sbp_goal, SBPL_MIN), SBPL_MAX)
+            sbpl_new = min(max(sbp_goal, SBPL_MIN), SBPL_MAX)
+            sbpl_news = (sbpl_news + [sbpl_new])[-LOADS_N:] 
+            sbpl_new = int(sum(sbpl_news)/len(sbpl_news))
+            logger.info(f'SBPL new ==> {sbpl_new}W @ {len(sbpl_news)}')
 
-        if sbp_load is not None:
-            logger.info(f'SBPL last ==> {sbp_load}W')
+        if sbpl_new is not None:
+            logger.info(f'SBPL last ==> {sbpl_new}W')
 
-            sbp_loads = (sbp_loads + [sbp_load])[-LOADS_N:] 
-            sbp_load = int(sum(sbp_loads)/len(sbp_loads))
-            logger.info(f'SBPL mean ==> {sbp_load}W @ {len(sbp_loads)}')
-            
-            logger.debug(f'SBPL {sbp_load}W queued')
-            if sb_q.full():  
-                # Skip new load
-                sbp_load = await sb_q.get()
-                logger.info(f'Old setting {sbp_load}W in progress! Wait!')
-            await sb_q.put(sbp_load)
+            logger.debug(f'SBPL {sbpl_new}W queued')
+            if sb_q.full():  # Skip new load
+                sbpl_new = await sb_q.get()
+                logger.info(f'Old setting {sbpl_new}W in progress! Wait!')
+            await sb_q.put(sbpl_new)
             
             # Reset the statistics
-            cycle, sbp_load_cycle, ivp_cycle_sum, smp_cycle_sum = 0, sbp_load, 0, 0
+            cycle, sbpl_old, ivp_sum, smp_sum = 0, sbpl_new, 0, 0
 
         else:
             # Reset the loads list
-            sbp_loads = []
+            sbpl_news = []
 
         if show_samples:
             now_str = time.strftime("%H:%M:%S", time.localtime(now))
-            sys.stdout.write(f'{now_str} {smp_new} {ivp_new} {sbp_load_cycle} {cycle}\n')
+            sys.stdout.write(f'{now_str} {smp_new} {ivp_new} {sbpl_old} {cycle}\n')
             sys.stdout.flush()
         
         # Delay without thrift
