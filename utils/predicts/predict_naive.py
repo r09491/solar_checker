@@ -51,7 +51,7 @@ power values (adapted from formula by NASA) """
 async def power_ratios(
         to: np.ndarray, # 0 to 100
         frm: np.ndarray, # 0 to 100
-        exponent: float = 2.0,
+        exponent: float = EXPONENT,
         scale: float = SCALE,
         eps: float = EPS 
 ) -> np.ndarray:
@@ -101,28 +101,38 @@ async def get_sky_info_24h(
     # The cast day the last in the list
     castdaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
     if castdaysky is None:
-        logger.error(f'Unable to retrieve sky data! Returning defaults')
+        logger.error(f'Unable to retrieve cast sky data! Returning defaults')
         return 24*[100], 24*[100], 24*[100] 
 
+    # The test day is the previous of the last in the list
+    testdaysky = skys[-2].reset_index(drop=True) if skys[-2] is not None else None
+    if testdaysky is None:
+        logger.error(f'Unable to retrieve test sky data! Returning defaults')
+        return 24*[100], 24*[100], 24*[100] 
     
-    # Based on the ratio of 'castdaycover' and 'tunnelskycover* the power
-    # values of castday may be predicted by aopplying the following
-    # formula if the average power day is given
+    
+    # The covers of the castday
+    castdaycover = castdaysky["cloud_cover"].values
+    castdaycover = castdaycover[:min(len(castdaycover),24)]
+
+    # The covers of the testday
+    testdaycover = testdaysky["cloud_cover"].values
+    testdaycover = testdaycover[:min(len(testdaycover),24)]
+
+    # Based on the ratio of 'castdaycover' and 'tunneldaycover' the
+    # power values of castday may be predicted by aopplying the
+    # following formula if the average power day is given
         
     #     ratios = await power_ratios(
-    #         castdayskyscover,
-    #         tunnelskycover
+    #         castdaycover,
+    #         tunneldaycover
     #     )
 
     # The weather is better (less clouds) with ratios >1. The weather
     # is worse (more clouds) with ratios <1
-
-    # The covers of castday
-    castdayskycover = castdaysky["cloud_cover"].values
-    castdayskycover = castdayskycover[:min(len(castdayskycover),24)]
-
+    
     # The average covers of the tunneldays
-    tunnelskycover = 24*[100]
+    tunneldaycover = 24*[100]
     if len(skys)>1:
         # Calc the median of the tunnel days without castday
         tunnelskys = pd.concat(
@@ -131,15 +141,16 @@ async def get_sky_info_24h(
 
         tunnelsky = tunnelskys.groupby(tunnelskys.index).mean()
         if len(tunnelsky) == 25:  # Only 24h
-            tunnelskycover = tunnelsky["cloud_cover"].values[:-1]
+            tunneldaycover = tunnelsky["cloud_cover"].values[:-1]
 
     #The temperatures of castday
     temperatures = castdaysky["temperature"].values
     temperatures = temperatures[:-1] if len(temperatures) == 25 else 24*[15,0]
         
     return (np.array(temperatures),
-            np.array(tunnelskycover),
-            np.array(castdayskycover))
+            np.array(tunneldaycover),
+            np.array(testdaycover),
+            np.array(castdaycover))
 
 
 """
@@ -195,7 +206,7 @@ async def get_sample_logs_24h(
         logprefix: str,
         logdir: str,
         logwindow: int = LOGTUNNELSIZE
-) -> (pd.DataFrame, pd.DataFrame):
+) -> (List, pd.DataFrame, pd.DataFrame, pd.DataFrame):
 
     # Get the logs close to the forecast day
     logdays, logs = await get_tunnel_logs(
@@ -222,7 +233,6 @@ async def get_sample_logs_24h(
     await fix_sbpi_frozen(castdaylog) 
     await fix_sbpi_lazy(castdaylog)
 
-    
     # Remove logs without sun in the tunnel or missing entries
     _tunneldaylogs = [
         l for l in logs[:-1] if (
@@ -241,7 +251,7 @@ async def get_sample_logs_24h(
     ]
     if not _tunneldaylogs:
         logger.error("No logs with irridiance in the tunnel")
-        return [castday], None, castdaylog
+        return [castday], None, None, castdaylog
 
     # Logs have irridiance
 
@@ -250,7 +260,11 @@ async def get_sample_logs_24h(
     # Get rid of frozrn SBPI samples
     for l in _tunneldaylogs:
         await fix_sbpi_frozen(l) 
+        await fix_sbpi_lazy(l)
 
+    # the last log in the tunnel is be used as test log
+    testdaylog = _tunneldaylogs[-1]
+    
     # Make the  single log from the many passed logs
     
     tunneldaylogs = pd.concat(
@@ -274,7 +288,7 @@ async def get_sample_logs_24h(
     
     logger.info(f'Cast finally based on "{len(logdays)-1}" days.')
 
-    return logdays, tunneldaylog, castdaylog
+    return logdays, tunneldaylog, testdaylog, castdaylog
 
 
 async def get_predict_tables(
@@ -574,7 +588,7 @@ async def predict_naive_today(
 
     # Read the samples for today and the tunnel. Today is the castday.
     # The logs have hour resolution.
-    days, tunneldaylog, todaylog = await get_sample_logs_24h(
+    days, tunneldaylog, _, todaylog = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -588,7 +602,7 @@ async def predict_naive_today(
     # Read the temeratures of today, the cloud cover for the tunneldaylog
     # (average day) and today. Default values are returned for
     # detected errors.
-    temperatures, tunnelskycover, todayskycover = await get_sky_info_24h(
+    temperatures, tunneldaycover, _, todaycover = await get_sky_info_24h(
         days, lat, lon
     )
 
@@ -596,8 +610,8 @@ async def predict_naive_today(
     # mulitplied with the today sky factor returns the today
     # irridiance.
     skyratios = await power_ratios(
-        todayskycover,
-        tunnelskycover
+        todaycover,
+        tunneldaycover
     )
 
     # Add the temperatures to the frames
@@ -697,7 +711,7 @@ async def predict_naive_custom(
     # Read the 24 predicted samples for the model day. The later are
     # calculated from the window selected logs. The logs have hour
     # resolution. Today samples are ignored.
-    days, tunneldaylog, _ = await get_sample_logs_24h(
+    days, tunneldaylog, _, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -721,20 +735,20 @@ async def predict_naive_custom(
 
     # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
-    temperatures, tunnelskycover, castdayskycover = await get_sky_info_24h(
+    temperatures, tunneldaycover, _, castdaycover = await get_sky_info_24h(
         days[:-1] + [castday], lat, lon
     )
 
     if cover is not None:
         logger.info(f'Using custom cloud coverage')
-        castdayskycover = cover
+        castdaycover = cover
 
     # Calculate the ratios for prediction. The sky ratio
     # mulitplied with the today sky factor returns the today
     # irridiance.
     skyratios = await power_ratios(
-        castdayskycover,
-        tunnelskycover
+        castdaycover,
+        tunneldaycover
     )
 
     # Add the temperature column
@@ -765,7 +779,7 @@ async def predict_naive_average(
 
     # Read the sampless for the average day. The logs have hour
     # resolution. Today samples are ignored.
-    days, tunneldaylog, _ = await get_sample_logs_24h(
+    days, tunneldaylog, _, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -865,3 +879,92 @@ async def predict_naive_dark(
         logdir = logdir)
 
     
+""" FInd the best ratio parameter for the irridiance prediction """
+async def predict_naive_configure(
+        lat: f64,
+        lon: f64,
+        logprefix: str,
+        logdir: str,
+        exponents: List = np.linspace(2.0, 3.0, 4),
+        scales: f64s = np.linspace(0.7, 1.2, 20),
+        epss: f64s = np.linspace(0.01, 0.2, 20)
+) -> (f64, f64, f64):
+
+    # Read the 24h predicted samples for the model day. The later are
+    # calculated from the window selected logs. The logs have hour
+    # resolution. Today samples are ignored.
+    days, tunneldaylog, testdaylog, _ = await get_sample_logs_24h(
+        logprefix = logprefix,
+        logdir = logdir
+    )
+
+    if (days is None or
+        tunneldaylog is None or
+        testdaylog is None):
+        logger.info(f'Nothing is in the tunnel')
+        return None
+
+    if (not ("SBPI" in tunneldaylog)):
+        logger.info(f'SBPI is not in the tunnelday log')
+        return None
+
+    if (not ("SBPI" in testdaylog)):
+        logger.info(f'SBPI is not in the testday log')
+        return None
+
+    # Use dataframe for scaliing
+    tunnel_sbpi= tunneldaylog.loc[:,"SBPI"]
+
+    # Skip TIME
+    test_sbpi= np.array( list(testdaylog.loc[:,"SBPI"].values) ) 
+    test_sbpi /= np.max(test_sbpi)
+    
+    if (len(tunnel_sbpi) < 24 or
+        len(test_sbpi) < 24):
+        logger.error(f'The provided tunnel log is illegal')
+        return None
+
+    testday = days[-2]
+    logger.info(f'Using {testday} as testday')
+
+    # Read the temeratures, the cloud cover for the tunnel day (average
+    # day) and today. Default values are returned for detected errors.
+    _, tunneldaycover, testdaycover, _ = await get_sky_info_24h(
+        days, lat, lon
+    )
+
+    if ((testdaycover is None) or
+        (tunneldaycover is None)):
+        logger.info(f'No cloud coverage in weather')
+        return None
+
+    
+    # Calculate the ratios for prediction. The sky ratio
+    # mulitplied with the today sky factor returns the today
+    # irridiance.
+
+    best_error = None
+    for exponent in exponents:
+        for scale in scales:
+            for eps in epss:
+                skyratios = await power_ratios(
+                    testdaycover,
+                    tunneldaycover,
+                    exponent,
+                    scale,
+                    eps
+                )
+
+                predict_sbpi= np.array( (tunnel_sbpi * skyratios).values)
+                predict_sbpi /= np.max(predict_sbpi)
+                #error = np.sqrt( (predict_sbpi - test_sbpi)**2) .sum()
+                #print(predict_sbpi.sum())
+                #print(tunnel_sbpi.sum())
+                error = np.mean((tunnel_sbpi - predict_sbpi)**2)
+
+                if (best_error is None) or (error < best_error):
+                    best_exponent, best_scale, best_eps, best_error = exponent, scale, eps, error
+                    #print(best_exponent, best_scale, best_eps, int(best_error))
+
+    return best_exponent, best_scale, best_eps
+

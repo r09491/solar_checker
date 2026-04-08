@@ -5,6 +5,7 @@ from .predict_naive import (
     predict_naive_custom,
     predict_naive_castday,
     predict_naive_average,
+    predict_naive_configure,
     get_predict_tables
 )
 
