@@ -49,12 +49,12 @@ PERCENT = 0.01
 """ Returns a list of ratios to calculate power values from source
 power values (adapted from formula by NASA) """
 async def power_ratios(
-        to: np.ndarray, # 0 to 100
-        frm: np.ndarray, # 0 to 100
+        to: np.array, # 0 to 100
+        frm: np.array, # 0 to 100
         exponent: float = EXPONENT,
         scale: float = SCALE,
         eps: float = EPS 
-) -> np.ndarray:
+) -> np.array:
     return (((1.0-scale*( PERCENT*to )**exponent) + eps) /
             ((1.0-scale*( PERCENT*frm )**exponent) + eps))
 
@@ -83,7 +83,7 @@ async def get_sky_info_24h(
         lat: f64,
         lon: f64,
         tz: str = SKY_TZ
-)  -> (f64s, f64s, f64s):
+)  -> (List[pd.Dataframe], np.array, np.array, np.array):
 
     skytasks = [
         asyncio.create_task(
@@ -98,27 +98,25 @@ async def get_sky_info_24h(
         logger.warning(f'Unable to retrieve sky pools! Returning defaults')
         return 24*[100], 24*[100], 24*[100] 
 
+    
     # The cast day the last in the list
     castdaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
     if castdaysky is None:
         logger.error(f'Unable to retrieve cast sky data! Returning defaults')
         return 24*[100], 24*[100], 24*[100] 
 
-    # The test day is the previous of the last in the list
-    testdaysky = skys[-2].reset_index(drop=True) if skys[-2] is not None else None
-    if testdaysky is None:
-        logger.error(f'Unable to retrieve test sky data! Returning defaults')
-        return 24*[100], 24*[100], 24*[100] 
-    
-    
     # The covers of the castday
     castdaycover = castdaysky["cloud_cover"].values
     castdaycover = castdaycover[:min(len(castdaycover),24)]
+    if len(castdaycover) != 24:  # Only 24h
+        castdaycover = 24*[100]
 
-    # The covers of the testday
-    testdaycover = testdaysky["cloud_cover"].values
-    testdaycover = testdaycover[:min(len(testdaycover),24)]
-
+    #The temperatures of castday
+    temperatures = castdaysky["temperature"].values
+    temperatures = temperatures[:min(len(temperatures),24)]
+    if len(temperatures) != 24:  # Only 24h
+        temperatures = 24*[15]
+    
     # Based on the ratio of 'castdaycover' and 'tunneldaycover' the
     # power values of castday may be predicted by aopplying the
     # following formula if the average power day is given
@@ -130,26 +128,26 @@ async def get_sky_info_24h(
 
     # The weather is better (less clouds) with ratios >1. The weather
     # is worse (more clouds) with ratios <1
-    
-    # The average covers of the tunneldays
-    tunneldaycover = 24*[100]
+
+    tunnelcovers = None
+    tunneldaycover = None
     if len(skys)>1:
+        #The coverages of all the tunnel days
+        tunnelcovers = [
+            s["cloud_cover"].iloc[:-1] for s in skys[:-1] if s is not None
+        ]
+    
         # Calc the median of the tunnel days without castday
-        tunnelskys = pd.concat(
-            [s.reset_index(drop=True) for s in skys[:-1] if s is not None]
+        _tunnelcovers = pd.concat(
+            [c.reset_index(drop=True) for c in tunnelcovers]
         )
+        tunneldaycover = _tunnelcovers.groupby(_tunnelcovers.index).mean()
+        if len(tunneldaycover) != 24:  # Only 24h
+            tunneldaycover = 24*[100]
 
-        tunnelsky = tunnelskys.groupby(tunnelskys.index).mean()
-        if len(tunnelsky) == 25:  # Only 24h
-            tunneldaycover = tunnelsky["cloud_cover"].values[:-1]
-
-    #The temperatures of castday
-    temperatures = castdaysky["temperature"].values
-    temperatures = temperatures[:-1] if len(temperatures) == 25 else 24*[15,0]
-        
-    return (np.array(temperatures),
+    return (tunnelcovers,
+            np.array(temperatures),
             np.array(tunneldaycover),
-            np.array(testdaycover),
             np.array(castdaycover))
 
 
@@ -206,7 +204,7 @@ async def get_sample_logs_24h(
         logprefix: str,
         logdir: str,
         logwindow: int = LOGTUNNELSIZE
-) -> (List, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+) -> (List, List[pd.DataFrame], pd.DataFrame, pd.DataFrame):
 
     # Get the logs close to the forecast day
     logdays, logs = await get_tunnel_logs(
@@ -233,62 +231,61 @@ async def get_sample_logs_24h(
     await fix_sbpi_frozen(castdaylog) 
     await fix_sbpi_lazy(castdaylog)
 
-    # Remove logs without sun in the tunnel or missing entries
-    _tunneldaylogs = [
-        l for l in logs[:-1] if (
-            len(l) == 24
-        ) and (
-            (
-                'SBPI' in l and l['SBPI'].any()
-            ) or (
+    tunnellogs = None
+    tunneldaylog = None
+    if len(logs) > 1:
+        # Remove logs without sun in the tunnel or missing entries
+        tunnellogs = [
+            l for l in logs[:-1] if (
+                len(l) == 24
+            ) and (
                 (
-                    'IVP1' in l and l['IVP1'].any()
-                ) and (
-                    'IVP2' in l and l['IVP2'].any()
+                    'SBPI' in l and l['SBPI'].any()
+                ) or (
+                    (
+                        'IVP1' in l and l['IVP1'].any()
+                    ) and (
+                        'IVP2' in l and l['IVP2'].any()
+                    )
                 )
             )
+        ]
+        if not tunnellogs:
+            logger.error("No logs with irridiance in the tunnel")
+            return [castday], None, None, castdaylog
+
+        # Logs have irridiance
+        
+        logger.info(f'"{len(tunnellogs)}" tunnel days left after sun check.')
+
+        # Get rid of frozrn SBPI samples
+        for l in tunnellogs:
+            await fix_sbpi_frozen(l) 
+            await fix_sbpi_lazy(l)
+
+        # Make the  single log from the many passed logs
+    
+        _tunnellogs = pd.concat(
+            [l.reset_index(drop=True) for l in tunnellogs]
         )
-    ]
-    if not _tunneldaylogs:
-        logger.error("No logs with irridiance in the tunnel")
-        return [castday], None, None, castdaylog
+        tunneldaylog = _tunnellogs.groupby(_tunnellogs.index).mean()   
 
-    # Logs have irridiance
+        tunneldaylog.index = pd.date_range(
+            castdaylog.index[0].date(),
+            periods=len(tunneldaylog),
+            freq="h"
+        ).set_names('TIME')
 
-    logger.info(f'"{len(_tunneldaylogs)}" tunnel days left after sun check.')
+        await fix_sbpi_lazy(tunneldaylog)
 
-    # Get rid of frozrn SBPI samples
-    for l in _tunneldaylogs:
-        await fix_sbpi_frozen(l) 
-        await fix_sbpi_lazy(l)
-
-    # the last log in the tunnel is be used as test log
-    testdaylog = _tunneldaylogs[-1]
+        # Fix logdays
+        logdays = [
+            l.index[0].strftime(LOGDAYFORMAT) for l in tunnellogs
+        ] + [castday]
     
-    # Make the  single log from the many passed logs
-    
-    tunneldaylogs = pd.concat(
-        [l.reset_index(drop=True) for l in _tunneldaylogs]
-    )
-    
-    tunneldaylog = tunneldaylogs.groupby(tunneldaylogs.index).mean()   
+        logger.info(f'Cast finally based on "{len(logdays)-1}" days.')
 
-    tunneldaylog.index = pd.date_range(
-        castdaylog.index[0].date(),
-        periods=len(tunneldaylog),
-        freq="h"
-    ).set_names('TIME')
-
-    await fix_sbpi_lazy(tunneldaylog)
-
-    # Fix logdays
-    logdays = [
-        l.index[0].strftime(LOGDAYFORMAT) for l in _tunneldaylogs
-    ] + [castday]
-    
-    logger.info(f'Cast finally based on "{len(logdays)-1}" days.')
-
-    return logdays, tunneldaylog, testdaylog, castdaylog
+    return logdays, tunnellogs, tunneldaylog, castdaylog
 
 
 async def get_predict_tables(
@@ -588,7 +585,7 @@ async def predict_naive_today(
 
     # Read the samples for today and the tunnel. Today is the castday.
     # The logs have hour resolution.
-    days, tunneldaylog, _, todaylog = await get_sample_logs_24h(
+    days, _, tunneldaylog, todaylog = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -602,7 +599,7 @@ async def predict_naive_today(
     # Read the temeratures of today, the cloud cover for the tunneldaylog
     # (average day) and today. Default values are returned for
     # detected errors.
-    temperatures, tunneldaycover, _, todaycover = await get_sky_info_24h(
+    _, temperatures, tunneldaycover, todaycover = await get_sky_info_24h(
         days, lat, lon
     )
 
@@ -711,7 +708,7 @@ async def predict_naive_custom(
     # Read the 24 predicted samples for the model day. The later are
     # calculated from the window selected logs. The logs have hour
     # resolution. Today samples are ignored.
-    days, tunneldaylog, _, _ = await get_sample_logs_24h(
+    days, _, tunneldaylog, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -735,7 +732,7 @@ async def predict_naive_custom(
 
     # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
-    temperatures, tunneldaycover, _, castdaycover = await get_sky_info_24h(
+    _, temperatures, tunneldaycover, castdaycover = await get_sky_info_24h(
         days[:-1] + [castday], lat, lon
     )
 
@@ -779,7 +776,7 @@ async def predict_naive_average(
 
     # Read the sampless for the average day. The logs have hour
     # resolution. Today samples are ignored.
-    days, tunneldaylog, _, _ = await get_sample_logs_24h(
+    days, _, tunneldaylog, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
@@ -893,14 +890,14 @@ async def predict_naive_configure(
     # Read the 24h predicted samples for the model day. The later are
     # calculated from the window selected logs. The logs have hour
     # resolution. Today samples are ignored.
-    days, tunneldaylog, testdaylog, _ = await get_sample_logs_24h(
+    days, tunnellogs, tunneldaylog, _ = await get_sample_logs_24h(
         logprefix = logprefix,
         logdir = logdir
     )
 
     if (days is None or
-        tunneldaylog is None or
-        testdaylog is None):
+        tunnellogs is None or
+        tunneldaylog is None):
         logger.info(f'Nothing is in the tunnel')
         return None
 
@@ -908,6 +905,7 @@ async def predict_naive_configure(
         logger.info(f'SBPI is not in the tunnelday log')
         return None
 
+    testdaylog = tunnellogs[-1]
     if (not ("SBPI" in testdaylog)):
         logger.info(f'SBPI is not in the testday log')
         return None
@@ -916,11 +914,10 @@ async def predict_naive_configure(
     tunnel_sbpi= tunneldaylog.loc[:,"SBPI"]
 
     # Skip TIME
-    test_sbpi= np.array( list(testdaylog.loc[:,"SBPI"].values) ) 
-    test_sbpi /= np.max(test_sbpi)
+    test_sbpi= list(testdaylog.loc[:,"SBPI"].values)
     
-    if (len(tunnel_sbpi) < 24 or
-        len(test_sbpi) < 24):
+    if (len(tunnel_sbpi) != 24 or
+        len(test_sbpi) != 24):
         logger.error(f'The provided tunnel log is illegal')
         return None
 
@@ -929,10 +926,11 @@ async def predict_naive_configure(
 
     # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
-    _, tunneldaycover, testdaycover, _ = await get_sky_info_24h(
+    tunnelcovers,  _, tunneldaycover, _ = await get_sky_info_24h(
         days, lat, lon
     )
 
+    testdaycover = tunnelcovers[-1].values
     if ((testdaycover is None) or
         (tunneldaycover is None)):
         logger.info(f'No cloud coverage in weather')
@@ -955,8 +953,8 @@ async def predict_naive_configure(
                     eps
                 )
 
-                predict_sbpi= np.array( (tunnel_sbpi * skyratios).values)
-                predict_sbpi /= np.max(predict_sbpi)
+                predict_sbpi= (tunnel_sbpi * skyratios).values
+                #predict_sbpi /= np.max(predict_sbpi)
                 #error = np.sqrt( (predict_sbpi - test_sbpi)**2) .sum()
                 #print(predict_sbpi.sum())
                 #print(tunnel_sbpi.sum())
