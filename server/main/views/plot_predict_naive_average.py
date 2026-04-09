@@ -27,6 +27,7 @@ from utils.plots import (
 )
 from utils.predicts import (
     predict_naive_average,
+    predict_naive_check,
     get_predict_tables
 )
 
@@ -46,6 +47,8 @@ async def plot_predict_naive_average(request: web.Request) -> dict:
     logdayformat = conf['logdayformat']
 
     today = datetime.strftime(datetime.now(), logdayformat)
+
+    lat, lon, tz = conf['lat'], conf['lon'], conf['tz']
 
     cast = await predict_naive_average(
         logprefix, logdir
@@ -130,10 +133,28 @@ async def plot_predict_naive_average(request: web.Request) -> dict:
              "error" : f'Cannot output predict tables for "{today}"'}
         )
 
+    
+    check = await predict_naive_check(
+        lat,
+        lon,
+        logprefix,
+        logdir
+    )
+    if check is None:
+        return aiohttp_jinja2.render_template(
+            "plot_predict_naive_error.html", request,
+            {'today': today,
+             'castday': today,
+             'casttomorrow': ymd_tomorrow(today),
+             'castyesterday': ymd_yesterday(today),
+             "error" : f'No checks for "{today}"'}
+        )
+
     return {'today': today,
             'pastdays': pastdays,
             'casttomorrow': ymd_tomorrow(today),
             'w': w,
             'kwh': kwh,
-            'predicttables': predicttables
+            'predicttables': predicttables,
+            'check': check
             }

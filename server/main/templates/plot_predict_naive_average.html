@@ -38,15 +38,6 @@
   </div>
 </div>
 
-<div style='display:flex;justify-content:center;'>
-  <div style='margin:1px;width:600px;text-align:center;'>
-  Tunnel Days: 
-  {% for pd in pastdays | sort | reverse | batch(36) | first %}
-     <a href='/plot_day/{{pd}}' >{{pd}}</a>
-  {% endfor %}
-  </div>
-</div>
-
 <div style='display:flex;justify-content:center;' >
   <img src='data:image/png;base64,{{w}}'/>
 </div>
@@ -78,6 +69,28 @@
   justify='center',
   float_format='{:,.0f}'.format)
   .replace('<td>', '<td align="center">') | safe }}
+</div>
+
+<div style='display:flex;justify-content:center;' >
+  <h3>Tunnel Check</h3>
+</div>  
+<div style='display:flex;justify-content:center;' >
+  {{ check.to_html(
+  index=False,
+  border=0,
+  col_space=70,
+  justify='center',
+  float_format='{:,.0f}'.format)
+  .replace('<td>', '<td align="center">') | safe }}
+</div>
+
+<div style='display:flex;justify-content:center;'>
+  <div style='margin:1px;width:600px;text-align:center;'>
+  Tunnel Days: 
+  {% for pd in pastdays | sort | batch(36) | first %}
+     <a href='/plot_day/{{pd}}' >{{pd}}</a>
+  {% endfor %}
+  </div>
 </div>
 
 {% endblock content %}

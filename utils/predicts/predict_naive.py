@@ -907,30 +907,30 @@ async def predict_naive_check(
 
 
     # The mean of all tunnel days
-    sbpitunnel = np.array(tunneldaylog["SBPI"])
+    tunnel_w = np.array(tunneldaylog["SBPI"])
 
     # THe real power observed for each tunnel day
-    sbpireal =  [tl["SBPI"] for tl in tunnellogs]
+    real_w =  np.array([tl["SBPI"] for tl in tunnellogs])
 
     # The predicted power for each tunnel day using cover
-    sbpicast = np.array([
+    cast_w = np.array([
         await power_ratios(
             np.array(realcover),
             np.array(tunneldaycover)
-        )*sbpitunnel for realcover in tunnelcovers
+        )*tunnel_w for realcover in tunnelcovers
     ])
 
-    #print([(np.median(sbpireal), np.median(cast)) for cast in sbpicast])
-    cast_wh = np.array([np.sum(cast) for cast in sbpicast])
-    real_wh = np.array([np.sum(real) for real in sbpireal])
+    cast_wh = np.array([np.sum(cast) for cast in cast_w])
+    real_wh = np.array([np.sum(real) for real in real_w])
 
+    print(len(real_wh>0))
     df = pd.DataFrame.from_dict({
         "DAY": days[:-1],
-        "REAL (Wh)": real_wh,
-        "CAST (Wh)": cast_wh,
-        "ERROR (Wh)": cast_wh-real_wh,
-        "ERROR (W)": np.sqrt((cast_wh-real_wh)**2)/len(real_wh),
-        "ERROR %": 100*np.sqrt(cast_wh**2/real_wh**2)/len(real_wh)
+        "CAST": cast_wh,
+        "REAL": real_wh,
+        "ABS ERR": cast_wh-real_wh,
+        "HOUR ERR": np.sqrt((cast_wh-real_wh)**2)/len(real_w>0),
+        "COVER": [np.mean(tc[10:17]) for tc in tunnelcovers]
     })
     
     return df
