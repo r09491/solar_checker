@@ -26,33 +26,21 @@ from utils.typing import(
 )
 from utils.predicts import (
     Script_Arguments,
-    predict_naive_configure
+    predict_naive_check
 )
 
 
 LOGDIR='/home/r09491/storage/solar_checker'
 LOGPREFIX='solar_checker_latest'
 
-# async def output_hour(
-#         testday:str,
-#         casthours: pd.DataFrame,
-#         caststart: pd.Timestamp
-# ) -> None:
+async def output_result(
+        result: pd.Dataframe,
+) -> None:
     
-#     pd.options.display.float_format = '{:,.1f}'.format
-
-#     predicttables = await get_predict_tables(casthours)
-
-#     w = predicttables[0]
-#     print(f"\nPower [W] Cast @ {caststart} for {testday}")
-#     print(w)
-
-#     print(f"\nEnergy [Wh] Cast @ {caststart} for {testday}")
-#     wh =  predicttables[1]
-#     print(wh)
+    pd.options.display.float_format = '{:,.0f}'.format
     
-#     print()
-
+    print(result)
+    
 
 if __name__ == '__main__':
     def parse_arguments() -> Script_Arguments:
@@ -93,19 +81,18 @@ if __name__ == '__main__':
 
     async def main(args: Script_Arguments) -> int:
 
-        para = await predict_naive_configure(
+        result = await predict_naive_check(
             args.lat,
             args.lon,
             args.logprefix,
             args.logdir
         )
-        if para is None:
-            logger.error(f'Testday para configuration failed')
+        if result is None:
+            logger.error(f'Check results failed')
             return -1
 
-        best_exponent, best_scale, best_eps = para
-        print(f'Exponent: {best_exponent} Scale: {best_scale} Eps; {best_eps}')
-
+        await output_result(result)
+        
         return 0
 
         
