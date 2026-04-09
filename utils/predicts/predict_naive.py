@@ -263,6 +263,7 @@ async def get_sample_logs_24h(
             await fix_sbpi_frozen(l) 
             await fix_sbpi_lazy(l)
 
+        
         # Make the  single log from the many passed logs
     
         _tunnellogs = pd.concat(
@@ -876,16 +877,13 @@ async def predict_naive_dark(
         logdir = logdir)
 
     
-""" FInd the best ratio parameter for the irridiance prediction """
-async def predict_naive_configure(
+""" Check predicted power against real power """
+async def predict_naive_check(
         lat: f64,
         lon: f64,
         logprefix: str,
-        logdir: str,
-        exponents: List = np.linspace(2.0, 3.0, 4),
-        scales: f64s = np.linspace(0.7, 1.2, 20),
-        epss: f64s = np.linspace(0.01, 0.2, 20)
-) -> (f64, f64, f64):
+        logdir: str
+) -> pd.DataFrame:
 
     # Read the 24h predicted samples for the model day. The later are
     # calculated from the window selected logs. The logs have hour
@@ -901,68 +899,38 @@ async def predict_naive_configure(
         logger.info(f'Nothing is in the tunnel')
         return None
 
-    if (not ("SBPI" in tunneldaylog)):
-        logger.info(f'SBPI is not in the tunnelday log')
-        return None
-
-    testdaylog = tunnellogs[-1]
-    if (not ("SBPI" in testdaylog)):
-        logger.info(f'SBPI is not in the testday log')
-        return None
-
-    # Use dataframe for scaliing
-    tunnel_sbpi= tunneldaylog.loc[:,"SBPI"]
-
-    # Skip TIME
-    test_sbpi= list(testdaylog.loc[:,"SBPI"].values)
-    
-    if (len(tunnel_sbpi) != 24 or
-        len(test_sbpi) != 24):
-        logger.error(f'The provided tunnel log is illegal')
-        return None
-
-    testday = days[-2]
-    logger.info(f'Using {testday} as testday')
-
     # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
     tunnelcovers,  _, tunneldaycover, _ = await get_sky_info_24h(
         days, lat, lon
     )
 
-    testdaycover = tunnelcovers[-1].values
-    if ((testdaycover is None) or
-        (tunneldaycover is None)):
-        logger.info(f'No cloud coverage in weather')
-        return None
 
+    # The mean of all tunnel days
+    sbpitunnel = np.array(tunneldaylog["SBPI"])
+
+    # THe real power observed for each tunnel day
+    sbpireal =  [tl["SBPI"] for tl in tunnellogs]
+
+    # The predicted power for each tunnel day using cover
+    sbpicast = np.array([
+        await power_ratios(
+            np.array(realcover),
+            np.array(tunneldaycover)
+        )*sbpitunnel for realcover in tunnelcovers
+    ])
+
+    #print([(np.median(sbpireal), np.median(cast)) for cast in sbpicast])
+    cast_wh = np.array([np.sum(cast) for cast in sbpicast])
+    real_wh = np.array([np.sum(real) for real in sbpireal])
+
+    df = pd.DataFrame.from_dict({
+        "DAY": days[:-1],
+        "REAL (Wh)": real_wh,
+        "CAST (Wh)": cast_wh,
+        "ERROR (Wh)": cast_wh-real_wh,
+        "ERROR (W)": np.sqrt((cast_wh-real_wh)**2)/len(real_wh),
+        "ERROR %": 100*np.sqrt(cast_wh**2/real_wh**2)/len(real_wh)
+    })
     
-    # Calculate the ratios for prediction. The sky ratio
-    # mulitplied with the today sky factor returns the today
-    # irridiance.
-
-    best_error = None
-    for exponent in exponents:
-        for scale in scales:
-            for eps in epss:
-                skyratios = await power_ratios(
-                    testdaycover,
-                    tunneldaycover,
-                    exponent,
-                    scale,
-                    eps
-                )
-
-                predict_sbpi= (tunnel_sbpi * skyratios).values
-                #predict_sbpi /= np.max(predict_sbpi)
-                #error = np.sqrt( (predict_sbpi - test_sbpi)**2) .sum()
-                #print(predict_sbpi.sum())
-                #print(tunnel_sbpi.sum())
-                error = np.mean((tunnel_sbpi - predict_sbpi)**2)
-
-                if (best_error is None) or (error < best_error):
-                    best_exponent, best_scale, best_eps, best_error = exponent, scale, eps, error
-                    #print(best_exponent, best_scale, best_eps, int(best_error))
-
-    return best_exponent, best_scale, best_eps
-
+    return df
