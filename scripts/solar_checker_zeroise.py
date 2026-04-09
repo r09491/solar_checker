@@ -280,7 +280,7 @@ async def schedule(
             logger.info(f'SBPL new ==> {sbpl_new}W @ {len(sbpl_news)}')
 
             if abs(sbpl_new - sbpl_old) < SMP_ZERO:
-                logger.info(f'SBPL small! No setting!')
+                logger.info(f'SBPL zero! No setting! Devices?')
                 sbpl_new = None
 
         if sbpl_new is not None:
