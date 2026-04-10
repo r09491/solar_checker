@@ -3,17 +3,17 @@
 __doc__="""Tries to zeroise the power imported from the grid against
 exported to the grid.
 
-\nA HITCHI infrared sensor polls the electricity provider's smartmeter.
+A HITCHI infrared sensor polls the electricity provider's smartmeter.
 A positive value indicates the import from the grid, a negative one
 the export to the grid. Ideally the value is zero. The big advantage
 is the data are on the local net. This means low latency compared to
 cloud aquisition.
 
-\nAn Apsystems EZ1-M inverter outputs the power to the grid. The big
+An Apsystems EZ1-M inverter outputs the power to the grid. The big
 advantage is the powerv value is available on the local net. This
 means low latency compared to cloud aquisition.
 
-\nAn Anker Solix 1 solarbank delivers power from the PV panels or
+An Anker Solix 1 solarbank delivers power from the PV panels or
 battery to the inverter.  The big disadvantage is data are on the
 cloud only. This means high latency. The funny thing is that changes
 in the solarbank are reported upto four minutes later than by the
@@ -27,7 +27,7 @@ sun. The battery discharge is another story. Here it takes up to four
 minutes to bring the solarbank output into the commanded range. But
 this is an hardware issue and not a software issue.
 
-\nThis script was tested on my system only.
+This script was tested on my system only.
 """
 __version__ = "0.0.0"
 __author__ = "r09491@gmail.com"
@@ -190,7 +190,15 @@ async def set_home_load_power(
             is_done = False
         
         await q.get() # Unblock
+
         
+async def to_stdout(text: str):
+    #loop = asyncio.get_running_loop()
+    #await loop.run_in_executor(None, sys.stdout.write, text)
+    #await loop.run_in_executor(None, sys.stdout.flush)
+    sys.stdout.write( text)
+    sys.stdout.flush()
+
 async def schedule(
         sm_q: asyncio.Queue,
         iv_q: asyncio.Queue,
@@ -245,7 +253,7 @@ async def schedule(
         sbpl_new = None
         
         if (ivp_new <= IVP_ZERO):
-            if ((sbpl_old >IVP_ZERO)):
+            if ((sbpl_old > SBPL_MIN)):
                 logger.info(f'IVP zero! Oh no!')
                 sbpl_new = SBPL_MIN
                 sbp_news = [] # Use load! No Average
@@ -280,7 +288,7 @@ async def schedule(
             logger.info(f'SBPL new ==> {sbpl_new}W @ {len(sbpl_news)}')
 
             if abs(sbpl_new - sbpl_old) < SMP_ZERO:
-                logger.info(f'SBPL zero! No setting! Devices?')
+                logger.info(f'SBPL same! No setting! Devices?')
                 sbpl_new = None
 
         if sbpl_new is not None:
@@ -302,13 +310,14 @@ async def schedule(
             
         if show_samples >0:
             now_str = time.strftime("%H:%M:%S", time.localtime(now))
-            text = f'{now_str}'
-            text += f'  {smp_new} {ivp_new}  '
-            text += f'  {smp_cycle_error} {ivp_cycle_error}'
-            text += f'  {sbpl_old}'
-            text += f'  {cycle}'
-            sys.stdout.write(text+'\n')
-            sys.stdout.flush()
+            text = f'{now_str} '
+            text += f'{smp_new:+5d} {ivp_new:3d}  '
+            text += f'{smp_cycle_error:+4d} {ivp_cycle_error:+4d}  '
+            text += f'{sbpl_old:3d}  '
+            text += f'{cycle}'
+            #await to_stdout(text+'\n')
+            await to_stdout(text+'\r')
+
         
         # Delay without thrift
         later = cycle_delay*(int(now/cycle_delay) + 1)
