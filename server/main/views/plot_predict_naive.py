@@ -81,8 +81,8 @@ async def plot_predict_naive(request: web.Request) -> dict:
             logdir = logdir
         )
 
-    _, casthours, realstop, caststart = cast if cast  is not None else 4*(None)        
-    if (casthours is None) or (caststart is None):
+    _, casthours, realstop, caststart = cast if cast is not None else 4*[None]
+    if (casthours is None):
         return aiohttp_jinja2.render_template(
             "plot_predict_naive_error.html", request,
             {'today': today,

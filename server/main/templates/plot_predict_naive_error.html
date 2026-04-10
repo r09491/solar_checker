@@ -10,9 +10,9 @@
 
 <div style='display:flex;justify-content:center;'>
   {% if castday is none %}
-  <a href='/plot_predict_naive/{{ today }}'>Today Naive Cloud_Error</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive/{{ today }}'>Today Cloud</a>&nbsp;&nbsp
   {% else %}
-  <a href='/plot_predict_naive'>Today Naive Live Error</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive'>Today Live</a>&nbsp;&nbsp
   {% endif %}
   <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp
   {% if castday is none %}

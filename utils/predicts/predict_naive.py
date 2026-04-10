@@ -628,7 +628,7 @@ async def predict_naive_today(
     tunneldaylog.insert(
         tunneldaylog.shape[1], "T", temperatures
     )
-    
+
     # For the last hour not all samples aremeasured yet. Therefore the
     # last hour is part of the casting and excluded from the
     # calculating of the ratio.
@@ -691,7 +691,7 @@ async def predict_naive_today(
     
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog[:realstop],restlog])
-    
+
     return today, castlog, realstop, caststart
 
 
@@ -923,7 +923,6 @@ async def predict_naive_check(
     cast_wh = np.array([np.sum(cast) for cast in cast_w])
     real_wh = np.array([np.sum(real) for real in real_w])
 
-    print(len(real_wh>0))
     df = pd.DataFrame.from_dict({
         "DAY": days[:-1],
         "CAST": cast_wh,
