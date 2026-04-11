@@ -920,16 +920,22 @@ async def predict_naive_check(
         )*tunnel_w for realcover in tunnelcovers
     ])
 
-    cast_wh = np.array([np.sum(cast) for cast in cast_w])
-    real_wh = np.array([np.sum(real) for real in real_w])
+    # Hours of items with irrdiance
+    h_mask = np.where(tunnel_w>0)[0]
+
+    # Cast energy per day
+    cast_wh = np.array([np.sum(cast[h_mask]) for cast in cast_w])
+    # Real energy per day
+    real_wh = np.array([np.sum(real[h_mask]) for real in real_w])
 
     df = pd.DataFrame.from_dict({
         "DAY": days[:-1],
         "CAST": cast_wh,
         "REAL": real_wh,
         "ABS ERR": cast_wh-real_wh,
-        "HOUR ERR": np.sqrt((cast_wh-real_wh)**2)/len(real_w>0),
-        "COVER": [np.mean(tc[10:17]) for tc in tunnelcovers]
+        "H": len(h_mask),
+        "H ERR": np.sqrt((cast_wh-real_wh)**2)/len(h_mask),
+        "H COVER": [np.mean(tc.iloc[h_mask]) for tc in tunnelcovers]
     })
     
     return df
