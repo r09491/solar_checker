@@ -315,8 +315,8 @@ async def schedule(
             text += f'{smp_cycle_error:+4d} {ivp_cycle_error:+4d}  '
             text += f'{sbpl_old:3d}  '
             text += f'{cycle}'
-            #await to_stdout(text+'\n')
-            await to_stdout(text+'\r')
+            await to_stdout(text+'\n')
+            #await to_stdout(text+'\r')
 
         
         # Delay without thrift
