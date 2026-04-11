@@ -329,6 +329,18 @@ async def get_predict_tables(
         t_df.reset_index(inplace=True, drop=True)    
         c3h.drop("T", inplace=True, axis=1)
 
+    ccov_df = None
+    if "CCOV" in c3h:
+        ccov_df = c3h["CCOV"]
+        ccov_df.reset_index(inplace=True, drop=True)    
+        c3h.drop("CCOV", inplace=True, axis=1)
+
+    tcov_df = None
+    if "TCOV" in c3h:
+        tcov_df = c3h["TCOV"]
+        tcov_df.reset_index(inplace=True, drop=True)    
+        c3h.drop("TCOV", inplace=True, axis=1)
+        
     if "SBPO" in c3h and not c3h["SBPO"].any():
         c3h.drop("SBPO", inplace=True, axis=1)        
     if "SPPH" in c3h and not c3h["SPPH"].any():
@@ -359,6 +371,10 @@ async def get_predict_tables(
 
     if t_df is not None:
         watts_table["T"] = t_df
+    if ccov_df is not None:
+        watts_table["CCOV"] = ccov_df
+    if tcov_df is not None:
+        watts_table["TCOV"] = tcov_df
     if sbsb_df is not None:
         energy_table["BAT%"] = 100*sbsb_df
     
@@ -624,11 +640,11 @@ async def predict_naive_today(
     # Abort if tunneldaylog is not 24h
     if len(tunneldaylog) <24:
         return today, todaylog, None, None
-    
+
     tunneldaylog.insert(
         tunneldaylog.shape[1], "T", temperatures
     )
-
+    
     # For the last hour not all samples aremeasured yet. Therefore the
     # last hour is part of the casting and excluded from the
     # calculating of the ratio.
@@ -751,6 +767,12 @@ async def predict_naive_custom(
 
     # Add the temperature column
     tunneldaylog.insert(tunneldaylog.shape[1], "T", temperatures)
+
+    # Add the castcover column
+    tunneldaylog.insert(tunneldaylog.shape[1], "CCOV", castdaycover)
+
+    # Add the tunnelcover column
+    tunneldaylog.insert(tunneldaylog.shape[1], "TCOV", tunneldaycover)
 
     if (("SBPI" in tunneldaylog)):
     
