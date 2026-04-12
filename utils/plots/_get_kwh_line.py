@@ -75,12 +75,6 @@ def _get_kwh_line(
                 alpha = 0.1
             )        
 
-    # Stacked!
-            
-    if sbei.any():
-        ax.fill_between(time, 0, sbei,
-                        color='orange', label='SUN', alpha=0.3)
-
     if speh.any():
         ax.plot(time, speh,
                 color='grey', label='PLUG', lw=1, ls='-', alpha=0.3)
@@ -98,14 +92,24 @@ def _get_kwh_line(
         
     else:
         balcony = np.zeros(N)
-        
+
+    # Stacked!
+
+    if sbei.any():
+        ax.fill_between(time, 0, sbei,
+                        color='orange', label='SUN', alpha=0.3)
+
+    if sbebdischarge.any():
+        ax.fill_between(time, sbei, sbei + sbebdischarge,
+                        color='m', alpha=0.2)
+
     if smein.any():
         ax.fill_between(time, balcony, balcony + smein,
                         color='b',label='GRID', alpha=0.3)
 
-        ax.axhline(balcony[-1] + POWER_PAYED,
+        ax.plot(time, balcony + POWER_PAYED,
                    label='PAYED', lw=2, color='orange', ls='--')
-        ax.axhline(balcony[-1] + POWER_USED,
+        ax.plot(time, balcony + POWER_USED,
                    label='GOAL', lw=2, color='g', ls='--')        
 
         
@@ -113,7 +117,8 @@ def _get_kwh_line(
         ax.axhline(-empty_kwh, color='r', ls='--')        
         ax.axhline(-full_kwh, color='r', ls='--')
 
-        sbeb = +sbebcharge - sbebdischarge + sbsb[0]
+        sbsb0 = np.max(sbsb[0:10]) # Overcome leading zeros
+        sbeb = +sbebcharge - sbebdischarge + sbsb0 
 
         ax.fill_between(time, 0, -sbsb,
                         color='m', label='BAT',alpha=0.3)
