@@ -42,12 +42,22 @@ from brightsky import (
     Sky
 )
 
-EPS = 0.01      # 0.1, 0.01 ..
-SCALE = 0.85    # 0.6, 0.75, 1.00
-EXPONENT = 2.0  # 1.0, 2.0, 3.0
-PERCENT = 0.01 
+EPS = 0.001      # 0.1, 0.01 ..
+SCALE = 0.650    # 0.6, 0.75, 1.00
+EXPONENT = 3.0  # 1.0, 2.0, 3.0
+PERCENT = 0.01
+
+""" Returns the scale factor to calc the power at a given cloud
+coverage (adapted from formula by NASA) """
+async def cover_to_power(
+        cover: np.array, # 0 to 100
+        exponent: float = EXPONENT,
+        scale: float = SCALE
+) -> np.array:
+    return 1.0-scale*(( PERCENT*cover )**exponent)
+
 """ Returns a list of ratios to calculate power values from source
-power values (adapted from formula by NASA) """
+power values """
 async def power_ratios(
         to: np.array, # 0 to 100
         frm: np.array, # 0 to 100
@@ -55,8 +65,8 @@ async def power_ratios(
         scale: float = SCALE,
         eps: float = EPS 
 ) -> np.array:
-    return (((1.0-scale*( PERCENT*to )**exponent) + eps) /
-            ((1.0-scale*( PERCENT*frm )**exponent) + eps))
+    return (((await cover_to_power(to)) + eps) /
+            ((await cover_to_power(frm)) + eps))
 
 
 SKY_TZ='Europe/Berlin'
