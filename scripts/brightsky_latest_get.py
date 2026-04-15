@@ -13,6 +13,8 @@ import argparse
 import asyncio
 
 import numpy as np
+import pandas as pd
+pd.options.display.float_format = '{:,.0f}'.format
 
 from datetime import datetime
 
@@ -35,7 +37,8 @@ async def main(sky: Sky, what: str) -> int:
         sunshinetotal = None
         suncovermean = None
         if what == "sky":
-            info = await sky.get_sky_info()
+            info = await sky.get_solar_info()
+            print(info)
             sunshine = info['sunshine']
             suninfo = info[sunshine>0]
             
@@ -55,7 +58,27 @@ async def main(sky: Sky, what: str) -> int:
             info = await sky.get_solar_info()
             index = np.array([t64_from_iso(t[:-6]) for t in info.index])
             info.set_index(index, inplace = True)
+
+            info['solar'] *= 1000
+            info['solar total'] = info['solar'].cumsum()
+            
             print(info)
+            print(f'solar power mean {info["solar"][info["solar"]>0].mean():.0f}W')
+            print()
+
+            info = info.resample(
+                '3h', label='left', closed='left'
+            ).mean() 
+
+            print(info)
+            print(f'solar power mean {info["solar"][info["solar"]>0].mean():.0f}W')
+            print()
+            
+            solar = info['solar']
+            info = info[solar>0]
+
+            print(info)
+            print(f'solar power mean {info["solar"][info["solar"]>0].mean():.0f}W')
 
         elif what == "sources":
             info = await sky.get_sources_info()

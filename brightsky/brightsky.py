@@ -105,9 +105,10 @@ class Sky:
         
         df = pd.DataFrame(response)
         df.set_index('timestamp', inplace = True)
-        solardf  = df.loc[:,['solar',
+        solardf  = df.loc[:,['sunshine',
                              'cloud_cover',
-                             'temperature'
+                             'temperature',
+                             'solar'
                              ]
                           ]
         return solardf

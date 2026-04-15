@@ -43,8 +43,8 @@ from brightsky import (
 )
 
 EPS = 0.001      # 0.1, 0.01 ..
-SCALE = 0.650    # 0.6, 0.75, 1.00
-EXPONENT = 3.0  # 1.0, 2.0, 3.0
+SCALE = 0.750    # 0.6, 0.75, 1.00
+EXPONENT = 3.41  # 1.0, 2.0, 3.0
 PERCENT = 0.01
 
 """ Returns the scale factor to calc the power at a given cloud
@@ -79,10 +79,12 @@ async def get_sky_pool_24h(
 ) -> Optional[pd.DataFrame]:
     
     sky = Sky(lat, lon, castday, tz)
-    df = (await sky.get_solar_info()).iloc[:,1:].fillna(0.0)
+    df = (await sky.get_solar_info())
     if df is None:
         logger.error(f'No sky features for {castday}')
         return None
+
+    df.set_index(pd.to_datetime(df.index), inplace = True)
     return df
 
 
@@ -108,7 +110,6 @@ async def get_sky_info_24h(
         logger.warning(f'Unable to retrieve sky pools! Returning defaults')
         return 24*[100], 24*[100], 24*[100] 
 
-    
     # The cast day the last in the list
     castdaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
     if castdaysky is None:
