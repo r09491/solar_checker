@@ -43,8 +43,8 @@ from brightsky import (
 )
 
 EPS = 0.001      # 0.1, 0.01 ..
-SCALE = 0.750    # 0.6, 0.75, 1.00
-EXPONENT = 3.41  # 1.0, 2.0, 3.0
+SCALE = 0.850    # 0.6, 0.75, 1.00
+EXPONENT = 3.0   # 1.0, 2.0, 3.0
 PERCENT = 0.01
 
 """ Returns the scale factor to calc the power at a given cloud
@@ -938,6 +938,24 @@ async def predict_naive_check(
         days, lat, lon
     )
 
+    # tunnelsbpis = pd.concat(tunnellogs)["SBPI"]
+    # tunnelsbpishourly = tunnelsbpis.groupby(tunnelsbpis.index.hour).mean()
+    # tunnelhourly = pd.DataFrame(tunnelsbpishourly)
+    
+    # def power_to_cover(
+    #         p: f64,
+    #         k: f64,
+    #         n: f64,
+    #         pmax : f64 = 880
+    # ) -> f64:
+    #     return min(100, 100*(((pmax-p)/((k/100)*pmax))**(1/n)))
+
+    # for N in range(2,3+1,1):
+    #     for K in range(80,85+5,5):
+    #         rcovershourly = [ power_to_cover(p, K, N) for p in tunnelsbpishourly]
+    #         tunnelhourly.insert(tunnelhourly.shape[1], f'RCOVER.{N}.{K}', rcovershourly)
+    # tunnelhourly.insert(tunnelhourly.shape[1], f'TCOVER', tunneldaycover)        
+    # print(tunnelhourly[tunnelhourly["SBPI"]>10])
 
     # The mean of all tunnel days
     tunnel_w = np.array(tunneldaylog["SBPI"])
