@@ -18,6 +18,7 @@ logger = logging.getLogger(os.path.basename(sys.argv[0]))
 
 import numpy as np
 import pandas as pd
+pd.options.display.float_format = '{:,.0f}'.format
 
 from dataclasses import dataclass
 
