@@ -132,7 +132,7 @@ def get_home_load_delay() -> int:
     now = datetime.datetime.now().time()
     is_day = SBPL_PANEL_DAY_START <= now < SBPL_PANEL_DAY_END
     sbpl_delay = SBPL_PANEL_DELAY if is_day else SBPL_BATTERY_DELAY 
-    logger.debug(f'SBPL delay {sbpl_delay}s')
+    logger.info(f'SBPL delay {sbpl_delay}s')
     return sbpl_delay
 
 async def set_home_load_power(
@@ -146,31 +146,31 @@ async def set_home_load_power(
 
     recall = 0
     while True:
-        logger.debug(f'Waiting for home load')
+        logger.info(f'Waiting for home load')
         sbpl_new = await q.get()
         if sbpl_new is None:
             logger.warning(f'SBPL illegal value')
             continue
-        logger.debug(f'SBPL {sbpl_new}W dequeued')
+        logger.info(f'SBPL {sbpl_new}W dequeued')
 
         await q.put(sbpl_new) # Block
-        logger.debug(f'SBPL {sbpl_new}W load received')
+        logger.info(f'SBPL {sbpl_new}W load received')
 
         is_load = (((abs(sbpl_new - sbpl_set) >SMP_ZERO) and
                    (abs(sbpl_new - sbpl_old) >SMP_ZERO))) # New load
         if is_load:
             recall = 0
-            logger.debug(f'SBPL {sbpl_new}W sent to SB')
+            logger.info(f'SBPL {sbpl_new}W sent to SB')
             is_done = await sb.set_home_load(sbpl_new)
-            logger.debug(f'SBPL {"set" if is_done else "kept"} in SB')
+            logger.info(f'SBPL {"set" if is_done else "kept"} in SB')
 
         else: #Avoid future 'kept' messages
             recall += 1
-            logger.debug(f'SBPL {sbpl_new}W load skipped')
+            logger.info(f'SBPL {sbpl_new}W load skipped')
             sbpl_new = sbpl_set # Keep the first
-            logger.debug(f'SBPL {sbpl_new}W load refixed')
+            logger.info(f'SBPL {sbpl_new}W load refixed')
 
-            logger.debug(f'Cannot zeroise @ {recall}! Manage devices!')
+            logger.info(f'Cannot zeroise @ {recall}! Manage devices!')
 
         sbpl_old = sbpl_new
             
@@ -183,9 +183,9 @@ async def set_home_load_power(
 
         if is_done:
             sbpl_delay = get_home_load_delay() 
-            logger.debug(f'--> Block setting "{sbpl_delay}s"')
+            logger.info(f'--> Block setting "{sbpl_delay}s"')
             await asyncio.sleep(sbpl_delay) #Wait
-            logger.debug(f'<-- Unblock setting "{sbpl_delay}s"')
+            logger.info(f'<-- Unblock setting "{sbpl_delay}s"')
             sbpl_set = sbpl_new
             is_done = False
         
@@ -218,12 +218,12 @@ async def schedule(
 
         now = time.time()
         
-        logger.debug(f'Waiting for power values')
+        logger.info(f'Waiting for power values')
         smp_new, ivp_new = await asyncio.gather(sm_q.get(), iv_q.get())
-        logger.debug(f'SMP {smp_new}W, IVP {ivp_new}W dequeued ')
+        logger.info(f'SMP {smp_new}W, IVP {ivp_new}W dequeued ')
 
-        logger.debug(f'SMP_NEW  {smp_new:4.0f}  {ivp_new:4.0f}  IVP_NEW')
-        logger.debug(f'SMP_OLD  {smp_old:4.0f}  {ivp_old:4.0f}  IVP_OLD')
+        logger.info(f'SMP_NEW  {smp_new:4.0f}  {ivp_new:4.0f}  IVP_NEW')
+        logger.info(f'SMP_OLD  {smp_old:4.0f}  {ivp_old:4.0f}  IVP_OLD')
 
         
         cycle += 1 
@@ -235,7 +235,7 @@ async def schedule(
         smp_sum += smp_new
         smp_cycle_mean = int(smp_sum/cycle)
         smp_cycle_error = smp_cycle_mean
-        logger.debug(f'SMP cyle delta {smp_cycle_error}W @ {cycle}')
+        logger.info(f'SMP cyle delta {smp_cycle_error}W @ {cycle}')
 
         # The IVP error is negative if the SB cannot provide the
         # power the load was set to. Obviously one reason may be
@@ -244,7 +244,7 @@ async def schedule(
         ivp_sum += ivp_new
         ivp_cycle_mean = int(ivp_sum/cycle)
         ivp_cycle_error = ivp_cycle_mean - sbpl_old 
-        logger.debug(f'IVP cyle delta {ivp_cycle_error}W @ {cycle}')
+        logger.info(f'IVP cyle delta {ivp_cycle_error}W @ {cycle}')
 
         # Both errors indicate losses if the observed power
         # outputs do not meet the logic correct requested load
@@ -254,30 +254,30 @@ async def schedule(
         
         if (ivp_new <= IVP_ZERO):
             if ((sbpl_old > SBPL_MIN)):
-                logger.debug(f'IVP zero! Oh no!')
+                logger.info(f'IVP zero! Oh no!')
                 sbpl_new = SBPL_MIN
                 sbp_news = [] # Use load! No Average
             else:
-                logger.debug(f'IVP rezero! No setting!')
+                logger.info(f'IVP rezero! No setting!')
 
         elif (smp_new >SBPL_BURST):
             if ((sbpl_old < SBPL_BURST)):
-                logger.debug(f'SMP burst! Caution!')
+                logger.info(f'SMP burst! Caution!')
                 sbpl_new = SBPL_MAX
                 sbp_news = [] # Use load! No Average
             else:
-                logger.debug(f'SMP reburst! No setting!')
+                logger.info(f'SMP reburst! No setting!')
             
         elif abs(smp_new) <SMP_ZERO:
-            logger.debug(f'SMP small! No setting! Is {sbpl_old}W! Bravo!')
+            logger.info(f'SMP small! No setting! Is {sbpl_old}W! Bravo!')
 
             ### The goals is achieved ###
 
         elif (abs(ivp_new - ivp_old) >IVP_STEP):
-            logger.debug(f'IVP change large! Delay setting!')
+            logger.info(f'IVP change large! Delay setting!')
 
         elif (abs(smp_new - smp_old) >SMP_STEP):
-            logger.debug(f'SMP change large! Delay setting!')
+            logger.info(f'SMP change large! Delay setting!')
 
         else:
             ivp_goal = int(ivp_new)
@@ -285,19 +285,19 @@ async def schedule(
             sbpl_new = min(max(sbp_goal, SBPL_MIN), SBPL_MAX)
             sbpl_news = (sbpl_news + [sbpl_new])[-LOADS_N:] 
             sbpl_new = int(sum(sbpl_news)/len(sbpl_news))
-            logger.debug(f'SBPL new ==> {sbpl_new}W @ {len(sbpl_news)}')
+            logger.info(f'SBPL new ==> {sbpl_new}W @ {len(sbpl_news)}')
 
             if abs(sbpl_new - sbpl_old) < SMP_ZERO:
-                logger.debug(f'SBPL same! No setting! Devices?')
+                logger.info(f'SBPL same! No setting! Devices?')
                 sbpl_new = None
 
         if sbpl_new is not None:
-            logger.debug(f'SBPL last ==> {sbpl_new}W')
+            logger.info(f'SBPL last ==> {sbpl_new}W')
 
-            logger.debug(f'SBPL {sbpl_new}W queued')
+            logger.info(f'SBPL {sbpl_new}W queued')
             if sb_q.full():  # Skip new load
                 sbpl_new = await sb_q.get()
-                logger.debug(f'Old setting {sbpl_new}W in progress! Wait!')
+                logger.info(f'Old setting {sbpl_new}W in progress! Wait!')
             await sb_q.put(sbpl_new)
             
             # Reset the statistics
