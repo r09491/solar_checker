@@ -979,14 +979,20 @@ async def predict_naive_check(
     # Real energy per day
     real_wh = np.array([np.sum(real[h_mask]) for real in real_w])
 
+    h = len(h_mask)
+    h_mae = np.array((cast_wh-real_wh)/h)
+    h_mse = np.array(((cast_wh-real_wh)**2)/h)
+    h_rmse =np.sqrt(h_mse)
+
     df = pd.DataFrame.from_dict({
         "DAY": days[:-1],
-        "CAST": cast_wh,
         "REAL": real_wh,
-        "ABS ERR": cast_wh-real_wh,
-        "H": len(h_mask),
-        "H ERR": np.sqrt((cast_wh-real_wh)**2)/len(h_mask),
+        "CAST": cast_wh,
+        "H": h,
+        "H MAE": h_mae,
+        # "H MSE": h_mse,
+        "H RMSE": h_rmse,
         "H COVER": [np.mean(tc.iloc[h_mask]) for tc in tunnelcovers]
     })
     
-    return df
+    return df.sort_values(by="H RMSE", ascending = True)

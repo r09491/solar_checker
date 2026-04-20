@@ -41,7 +41,7 @@ async def output_hour(
         caststart: pd.Timestamp
 ) -> None:
     
-    pd.options.display.float_format = '{:,.1f}'.format
+    pd.options.display.float_format = '{:,.0f}'.format
 
     predicttables = await get_predict_tables(casthours)
 
