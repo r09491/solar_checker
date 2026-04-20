@@ -5,13 +5,13 @@
 {% block content %}
 
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict_naive'>Today Live</a>&nbsp;&nbsp
+  <!-- <a href='/plot_predict_naive_average'>Today Average</a>&nbsp;&nbsp;&nbsp;&nbsp -->
   <a href='/plot_predict_naive/{{ today }}'>Today Cloud</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive'>Today Live</a>&nbsp;&nbsp
   <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp
-
-  <a href='/plot_predict/{{ today }}/today'>Today Cast</a>&nbsp;&nbsp
-  <a href='/plot_predict/{{ today }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ today }}/total'>Total Cast</a>
+  <!-- <a href='/plot_predict/{{ today }}/today'>Today Cast</a>&nbsp;&nbsp -->
+  <!-- <a href='/plot_predict/{{ today }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp; -->
+  <!-- <a href='/plot_predict/{{ today }}/total'>Total Cast</a> -->
 </div>
 
 <div style='display:flex;justify-content:center;'>
@@ -33,7 +33,7 @@
     <!-- <a href='/plot_predict_naive_average'>Average Day</a>&nbsp;&nbsp&nbsp;&nbsp -->
     <a href='/plot_predict_naive/{{ today }}/blue'>Blue Day</a>&nbsp;&nbsp&nbsp;&nbsp
     <a href='/plot_predict_naive/{{ today }}/white'>White Day</a>&nbsp;&nbsp&nbsp;&nbsp
-    <a href='/plot_predict_naive/{{ rodayday }}/grey'>Grey Day</a>&nbsp;&nbsp&nbsp;&nbsp
+    <a href='/plot_predict_naive/{{ today }}/grey'>Grey Day</a>&nbsp;&nbsp&nbsp;&nbsp
     {% endif %}
   </div>
 </div>

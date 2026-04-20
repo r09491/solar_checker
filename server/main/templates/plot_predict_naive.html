@@ -9,21 +9,14 @@
 {% block content %}
 
 <div style='display:flex;justify-content:center;'>
-  {% if castday is none %}
-  <a href='/plot_predict_naive/{{ today }}'>Today Cloud</a>&nbsp;&nbsp
-  {% else %}
-  <a href='/plot_predict_naive'>Today Live</a>&nbsp;&nbsp
+  <a href='/plot_predict_naive_average'>Today Average</a>&nbsp;&nbsp;&nbsp;&nbsp
+  {% if castday is none or cover is not none %}
+  <a href='/plot_predict_naive/{{ today }}'>Today Cloud</a>&nbsp;&nbsp;&nbsp;&nbsp
   {% endif %}
-  <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp
-  {% if castday is none %}
-  <a href='/plot_predict/{{ today }}/today'>Today Cast</a>&nbsp;&nbsp
-  <a href='/plot_predict/{{ today }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ today }}/total'>Total Cast</a>
-  {% else %}
-  <a href='/plot_predict/{{ castday }}/today'>Today Cast</a>&nbsp;&nbsp
-  <a href='/plot_predict/{{ castday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ castday }}/total'>Total Cast</a>
+  {% if castday is not none %}
+  <a href='/plot_predict_naive'>Today Live</a>&nbsp;&nbsp;&nbsp;&nbsp
   {% endif %}
+  <a href='/plot_ai_cast'>Today AI</a>&nbsp;&nbsp;&nbsp;&nbsp
 </div>
 
 <div style='display:flex;justify-content:center;'>
@@ -39,19 +32,19 @@
     {% if castday is none %}
     <h1 style='margin:4px;'>Cast Live {{today}}</h1>
     {% elif cover == 'blue' %}
-    <h1 style='margin:4px;'>Blue Day {{castday}}</h1>
+    <h1 style='margin:4px;'>Blue Day</h1>
     {% elif cover == 'white' %}
-    <h1 style='margin:4px;'>White Day {{castday}}</h1>
+    <h1 style='margin:4px;'>White Day</h1>
     {% elif cover == 'grey' %}
-    <h1 style='margin:4px;'>Grey Day {{castday}}</h1>
+    <h1 style='margin:4px;'>Grey Day</h1>
     {% else %}
     <h1 style='margin:4px;'>Cast Cloud {{castday}}</h1>
     {% endif %}
   </div>
 
   <div style='margin:30px;width:90px;text-align:center;'> 
-    {% if castday is none %}
-    &nbsp;&nbsp
+    {% if castday is none or cover is not none%}
+    &nbsp;&nbsp;&nbsp;&nbsp
     {% else %}
     <a href='/plot_predict_naive/{{casttomorrow}}'>1></a>
     {% endif %}
@@ -60,8 +53,7 @@
 
 <div style='display:flex;justify-content:center;'>
   <div style='margin:1px;width:360px;text-align:center;'>
-    {% if castday is not none %}
-    <a href='/plot_predict_naive_average'>Average Day</a>&nbsp;&nbsp&nbsp;&nbsp
+    {% if cover is not none %}
     {% if cover != 'blue' %}
     <a href='/plot_predict_naive/{{ castday }}/blue'>Blue Day</a>&nbsp;&nbsp&nbsp;&nbsp
     {% endif %}

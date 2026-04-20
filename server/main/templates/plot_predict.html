@@ -6,11 +6,12 @@
 
 {% if what == 'Today' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict_naive/{{ logday }}'>Today Live</a>&nbsp;&nbsp
-  <a href='/plot_predict_naive/{{ logday }}'>Today Cloud</a>&nbsp;&nbsp
-  <a href='/plot_ai_cast/{{ logday }}'>Today AI</a>&nbsp;&nbsp
-  <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp;
-  <a href='/plot_predict/{{ logday }}/total'>Total Cast</a>
+  <a href='/plot_predict_naive_average'>Today Average</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <a href='/plot_predict_naive/{{ logday }}'>Today Cloud</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <a href='/plot_predict_naive/{{ logday }}'>Today Live</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <a href='/plot_ai_cast/{{ logday }}'>Today AI</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <!-- <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>&nbsp;&nbsp; -->
+  <!-- <a href='/plot_predict/{{ logday }}/total'>Total Cast</a> -->
 </div>
 
 <h1 style='margin:4px;'>Today Cast</h1>
@@ -18,9 +19,9 @@
 
 {% if what == 'Tomorrow' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict_naive/{{ logday }}'>Today Naive</a>&nbsp;&nbsp
-  <a href='/plot_ai_cast/{{ logday }}'>Today AI</a>&nbsp;&nbsp
-  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict_naive/{{ logday }}'>Today Naive</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <a href='/plot_ai_cast/{{ logday }}'>Today AI</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;&nbsp;&nbsp
   <a href='/plot_predict/{{ logday }}/total'>Total Cast</a>
 </div>
 
@@ -29,9 +30,9 @@
 
 {% if what == 'Total' %}
 <div style='display:flex;justify-content:center;'>
-  <a href='/plot_predict_naive/{{ logday }}'>Today Naive</a>&nbsp;&nbsp
-  <a href='/plot_ai_cast/{{ logday }}'>Today AI</a>&nbsp;&nbsp
-  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;
+  <a href='/plot_predict_naive/{{ logday }}'>Today Naive</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <a href='/plot_ai_cast/{{ logday }}'>Today AI</a>&nbsp;&nbsp;&nbsp;&nbsp
+  <a href='/plot_predict/{{ logday }}/today'>Today Cast</a>&nbsp;&nbsp;&nbsp;&nbsp
   <a href='/plot_predict/{{ logday }}/tomorrow'>Tomorrow Cast</a>
 </div>
 
