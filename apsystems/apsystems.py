@@ -54,7 +54,7 @@ class ReturnOutputData:
 
 class Inverter:
 
-    def __init__(self, ip_address: str, port: int = 8050, timeout: int = 10):
+    def __init__(self, ip_address: str, port: int = 8050, timeout: int = 5):
         self.base_url = f"http://{ip_address}:{port}"
         self.timeout = timeout
 
@@ -112,7 +112,10 @@ class Inverter:
         except:
             respone = None
         data = response.get("data") if response else None
-        return ReturnOutputData(**data) if data else None
+        if ((data is None) or
+            ('rtime' in data.keys())):
+            return None
+        return ReturnOutputData(**data)
 
     
     async def get_total_output(self) -> Optional[float]:
