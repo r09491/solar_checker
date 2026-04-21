@@ -980,7 +980,7 @@ async def predict_naive_check(
     real_wh = np.array([np.sum(real[h_mask]) for real in real_w])
 
     h = len(h_mask)
-    h_mae = np.array((cast_wh-real_wh)/h)
+    h_mae = np.array(np.abs(cast_wh-real_wh)/h)
     h_mse = np.array(((cast_wh-real_wh)**2)/h)
     h_rmse =np.sqrt(h_mse)
 
