@@ -110,12 +110,16 @@ class Inverter:
         try:
             response = await self._request("getOutputData")
         except:
-            respone = None
-        data = response.get("data") if response else None
-        if ((data is None) or
-            ('rtime' in data.keys())):
             return None
-        return ReturnOutputData(**data)
+        
+        data = response if response is None else response.get("data")
+        
+        try:
+            output = data if data is None else ReturnOutputData(**data)
+        except TypeError:
+            return None
+        
+        return output
 
     
     async def get_total_output(self) -> Optional[float]:
