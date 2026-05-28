@@ -65,6 +65,7 @@ class Sky:
             logger.error('Raised unknown exception')
             return None
         if response is None:
+            logger.error('No response for sky info')
             return None
         
         df = pd.DataFrame(response) 
@@ -80,6 +81,7 @@ class Sky:
             logger.error('Raised unknown exception')
             return None
         if response is None:
+            logger.error('No response for AI features')
             return None
 
         df = pd.DataFrame(response) 
@@ -101,6 +103,7 @@ class Sky:
             logger.error('Raised unknown exception')
             return None            
         if response is None:
+            logger.error('No response for solar info')
             return None
         
         df = pd.DataFrame(response)
@@ -130,6 +133,7 @@ class Sky:
             logger.error('Raised unknown exception')
             return None
         if response is None:
+            logger.error('No response for sources')
             return None
         
         df = pd.DataFrame(response)

@@ -37,20 +37,20 @@ async def main(sky: Sky, what: str) -> int:
         sunshinetotal = None
         suncovermean = None
         if what == "sky":
-            info = await sky.get_solar_info()
-            print(info)
+            info = await sky.get_sky_info()
+            
             sunshine = info['sunshine']
             suninfo = info[sunshine>0]
             
-            sunshinetotal = suninfo['sunshine'].sum()
-            suncovermean = suninfo['cloud_cover'].mean()
-
             # Remove time zone
             index = np.array([t64_from_iso(t[:-6]) for t in suninfo.index])
             suninfo.set_index(index, inplace = True)
             print(suninfo)
 
-            print(f'Total sunshine: "{sunshinetotal/60:.0f}h"')
+            sunshinetotal = suninfo['sunshine'].sum()
+            suncovermean = suninfo['cloud_cover'].mean()
+
+            print(f'Total sunshine: "{sunshinetotal/60+1:.0f}h"')
             print(f'Mean cloud cover: "{suncovermean:.0f}%"')
             print(f'Mean cloud free: "{100 - suncovermean:.0f}%"')
             
@@ -59,26 +59,26 @@ async def main(sky: Sky, what: str) -> int:
             index = np.array([t64_from_iso(t[:-6]) for t in info.index])
             info.set_index(index, inplace = True)
 
-            info['solar'] *= 1000
+            info['solar'] *= 240*2
+
+            solar = info['solar']
+            info = info[solar>0]
+
             info['solar total'] = info['solar'].cumsum()
             
             print(info)
-            print(f'solar power mean {info["solar"][info["solar"]>0].mean():.0f}W')
+            print(f'solar power mean {info["solar"].mean():.0f}W')
             print()
 
             info = info.resample(
                 '3h', label='left', closed='left'
             ).mean() 
 
-            print(info)
-            print(f'solar power mean {info["solar"][info["solar"]>0].mean():.0f}W')
-            print()
-            
-            solar = info['solar']
-            info = info[solar>0]
+            info['solar total'] = 3 * info['solar'].cumsum()
 
             print(info)
-            print(f'solar power mean {info["solar"][info["solar"]>0].mean():.0f}W')
+            print(f'solar power mean {info["solar"].mean():.0f}W')
+            print()
 
         elif what == "sources":
             info = await sky.get_sources_info()

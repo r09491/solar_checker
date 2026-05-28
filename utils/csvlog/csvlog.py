@@ -152,7 +152,7 @@ def _get_log(
     # Cleanup
     time = samples['TIME'].apply(t64_first)
     # All colums but TIME are float
-    columns = samples.iloc[:,1:].astype(float)        
+    columns = samples.iloc[:,1:].astype(f64)        
 
     # TIME must not be index!
     

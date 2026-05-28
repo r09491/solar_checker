@@ -50,21 +50,26 @@ PERCENT = 0.01
 """ Returns the scale factor to calc the power at a given cloud
 coverage (adapted from formula by NASA) """
 async def cover_to_power(
-        cover: np.array, # 0 to 100
-        exponent: float = EXPONENT,
-        scale: float = SCALE
-) -> np.array:
+        cover: f64s, # 0 to 100
+        exponent: f64 = EXPONENT,
+        scale: f64 = SCALE
+) -> f64s:
+    # Replace None by full cloudcover
+    coverisnone = cover==None
+    if coverisnone.any():
+        logger.warning(f'Replacing undefined cloud cover values with default')
+    cover[coverisnone] = 57 # average cloud coverage
     return 1.0-scale*(( PERCENT*cover )**exponent)
 
 """ Returns a list of ratios to calculate power values from source
 power values """
 async def power_ratios(
-        to: np.array, # 0 to 100
-        frm: np.array, # 0 to 100
-        exponent: float = EXPONENT,
-        scale: float = SCALE,
-        eps: float = EPS 
-) -> np.array:
+        to: f64s, # 0 to 100
+        frm: f64s, # 0 to 100
+        exponent: f64 = EXPONENT,
+        scale: f64 = SCALE,
+        eps: f64 = EPS 
+) -> f64s:
     return (((await cover_to_power(to)) + eps) /
             ((await cover_to_power(frm)) + eps))
 
@@ -73,8 +78,8 @@ SKY_TZ='Europe/Berlin'
 """ Returns all sky data for each hour in the castday """
 async def get_sky_pool_24h(
         castday: str,
-        lat: float,
-        lon: float,
+        lat: f64,
+        lon: f64,
         tz: str = SKY_TZ 
 ) -> Optional[pd.DataFrame]:
     
@@ -84,18 +89,20 @@ async def get_sky_pool_24h(
         logger.error(f'No sky features for {castday}')
         return None
 
+    # Brightsky does not provide sunshine and solar always. Drop!  
+    df.drop(columns=['sunshine', 'solar'], inplace=True)
+      
     df.set_index(pd.to_datetime(df.index), inplace = True)
     return df
 
 
-""" Return the power ratio of the sky in % for each hour from the
-castday to today and the temeperatures of today """
+""" Return cloud coverages and temperatures """
 async def get_sky_info_24h(
         castdays: List[str],
         lat: f64,
         lon: f64,
         tz: str = SKY_TZ
-)  -> (List[pd.Dataframe], np.array, np.array, np.array):
+)  -> (List[pd.Dataframe], f64s, f64s, f64s):
 
     skytasks = [
         asyncio.create_task(
@@ -127,6 +134,10 @@ async def get_sky_info_24h(
     temperatures = temperatures[:min(len(temperatures),24)]
     if len(temperatures) != 24:  # Only 24h
         temperatures = 24*[15]
+    temperaturesnan = np.isnan(temperatures)
+    if temperaturesnan.any():
+        logger.warning(f'Replacing undefined temperature values with default')
+    temperatures[temperaturesnan] = 15
     
     # Based on the ratio of 'castdaycover' and 'tunneldaycover' the
     # power values of castday may be predicted by aopplying the
@@ -156,10 +167,15 @@ async def get_sky_info_24h(
         if len(tunneldaycover) != 24:  # Only 24h
             tunneldaycover = 24*[100]
 
+    castdaycovernan = np.isnan(castdaycover)
+    if castdaycovernan.any():
+        logger.warning(f'Replacing undefined cloud cover values with average')
+    castdaycover[castdaycovernan] = tunneldaycover[castdaycovernan]
+
     return (tunnelcovers,
-            np.array(temperatures),
-            np.array(tunneldaycover),
-            np.array(castdaycover))
+            temperatures.astype(f64),
+            tunneldaycover.astype(f64),
+            castdaycover.astype(f64))
 
 
 """
@@ -673,10 +689,10 @@ async def predict_naive_today(
         return today, tunneldaylog, realstop, caststart
 
     # The sky cast starts with the tunneldaylog to be scaled with sky
-    # factors for the whole day. 
+    # factors for the whole day.
     castlog = tunneldaylog
-    castlog.loc[:, "SBPI"] *= skyratios
-
+    castlog["SBPI"] *= skyratios.values
+    
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1] if len(todaylog)>0 else None
 
@@ -715,7 +731,7 @@ async def predict_naive_today(
         plug_ratio = plug_ratio # Avoid div by zero
     )
 
-    
+
     #Join the current real data with the cast data
     castlog = pd.concat([todaylog[:realstop],restlog])
 
@@ -768,6 +784,7 @@ async def predict_naive_custom(
         logger.info(f'Using custom cloud coverage')
         castdaycover = cover
 
+    
     # Calculate the ratios for prediction. The sky ratio
     # mulitplied with the today sky factor returns the today
     # irridiance.
@@ -783,13 +800,13 @@ async def predict_naive_custom(
     tunneldaylog.insert(tunneldaylog.shape[1], "CCOV", castdaycover)
 
     # Add the tunnelcover column
-    tunneldaylog.insert(tunneldaylog.shape[1], "TCOV", tunneldaycover)
+    tunneldaylog.insert(tunneldaylog.shape[1], "TCOV", tunneldaycover.values)
 
     if (("SBPI" in tunneldaylog)):
     
         # Update the irridiance tunnel day average to expected aky
         # conditions
-        tunneldaylog.loc[:,"SBPI"] *= skyratios
+        tunneldaylog["SBPI"] *= skyratios.values
 
         # Keep SOC
         tunnelsoc = tunneldaylog["SBSB"].iloc[0]
@@ -958,30 +975,30 @@ async def predict_naive_check(
     # print(tunnelhourly[tunnelhourly["SBPI"]>10])
 
     # The mean of all tunnel days
-    tunnel_w = np.array(tunneldaylog["SBPI"])
+    tunnel_w = tunneldaylog["SBPI"]
 
     # THe real power observed for each tunnel day
-    real_w =  np.array([tl["SBPI"] for tl in tunnellogs])
+    real_w =  [tl["SBPI"] for tl in tunnellogs]
 
     # The predicted power for each tunnel day using cover
-    cast_w = np.array([
+    cast_w = [
         await power_ratios(
-            np.array(realcover),
-            np.array(tunneldaycover)
+            realcover.values,
+            tunneldaycover.values
         )*tunnel_w for realcover in tunnelcovers
-    ])
+    ]
 
     # Hours of items with irrdiance
     h_mask = np.where(tunnel_w>0)[0]
 
     # Cast energy per day
-    cast_wh = np.array([np.sum(cast[h_mask]) for cast in cast_w])
+    cast_wh = np.array([np.sum(cast.iloc[h_mask]) for cast in cast_w], dtype=f64)
     # Real energy per day
-    real_wh = np.array([np.sum(real[h_mask]) for real in real_w])
+    real_wh = np.array([np.sum(real.iloc[h_mask]) for real in real_w], dtype=f64)
 
     h = len(h_mask)
-    h_mae = np.array(np.abs(cast_wh-real_wh)/h)
-    h_mse = np.array(((cast_wh-real_wh)**2)/h)
+    h_mae = np.abs(cast_wh-real_wh)/h
+    h_mse = ((cast_wh-real_wh)**2)/h
     h_rmse =np.sqrt(h_mse)
 
     df = pd.DataFrame.from_dict({
