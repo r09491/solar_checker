@@ -96,7 +96,7 @@ async def get_sample_pool(
     if t is None:
         logger.error(f'No TIME samples für {logday}')
         return None
-        
+
     t = pd.DatetimeIndex(t).tz_localize(logtz, ambiguous = 'NaT')
 
     sbsb *=100
@@ -104,12 +104,12 @@ async def get_sample_pool(
     df = pd.DataFrame(
         data = {
             'TIME':t,
-            'hour':t.hour,
-            'minute':t.minute,
-            'month':t.month,
-            'year':t.year,
-            'day_of_year':t.day_of_year,
-            'date':t.date.astype(str),
+            # 'hour':t.hour,
+            # 'minute':t.minute,
+            # 'month':t.month,
+            # 'year':t.year,
+            # 'day_of_year':t.day_of_year,
+            # 'date':t.date.astype(str),
             'SBPI':sbpi,
             'SBSB':sbsb,
             'SBPB':sbpb,
@@ -118,8 +118,20 @@ async def get_sample_pool(
         }
     ).set_index('TIME')
 
-    return df[~df.index.duplicated(keep='last')]
+    df_1h = df.resample("1h", label='left', closed='left').mean()
 
+    t = df_1h.index
+
+    df_1h['hour'] = t.hour
+    #df_1h['minute'] = t.minute
+    df_1h['month'] = t.month
+    df_1h['year'] = t.year
+    df_1h['day_of_year'] = t.day_of_year
+
+    #df_1h['date'] = t.date.astype(str),
+
+    #return df_1h[~t.duplicated(keep='last')]
+    return df_1h
 
 """ """
 async def get_position_pool(
@@ -170,7 +182,7 @@ async def get_sky_pool(
         logger.error(f'Skipped sky features for "{logday}"')
         return None
     
-    df = df.resample("1min").interpolate()
+    #df = df.resample("1min").interpolate()
     return df
 
 
@@ -256,14 +268,10 @@ async def get_train_pools(
         logger.error('Unable to create training pools')
         return None
 
-    """
-    pool_first = pd.to_datetime(
-        pool.index[pool['is_daylight']==1][0]
-    )
-    pool = pool[pool_first:]
-    """
-    pool = pool[pool['is_daylight']==1]
-    
+    # Uncomment daylight only
+    #pool = pool[pool['is_daylight']==1]
+
+
     #Extend the SBPI base features for time series
     for lag in SBPI_FEATURES_lags:
         pool[f'SBPI_lag{lag}'] = pool['SBPI'].shift(lag)
@@ -378,11 +386,11 @@ async def get_predict_pool(
         data = {
             'TIME':t,
             'hour':t.hour,
-            'minute':t.minute,
+            #'minute':t.minute,
             'month':t.month,
             'year':t.year,
             'day_of_year':t.day_of_year,
-            'date':t.date.astype(str),
+            #'date':t.date.astype(str),
         }
     ).set_index('TIME')
 
@@ -394,15 +402,11 @@ async def get_predict_pool(
         logger.error (f'Skipped pool for "{day}"')
         return None
 
-    """
-    day_pool_first = pd.to_datetime(
-        day_pool.index[day_pool['is_daylight']==1][0]
-    )
-    day_pool = day_pool[day_pool_first:]
-    """
+
+    # Uncomment for daylight only
+    #day_pool = day_pool[day_pool['is_daylight']==1]
     
-    day_pool = day_pool[day_pool['is_daylight']==1]
     day_pool = day_pool.dropna().tz_convert(tz).reset_index()
     logger.info (f'Have predict pool for "{day}" with "{len(day_pool)}" entries.')
-
+          
     return day_pool.rename(columns={'index':'TIME'})

@@ -76,14 +76,14 @@ async def predict_sbpi_models(
     pool['SBPI_below_40']=(sbpi < 40).astype(int)
     pool['SBPI_above_100']=(sbpi > 100).astype(int)
 
-    pool.loc[
-        pool['SBPI']<0, 'SBPI'
-    ] = 0
-    """
+    #pool.loc[
+    #    pool['SBPI']<10, 'SBPI'
+    #] = 0
+
     pool.loc[
         pool['is_daylight']==0, 'SBPI'
     ] = 0
-    """
+    
     
 """ Updates SBSB in the pool """
 async def predict_sbsb_models(

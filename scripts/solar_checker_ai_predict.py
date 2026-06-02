@@ -113,7 +113,7 @@ async def main(
     if pool is None:
         logger.error(f'Cast for day "{day}" failed')
         return -1
-
+    print(pool)
     pool.to_csv(f'{castsdir}/cast_{day}.csv')
     logger.info(f'Saved cast to "{castsdir}/cast_{day}.csv"')
 

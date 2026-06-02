@@ -1,6 +1,6 @@
 TIME_FEATURES = [
     'hour',
-    'minute',
+#    'minute',
     'month',
     'year',
     'day_of_year'

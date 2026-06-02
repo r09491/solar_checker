@@ -28,7 +28,7 @@ MODELDIR='/home/r09491/storage/solar_checker/aicast/models'
 
 LOGDIR='/home/r09491/storage/solar_checker'
 LOGPREFIX='solar_checker_latest'
-LOGAIWINDOW=28
+LOGAIWINDOW=45
 
 LAT, LON, TZ = 49.04885, 11.78333, 'Europe/Berlin'
 
