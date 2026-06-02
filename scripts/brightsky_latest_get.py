@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 __doc__="""
-Writes the latest sky, solar, and origin data to stdout
+Writes the latest sunshine, cloud, ai, and origin data to stdout
 """
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 __author__ = "r09491@gmail.com"
 
 import os
@@ -36,43 +36,37 @@ async def main(sky: Sky, what: str) -> int:
     try:
         sunshinetotal = None
         suncovermean = None
-        if what == "sky":
-            info = await sky.get_sky_info()
+        if what == "sunshine":
+            info = await sky.get_sunshine_info()
             sunshine = info['sunshine']
             suninfo = info[sunshine>0].copy()
 
-            index = (pd.to_datetime(suninfo.index))
-            suninfo.set_index(index, inplace = True)
-            print(suninfo)
+            if suninfo.empty:
+                print("No sunshine recorded")
+            else:
+                print(suninfo)
 
-            sunshinetotal = suninfo['sunshine'].sum()
-            suncovermean = suninfo['cloud_cover'].mean()
+                sunshinetotal = suninfo['sunshine'].sum()
+                suncovermean = suninfo['cloud_cover'].mean()
 
-            print(f'Total sunshine: "{sunshinetotal/60+1:.0f}h"')
-            print(f'Mean cloud cover: "{suncovermean:.0f}%"')
-            print(f'Mean cloud free: "{100 - suncovermean:.0f}%"')
+                print(f'Total sunshine: "{sunshinetotal/60+1:.0f}h"')
+                print(f'Mean cloud cover: "{suncovermean:.0f}%"')
+                print(f'Mean cloud free: "{100 - suncovermean:.0f}%"')
             
-        elif what == "solar":
-            info = await sky.get_solar_info()
-            sunshine = info['sunshine']
-            solarinfo = info[sunshine>0].copy()
-            index = (pd.to_datetime(solarinfo.index))
-            solarinfo.set_index(index, inplace = True)
-
-
-            solarinfo['solar'] *= 220*2
+        elif what == "cloud":
+            info = await sky.get_cloud_info()
+            print(info)
+            print()
             
-            solarinfo['solar total'] = solarinfo['solar'].cumsum()            
-            print(solarinfo)
-            print(f'solar power mean {solarinfo['solar'].mean():.0f}W')
+            cloudinfo = info.resample(
+                '3h', label='left', closed='left'
+            ).mean().interpolate()
+            print(cloudinfo)
             print()
 
-            solarinfo = solarinfo.resample(
-                '3h', label='left', closed='left'
-            ).mean() 
-            solarinfo['solar total'] = 3 * solarinfo['solar'].cumsum()
-            print(solarinfo)
-            print(f'solar power mean {solarinfo["solar"].mean():.0f}W')
+        elif what == "ai":
+            info = await sky.get_ai_feature_info()
+            print(info)
             print()
 
         elif what == "sources":
@@ -124,7 +118,7 @@ def parse_arguments() -> Script_Arguments:
     parser.add_argument('--tz', type = str, default='Europe/Berlin',
                         help = "TZ for forecast")
 
-    parser.add_argument('what', nargs='?', default='sky')
+    parser.add_argument('what', nargs='?', default='sunshine')
 
     args = parser.parse_args()
 
@@ -146,8 +140,8 @@ if __name__ == '__main__':
         logger.error('day for forcast is missing.')
         sys.exit(3)
 
-    if args.what not in ['sky', 'solar', 'sources']:
-        logger.error(f'Illegal command "{what}".')
+    if args.what is None or args.what not in ['sunshine', 'cloud', 'ai', 'sources']:
+        logger.error(f'Illegal command.')
         sys.exit(4)
     
     sky = Sky(args.lat,

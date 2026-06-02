@@ -76,7 +76,7 @@ async def power_ratios(
 
 SKY_TZ='Europe/Berlin'
 """ Returns all sky data for each hour in the castday """
-async def get_sky_pool_24h(
+async def get_cloud_pool_24h(
         castday: str,
         lat: f64,
         lon: f64,
@@ -84,20 +84,15 @@ async def get_sky_pool_24h(
 ) -> Optional[pd.DataFrame]:
     
     sky = Sky(lat, lon, castday, tz)
-    df = (await sky.get_solar_info())
+    df = (await sky.get_cloud_info())
     if df is None:
         logger.error(f'No sky features for {castday}')
         return None
-
-    # Brightsky does not provide sunshine and solar always. Drop!  
-    df.drop(columns=['sunshine', 'solar'], inplace=True)
-      
-    df.set_index(pd.to_datetime(df.index), inplace = True)
     return df
 
 
 """ Return cloud coverages and temperatures """
-async def get_sky_info_24h(
+async def get_cloud_info_24h(
         castdays: List[str],
         lat: f64,
         lon: f64,
@@ -106,7 +101,7 @@ async def get_sky_info_24h(
 
     skytasks = [
         asyncio.create_task(
-            get_sky_pool_24h(
+            get_cloud_pool_24h(
                 cd, lat, lon, tz
             )
         ) for cd in castdays]
@@ -115,25 +110,25 @@ async def get_sky_info_24h(
     skys = await asyncio.gather(*skytasks)
     if skys is None:
         logger.warning(f'Unable to retrieve sky pools! Returning defaults')
-        return 24*[100], 24*[100], 24*[100] 
+        return np.ndarray(24*[100]), np.ndarray(24*[100]), np.ndarray(24*[100]) 
 
     # The cast day the last in the list
-    castdaysky = skys[-1].reset_index(drop=True) if skys[-1] is not None else None
+    castdaysky = skys[-1] if skys[-1] is not None else None
     if castdaysky is None:
         logger.error(f'Unable to retrieve cast sky data! Returning defaults')
-        return 24*[100], 24*[100], 24*[100] 
+        return np.ndarray(24*[100]), np.ndarray(24*[100]), np.ndarray(24*[100]) 
 
     # The covers of the castday
-    castdaycover = castdaysky["cloud_cover"].values
+    castdaycover = castdaysky["cloud_cover"].to_numpy()
     castdaycover = castdaycover[:min(len(castdaycover),24)]
     if len(castdaycover) != 24:  # Only 24h
-        castdaycover = 24*[100]
+        castdaycover = np.ndarry(24*[100])
 
     #The temperatures of castday
-    temperatures = castdaysky["temperature"].values
+    temperatures = castdaysky["temperature"].to_numpy()
     temperatures = temperatures[:min(len(temperatures),24)]
     if len(temperatures) != 24:  # Only 24h
-        temperatures = 24*[15]
+        temperatures = np.ndarray(24*[15])
     temperaturesnan = np.isnan(temperatures)
     if temperaturesnan.any():
         logger.warning(f'Replacing undefined temperature values with default')
@@ -643,7 +638,7 @@ async def predict_naive_today(
     # Read the temeratures of today, the cloud cover for the tunneldaylog
     # (average day) and today. Default values are returned for
     # detected errors.
-    _, temperatures, tunneldaycover, todaycover = await get_sky_info_24h(
+    _, temperatures, tunneldaycover, todaycover = await get_cloud_info_24h(
         days, lat, lon
     )
 
@@ -776,7 +771,7 @@ async def predict_naive_custom(
 
     # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
-    _, temperatures, tunneldaycover, castdaycover = await get_sky_info_24h(
+    _, temperatures, tunneldaycover, castdaycover = await get_cloud_info_24h(
         days[:-1] + [castday], lat, lon
     )
 
@@ -951,7 +946,7 @@ async def predict_naive_check(
 
     # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
-    tunnelcovers,  _, tunneldaycover, _ = await get_sky_info_24h(
+    tunnelcovers,  _, tunneldaycover, _ = await get_cloud_info_24h(
         days, lat, lon
     )
 

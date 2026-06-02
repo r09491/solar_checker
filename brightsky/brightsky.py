@@ -1,5 +1,5 @@
 __doc__=""" A python library for Bright Sky weather data """
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 __author__ = "r09491@gmail.com"
 
 import logging
@@ -19,20 +19,31 @@ import pandas as pd
 
 from utils.typing import Optional, Any, Dict
 Return_Request = Optional[Dict[str, Any]]
-    
+
+TIMEOUT = 10
+
+#SOURCE_ID = '7201'
+#SOURCE_ID = '7201,61372'
+#SOURCE_ID = '61372,7201'
+TZ = 'Europe/Berlin'
+
+
 class Sky:
 
     _URL, _ENDPOINT = 'api.brightsky.dev', 'weather'
-    
+
     def __init__(self,
                  lat: float,
                  lon: float,
                  day: str,
-                 tz: str = 'UTC', timeout: int = 20):
+                 tz: str = TZ,
+                 #source_id: str = SOURCE_ID,
+                 timeout: int = TIMEOUT):
         
         self.url = f'https://{self._URL}/{self._ENDPOINT}?'
         self.url += f'lat={lat}&lon={lon}&'
         self.url += f'date={datetime.strptime(day, "%y%m%d").strftime("%Y-%m-%d")}&'
+        #self.url += f'source_id={SOURCE_ID}&'
         self.url += f'tz={tz}'
         self.timeout = timeout
 
@@ -55,66 +66,70 @@ class Sky:
         except:
             logger.error('Raised unknown exception')
             return None
-        return response['weather'] if response is not None else None
+        weather = response['weather'] if response is not None else None
+        return weather
 
 
-    async def get_sky_info(self) -> Optional[pd.DataFrame]:
+    async def get_sunshine_info(self) -> Optional[pd.DataFrame]:
         try:
-            response = await self._get_weather_info()
+            weather = await self._get_weather_info()
         except:
             logger.error('Raised unknown exception')
             return None
-        if response is None:
-            logger.error('No response for sky info')
+        if weather is None:
+            logger.error('No weather for sunshine info')
             return None
         
-        df = pd.DataFrame(response) 
-        df.set_index('timestamp', inplace = True)
+        df = pd.DataFrame(weather)
+        index = pd.to_datetime(df['timestamp'])
+        df.drop('timestamp', inplace=True, axis=1)
+        df.set_index(index, inplace = True)
         skydf = df.loc[:,['sunshine', 'cloud_cover']]
-        return skydf
+        return None if skydf.empty else skydf.dropna().astype(int)
 
     
     async def get_ai_feature_info(self) -> Optional[pd.DataFrame]:
         try:
-            response = await self._get_weather_info()
+            weather = await self._get_weather_info()
         except:
             logger.error('Raised unknown exception')
             return None
-        if response is None:
-            logger.error('No response for AI features')
+        if weather is None:
+            logger.error('No weather for AI features')
             return None
 
-        df = pd.DataFrame(response) 
-        df.set_index('timestamp', inplace = True)
-        skydf = df.loc[:,['sunshine',
-                          'cloud_cover',
-                          'temperature',
-                          'dew_point',
-                          'visibility'
-                          ]
-                       ]
-        return skydf
+        df = pd.DataFrame(weather)
+        index = pd.to_datetime(df['timestamp'])
+        df.drop('timestamp', inplace=True, axis=1)
+        df.set_index(index, inplace = True)
+        aidf = df.loc[:,['cloud_cover',
+                         'temperature',
+                         'dew_point',
+                         'visibility'
+                         ]
+                      ]
+        return None if aidf.empty else aidf.astype(int)
     
 
-    async def get_solar_info(self) -> Optional[pd.DataFrame]:
+    async def get_cloud_info(self) -> Optional[pd.DataFrame]:
         try:
-            response = await self._get_weather_info()
+            weather = await self._get_weather_info()
         except:
             logger.error('Raised unknown exception')
             return None            
-        if response is None:
-            logger.error('No response for solar info')
+        if weather is None:
+            logger.error('No weather for solar info')
             return None
         
-        df = pd.DataFrame(response)
-        df.set_index('timestamp', inplace = True)
-        solardf  = df.loc[:,['sunshine',
-                             'cloud_cover',
-                             'temperature',
-                             'solar'
+        df = pd.DataFrame(weather)
+        index = pd.to_datetime(df['timestamp'])
+        df.drop('timestamp', inplace=True, axis=1)
+        df.set_index(index, inplace = True)
+        clouddf  = df.loc[:,['cloud_cover',
+                             'temperature'
                              ]
                           ]
-        return solardf
+        return None if clouddf.empty else clouddf.astype(int)
     
 
     async def _get_sources_info(self) -> Optional[Dict[str, Any]]:
@@ -123,20 +138,21 @@ class Sky:
         except:
             logger.error('Raised unknown exception')
             return None
-        return response['sources'] if response is not None else None
+        sources = response['sources'] if response is not None else None
+        return sources
 
     
     async def get_sources_info(self) -> Optional[pd.DataFrame]:
         try:
-            response = await self._get_sources_info()
+            sources = await self._get_sources_info()
         except:
             logger.error('Raised unknown exception')
             return None
-        if response is None:
+        if sources is None:
             logger.error('No response for sources')
             return None
-        
-        df = pd.DataFrame(response)
+
+        df = pd.DataFrame(sources)
         df.set_index('id', inplace = True)
-        sourcesdf = df.loc[:,['distance','height','station_name']]
-        return sourcesdf
+        sourcesdf = df.loc[:,['station_name']]
+        return None if sourcesdf.empty else sourcesdf

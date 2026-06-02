@@ -14,7 +14,6 @@ POSITION_FEATURES = [
 ]
 
 WEATHER_FEATURES = [
-    'sunshine',
     'cloud_cover',
     'temperature',
     'dew_point',
