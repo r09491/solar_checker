@@ -38,12 +38,10 @@ async def main(sky: Sky, what: str) -> int:
         suncovermean = None
         if what == "sky":
             info = await sky.get_sky_info()
-            
             sunshine = info['sunshine']
-            suninfo = info[sunshine>0]
-            
-            # Remove time zone
-            index = np.array([t64_from_iso(t[:-6]) for t in suninfo.index])
+            suninfo = info[sunshine>0].copy()
+
+            index = (pd.to_datetime(suninfo.index))
             suninfo.set_index(index, inplace = True)
             print(suninfo)
 
@@ -56,28 +54,25 @@ async def main(sky: Sky, what: str) -> int:
             
         elif what == "solar":
             info = await sky.get_solar_info()
-            index = np.array([t64_from_iso(t[:-6]) for t in info.index])
-            info.set_index(index, inplace = True)
+            sunshine = info['sunshine']
+            solarinfo = info[sunshine>0].copy()
+            index = (pd.to_datetime(solarinfo.index))
+            solarinfo.set_index(index, inplace = True)
 
-            info['solar'] *= 240*2
 
-            solar = info['solar']
-            info = info[solar>0]
-
-            info['solar total'] = info['solar'].cumsum()
+            solarinfo['solar'] *= 220*2
             
-            print(info)
-            print(f'solar power mean {info["solar"].mean():.0f}W')
+            solarinfo['solar total'] = solarinfo['solar'].cumsum()            
+            print(solarinfo)
+            print(f'solar power mean {solarinfo['solar'].mean():.0f}W')
             print()
 
-            info = info.resample(
+            solarinfo = solarinfo.resample(
                 '3h', label='left', closed='left'
             ).mean() 
-
-            info['solar total'] = 3 * info['solar'].cumsum()
-
-            print(info)
-            print(f'solar power mean {info["solar"].mean():.0f}W')
+            solarinfo['solar total'] = 3 * solarinfo['solar'].cumsum()
+            print(solarinfo)
+            print(f'solar power mean {solarinfo["solar"].mean():.0f}W')
             print()
 
         elif what == "sources":
