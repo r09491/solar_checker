@@ -83,14 +83,17 @@ def _get_kwh_bar_unified(
         smeoffon = abs(smeoff)[abs(smeoff)>0]
         if smeoffon.any():
             bonus = balconyon.sum()-smeoffon.sum()
-            title += f' | Bonus {bonus:.1f}kWh'
-            title += f'~{(bonus*price):.2f}€'
-            title += f' ({bonus/balconyon.sum()*100:.0f}%)'
+            if bonus >=0:
+                title += f' | Bonus {bonus:.1f}kWh'
+                title += f'~{(bonus*price):.2f}€'
+                title += f' ({bonus/balconyon.sum()*100:.0f}%)'
+                title += '\n'
 
-            title += f'\n{smeoffon.sum():.1f}'
+            title += f'{smeoffon.sum():.1f}'
             title += f'={smeoffon.mean():.1f}'
             title += f'^{smeoffon.max():.1f}kWh'   
             title += f'~{(smeoffon.sum()*price):.2f}€>'
+
         else:
             bonus = 0
             title += '\n'
