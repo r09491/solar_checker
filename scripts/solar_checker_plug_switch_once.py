@@ -86,15 +86,7 @@ async def main(
         logger.error(f'Samples from stdin are not valid')
         return -10
 
-    spp =  c[SPP]
-    logger.info(f'"{SPP}" power total (energy) is "{spp.sum()/60:.0f}Wh"')
-    sppon = spp[(spp >0) & (spp <800)][-6:]
-    #sppon = spp[(spp <800)][-30:]
-    #sppon = spp[-30:]
-    logger.info(sppon)
-    sppon_mean = sppon.mean() if sppon.size > 0 else 0.0
-    logger.info(f'"{SPP}" power mean is "{sppon_mean:.0f}W"')
-
+    
     smp = c['SMP'][-2:]
     if abs(smp[-1]) <10:
         logger.info(f'"SMP" small! No action!')
@@ -105,8 +97,17 @@ async def main(
         return 4
     smp_mean = smp.mean()
 
+
+    spp =  c[SPP]
+    logger.info(f'"{SPP}" power total (energy) is "{spp.sum()/60:.0f}Wh"')
+    sppon = spp[(spp >0) & (spp <800)][-6:]
+    logger.info(sppon)
+    sppon_mean = sppon.mean() if sppon.size > 0 else 0.0
+    logger.info(f'"{SPP}" power mean is "{sppon_mean:.0f}W"')
+
     sbpb = c['SBPB'][-2:]
     sbpb_mean = sbpb.mean()
+
     
     sppon_open = max(0.2*sppon_mean,10)
     logger.info(f'"{SPP}" open power is {sppon_open:.0f}W')
@@ -119,11 +120,9 @@ async def main(
 
     # Switch to be Open if above the import average or a burst
     is_to_open =  ((smp_mean > sppon_open) or
-                   ##(smp[-1] >500) or
                    (spp[-30:] >800).any())
     # Switch to be Closed if below export average and not a burst
     is_to_closed =  ((smp_mean < -sppon_closed) and
-                     ##(smp[-1] <=500) and
                      (spp[-30:] <=800).all())
 
     ss_actual = await tuya_smartplug_switch_get(sp)
@@ -179,9 +178,9 @@ def parse_arguments() -> Script_Arguments:
 if __name__ == '__main__':
     args = parse_arguments()
 
-    logger.info(f'Switching of "{args.plug_name}" started')
+    logger.info(f'>>> Switching of "{args.plug_name}" started')
     
     err = asyncio.run(main(Smartplug(args.plug_name)))
 
-    logger.info(f'"{args.plug_name}" done (err={err})')
+    logger.info(f'<<< "{args.plug_name}" done (err={err})')
     sys.exit(err)
