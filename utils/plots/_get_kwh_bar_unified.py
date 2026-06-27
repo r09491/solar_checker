@@ -96,7 +96,7 @@ def _get_kwh_bar_unified(
 
         else:
             bonus = 0
-            title += '\n'
+            #title += '\n'
 
         title += f'Grid'
             
@@ -104,7 +104,8 @@ def _get_kwh_bar_unified(
         title += f'={smeonon.mean():.1f}'
         title += f'^{smeonon.max():.1f}kWh'   
         title += f'~{(smeonon.sum()*price):.2f}€'
-        title += f' ({smeonon.sum()/(smeonon.sum()+bonus)*100:.0f}%)'
+        if bonus >0:
+            title += f' ({smeonon.sum()/(smeonon.sum()+bonus)*100:.0f}%)'
 
     ax.set_title(title, fontsize='x-large')
 
