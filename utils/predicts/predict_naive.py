@@ -97,7 +97,7 @@ async def get_cloud_info_24h(
         lat: f64,
         lon: f64,
         tz: str = SKY_TZ
-)  -> (List[pd.Dataframe], f64s, f64s, f64s):
+)  -> Optional[List[pd.Dataframe], f64s, f64s, f64s]:
 
     skytasks = [
         asyncio.create_task(
@@ -110,25 +110,54 @@ async def get_cloud_info_24h(
     skys = await asyncio.gather(*skytasks)
     if skys is None:
         logger.warning(f'Unable to retrieve sky pools! Returning defaults')
-        return np.ndarray(24*[100]), np.ndarray(24*[100]), np.ndarray(24*[100]) 
+        return None, None, None, None, None
 
-    # The cast day the last in the list
+
+    tunneldays = None
+    tunnelcovers = None
+    tunneldaycover = None
+    if len(skys)>1:
+        # Filter valid days
+        tunneldays = [
+            d for d, s in zip(castdays[:-1], skys[:-1]) if s is not None
+        ]
+        
+        #The coverages of all valid days successfully acquired
+        tunnelcovers = [
+            s["cloud_cover"].iloc[:-1] for s in skys[:-1] if s is not None
+        ]
+    
+        # Calc the median of the tunnel days without castday
+        _tunnelcovers = pd.concat(
+            [c.reset_index(drop=True) for c in tunnelcovers]
+        )
+        tunneldaycover = _tunnelcovers.groupby(_tunnelcovers.index).mean()
+        if len(tunneldaycover) != 24:  # Only 24h
+            tunneldaycover = 24*[100]
+
+            
+    # The cast day is the last in the list
     castdaysky = skys[-1] if skys[-1] is not None else None
     if castdaysky is None:
         logger.error(f'Unable to retrieve cast sky data! Returning defaults')
-        return np.ndarray(24*[100]), np.ndarray(24*[100]), np.ndarray(24*[100]) 
+        return (tunneldays,
+                tunnelcovers,
+                np.full(shape=24, fill_value=15).astype(f64),
+                tunneldaycover.astype(f64),
+                np.full(shape=24, fill_value=100).astype(f64))
 
+    
     # The covers of the castday
     castdaycover = castdaysky["cloud_cover"].to_numpy()
     castdaycover = castdaycover[:min(len(castdaycover),24)]
     if len(castdaycover) != 24:  # Only 24h
-        castdaycover = np.ndarry(24*[100])
+        castdaycover = np.full(shape=24, fill_value=100)
 
     #The temperatures of castday
     temperatures = castdaysky["temperature"].to_numpy()
     temperatures = temperatures[:min(len(temperatures),24)]
     if len(temperatures) != 24:  # Only 24h
-        temperatures = np.ndarray(24*[15])
+        temperatures = np.full(shape=24, fill_value=15)
     temperaturesnan = np.isnan(temperatures)
     if temperaturesnan.any():
         logger.warning(f'Replacing undefined temperature values with default')
@@ -146,28 +175,13 @@ async def get_cloud_info_24h(
     # The weather is better (less clouds) with ratios >1. The weather
     # is worse (more clouds) with ratios <1
 
-    tunnelcovers = None
-    tunneldaycover = None
-    if len(skys)>1:
-        #The coverages of all the tunnel days
-        tunnelcovers = [
-            s["cloud_cover"].iloc[:-1] for s in skys[:-1] if s is not None
-        ]
-    
-        # Calc the median of the tunnel days without castday
-        _tunnelcovers = pd.concat(
-            [c.reset_index(drop=True) for c in tunnelcovers]
-        )
-        tunneldaycover = _tunnelcovers.groupby(_tunnelcovers.index).mean()
-        if len(tunneldaycover) != 24:  # Only 24h
-            tunneldaycover = 24*[100]
-
     castdaycovernan = np.isnan(castdaycover)
     if castdaycovernan.any():
         logger.warning(f'Replacing undefined cloud cover values with average')
     castdaycover[castdaycovernan] = tunneldaycover[castdaycovernan]
 
-    return (tunnelcovers,
+    return (tunneldays,
+            tunnelcovers,
             temperatures.astype(f64),
             tunneldaycover.astype(f64),
             castdaycover.astype(f64))
@@ -638,7 +652,7 @@ async def predict_naive_today(
     # Read the temeratures of today, the cloud cover for the tunneldaylog
     # (average day) and today. Default values are returned for
     # detected errors.
-    _, temperatures, tunneldaycover, todaycover = await get_cloud_info_24h(
+    _, _, temperatures, tunneldaycover, todaycover = await get_cloud_info_24h(
         days, lat, lon
     )
 
@@ -771,7 +785,7 @@ async def predict_naive_custom(
 
     # Read the temeratures, the cloud cover for the tunnel day (average
     # day) and today. Default values are returned for detected errors.
-    _, temperatures, tunneldaycover, castdaycover = await get_cloud_info_24h(
+    _, _, temperatures, tunneldaycover, castdaycover = await get_cloud_info_24h(
         days[:-1] + [castday], lat, lon
     )
 
@@ -944,67 +958,60 @@ async def predict_naive_check(
         logger.info(f'Nothing is in the tunnel')
         return None
 
-    # Read the temeratures, the cloud cover for the tunnel day (average
-    # day) and today. Default values are returned for detected errors.
-    tunnelcovers,  _, tunneldaycover, _ = await get_cloud_info_24h(
+    
+    # Read the valid cloud cover for average day and today.
+    # Default values are returned for detected errors.
+    tunneldays, tunnelcovers,  _, tunneldaycover, _ = await get_cloud_info_24h(
         days, lat, lon
     )
 
-    # tunnelsbpis = pd.concat(tunnellogs)["SBPI"]
-    # tunnelsbpishourly = tunnelsbpis.groupby(tunnelsbpis.index.hour).mean()
-    # tunnelhourly = pd.DataFrame(tunnelsbpishourly)
+    if (tunneldays is None or
+        tunnelcovers is None or
+        tunneldaycover is None):
+        logger.info(f'No cloud info available')
+        return None
+
     
-    # def power_to_cover(
-    #         p: f64,
-    #         k: f64,
-    #         n: f64,
-    #         pmax : f64 = 880
-    # ) -> f64:
-    #     return min(100, 100*(((pmax-p)/((k/100)*pmax))**(1/n)))
-
-    # for N in range(2,3+1,1):
-    #     for K in range(80,85+5,5):
-    #         rcovershourly = [ power_to_cover(p, K, N) for p in tunnelsbpishourly]
-    #         tunnelhourly.insert(tunnelhourly.shape[1], f'RCOVER.{N}.{K}', rcovershourly)
-    # tunnelhourly.insert(tunnelhourly.shape[1], f'TCOVER', tunneldaycover)        
-    # print(tunnelhourly[tunnelhourly["SBPI"]>10])
-
     # The mean of all tunnel days
     tunnel_w = tunneldaylog["SBPI"]
 
-    # THe real power observed for each tunnel day
-    real_w =  [tl["SBPI"] for tl in tunnellogs]
+    # Hours of items with irrdiance
+    h_mask = np.where(tunnel_w>0)[0]
 
-    # The predicted power for each tunnel day using cover
+    h = len(h_mask)
+
+    
+    # The predicted power for each valid tunnel day using cover
     cast_w = [
         await power_ratios(
             realcover.values,
             tunneldaycover.values
         )*tunnel_w for realcover in tunnelcovers
     ]
-
-    # Hours of items with irrdiance
-    h_mask = np.where(tunnel_w>0)[0]
-
+    
+    
     # Cast energy per day
     cast_wh = np.array([np.sum(cast.iloc[h_mask]) for cast in cast_w], dtype=f64)
+
+
+    # The real power observed for each tunnel day
+    real_w =  [tl["SBPI"] for d, tl in zip(days,tunnellogs) if d in tunneldays]
+
     # Real energy per day
     real_wh = np.array([np.sum(real.iloc[h_mask]) for real in real_w], dtype=f64)
 
-    h = len(h_mask)
-    h_mae = np.abs(cast_wh-real_wh)/h
-    h_mse = ((cast_wh-real_wh)**2)/h
-    h_rmse =np.sqrt(h_mse)
+    ae = np.abs(np.array(cast_wh-real_wh))
+    re = np.abs((cast_wh-real_wh)/real_wh)*100
 
     df = pd.DataFrame.from_dict({
-        "DAY": days[:-1],
-        "REAL": real_wh,
+        "DAY": tunneldays,
         "CAST": cast_wh,
+        "REAL": real_wh,
+        "RE": re,
+        "AE": ae,
+        "AE/H": ae/h,
         "H": h,
-        "H MAE": h_mae,
-        # "H MSE": h_mse,
-        "H RMSE": h_rmse,
-        "H COVER": [np.mean(tc.iloc[h_mask]) for tc in tunnelcovers]
+        "COVER": [np.mean(tc.iloc[h_mask]) for tc in tunnelcovers]
     })
     
-    return df.sort_values(by="H RMSE", ascending = True)
+    return df.sort_values(by="RE", ascending = True)

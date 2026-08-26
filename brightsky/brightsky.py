@@ -37,13 +37,11 @@ class Sky:
                  lon: float,
                  day: str,
                  tz: str = TZ,
-                 #source_id: str = SOURCE_ID,
                  timeout: int = TIMEOUT):
         
         self.url = f'https://{self._URL}/{self._ENDPOINT}?'
         self.url += f'lat={lat}&lon={lon}&'
         self.url += f'date={datetime.strptime(day, "%y%m%d").strftime("%Y-%m-%d")}&'
-        #self.url += f'source_id={SOURCE_ID}&'
         self.url += f'tz={tz}'
         self.timeout = timeout
 
@@ -118,18 +116,19 @@ class Sky:
             logger.error('Raised unknown exception')
             return None            
         if weather is None:
-            logger.error('No weather for solar info')
+            logger.error('No weather for cloud info')
             return None
         
         df = pd.DataFrame(weather)
         index = pd.to_datetime(df['timestamp'])
         df.drop('timestamp', inplace=True, axis=1)
         df.set_index(index, inplace = True)
+    
         clouddf  = df.loc[:,['cloud_cover',
                              'temperature'
                              ]
                           ]
-        return None if clouddf.empty else clouddf.astype(int)
+        return None if clouddf.empty else clouddf.interpolate(axis=1)
     
 
     async def _get_sources_info(self) -> Optional[Dict[str, Any]]:
