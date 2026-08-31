@@ -75,10 +75,11 @@ def _get_w_line(time: t64s, smp: f64s,
     sbpi = np.zeros(N) if sbpi is None else sbpi
         
     issbpion = sbpi>0
-    sbpion = sbpi
-    sbpion[issbpion] = sbpi[issbpion]
-    sbpion_mean = sbpion.mean()
-    sbpion_max = sbpion.max() 
+    # sbpion = sbpi
+    # sbpion[issbpion] = sbpi[issbpion]
+    sbpion = sbpi[issbpion]
+    sbpion_mean = sbpion.mean() if len(sbpion)>0 else 0 
+    sbpion_max = sbpion.max()  if len(sbpion)>0 else 0 
 
     # 'Have output (solarbank)
     sbpo = np.zeros(N) if sbpo is None else sbpo

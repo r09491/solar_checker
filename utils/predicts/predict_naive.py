@@ -1005,13 +1005,13 @@ async def predict_naive_check(
 
     df = pd.DataFrame.from_dict({
         "DAY": tunneldays,
+        "H": h,
         "CAST": cast_wh,
         "REAL": real_wh,
         "RE": re,
         "AE": ae,
         "AE/H": ae/h,
-        "H": h,
-        "COVER": [np.mean(tc.iloc[h_mask]) for tc in tunnelcovers]
+        "MCOV": [np.mean(tc.iloc[h_mask]) for tc in tunnelcovers]
     })
     
     return df.sort_values(by="RE", ascending = True)
