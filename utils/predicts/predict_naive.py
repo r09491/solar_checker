@@ -114,8 +114,8 @@ async def get_cloud_info_24h(
     """ Get the list of associated columns """
     skys = await asyncio.gather(*skytasks)
     if skys is None:
-        logger.warning(f'Unable to retrieve sky pools! Returning defaults')
-        return None, None, None, None, None
+        logger.warning(f'Unable to retrieve sky pools!')
+        return None
 
 
     tunneldays = None
@@ -129,44 +129,40 @@ async def get_cloud_info_24h(
         
         #The coverages of all valid days successfully acquired
         tunnelcovers = [
-            s["cloud_cover"].iloc[:-1] for s in skys[:-1] if s is not None
+            s["cloud_cover"].iloc[:24] for s in skys[:-1] if s is not None
         ]
     
         # Calc the median of the tunnel days without castday
         _tunnelcovers = pd.concat(
             [c.reset_index(drop=True) for c in tunnelcovers]
         )
+        
         tunneldaycover = _tunnelcovers.groupby(_tunnelcovers.index).mean()
+        tunneldaycover = tunneldaycover.to_numpy(na_value=DEFAULT_COVER)
+        tunneldaycover = tunneldaycover[:min(len(tunneldaycover),24)].astype(f64)
         if len(tunneldaycover) != 24:  # Only 24h
-            tunneldaycover = 24*[DEFAULT_COVER]
+            return None
 
-            
+        
     # The cast day is the last in the list
     castdaysky = skys[-1] if skys[-1] is not None else None
     if castdaysky is None:
-        logger.error(f'Unable to retrieve cast sky data! Returning defaults')
-        return (tunneldays,
-                tunnelcovers,
-                np.full(shape=24, fill_value=DEFAULT_TEMPERATURE).astype(f64),
-                tunneldaycover.astype(f64),
-                np.full(shape=24, fill_value=DEFAULT_COVER).astype(f64))
+        logger.error(f'Unable to retrieve cast sky data!')
+        return None
+
+    # The covers of the castday
+    castdaycover = castdaysky["cloud_cover"].to_numpy(na_value=DEFAULT_COVER)
+    castdaycover = castdaycover[:min(len(castdaycover),24)].astype(f64)
+    if len(castdaycover) > 24:  # Only 24h
+        return None
 
     
-    # The covers of the castday
-    castdaycover = castdaysky["cloud_cover"].to_numpy()
-    castdaycover = castdaycover[:min(len(castdaycover),24)]
-    if len(castdaycover) != 24:  # Only 24h
-        castdaycover = np.full(shape=24, fill_value=DEFAULT_COVER)
-
     #The temperatures of castday
-    temperatures = castdaysky["temperature"].to_numpy()
-    temperatures = temperatures[:min(len(temperatures),24)]
+    temperatures = castdaysky["temperature"].to_numpy(na_value=DEFAULT_TEMPERATURE)
+    temperatures = temperatures[:min(len(temperatures),24)].astype(f64)
     if len(temperatures) != 24:  # Only 24h
-        temperatures = np.full(shape=24, fill_value=DEFAULT_TEMPERATURE)
-    temperaturesnan = np.isnan(temperatures)
-    if temperaturesnan.any():
-        logger.warning(f'Replacing undefined temperature values with default')
-    temperatures[temperaturesnan] = DEFAULT_TEMPERATURE
+        return None
+
     
     # Based on the ratio of 'castdaycover' and 'tunneldaycover' the
     # power values of castday may be predicted by aopplying the
@@ -180,16 +176,11 @@ async def get_cloud_info_24h(
     # The weather is better (less clouds) with ratios >1. The weather
     # is worse (more clouds) with ratios <1
 
-    castdaycovernan = np.isnan(castdaycover)
-    if castdaycovernan.any():
-        logger.warning(f'Replacing undefined cloud cover values with average')
-    castdaycover[castdaycovernan] = tunneldaycover[castdaycovernan]
-
     return (tunneldays,
             tunnelcovers,
-            temperatures.astype(f64),
-            tunneldaycover.astype(f64),
-            castdaycover.astype(f64))
+            temperatures,
+            tunneldaycover,
+            castdaycover)
 
 
 """
@@ -705,7 +696,7 @@ async def predict_naive_today(
     # The sky cast starts with the tunneldaylog to be scaled with sky
     # factors for the whole day.
     castlog = tunneldaylog
-    castlog["SBPI"] *= skyratios.values
+    castlog["SBPI"] *= skyratios
     
     # Keep SOC
     realsoc = todaylog["SBSB"].iloc[-1] if len(todaylog)>0 else None
@@ -814,13 +805,13 @@ async def predict_naive_custom(
     tunneldaylog.insert(tunneldaylog.shape[1], "CCOV", castdaycover)
 
     # Add the tunnelcover column
-    tunneldaylog.insert(tunneldaylog.shape[1], "TCOV", tunneldaycover.values)
+    tunneldaylog.insert(tunneldaylog.shape[1], "TCOV", tunneldaycover)
 
     if (("SBPI" in tunneldaylog)):
     
         # Update the irridiance tunnel day average to expected aky
         # conditions
-        tunneldaylog["SBPI"] *= skyratios.values
+        tunneldaylog["SBPI"] *= skyratios
 
         # Keep SOC
         tunnelsoc = tunneldaylog["SBSB"].iloc[0]
@@ -985,12 +976,11 @@ async def predict_naive_check(
 
     h = len(h_mask)
 
-    
     # The predicted power for each valid tunnel day using cover
     cast_w = [
         await power_ratios(
             realcover.values,
-            tunneldaycover.values
+            tunneldaycover
         )*tunnel_w for realcover in tunnelcovers
     ]
     
