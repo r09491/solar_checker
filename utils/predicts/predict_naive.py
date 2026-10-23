@@ -42,6 +42,11 @@ from brightsky import (
     Sky
 )
 
+DEFAULT_COVER = 100
+DEFAULT_TEMPERATURE = -45
+
+AVERAGE_COVER = 57
+
 EPS = 0.001      # 0.1, 0.01 ..
 SCALE = 0.850    # 0.6, 0.75, 1.00
 EXPONENT = 3.0   # 1.0, 2.0, 3.0
@@ -58,7 +63,7 @@ async def cover_to_power(
     coverisnone = cover==None
     if coverisnone.any():
         logger.warning(f'Replacing undefined cloud cover values with default')
-    cover[coverisnone] = 57 # average cloud coverage
+    cover[coverisnone] = AVERAGE_COVER # average cloud coverage
     return 1.0-scale*(( PERCENT*cover )**exponent)
 
 """ Returns a list of ratios to calculate power values from source
@@ -133,7 +138,7 @@ async def get_cloud_info_24h(
         )
         tunneldaycover = _tunnelcovers.groupby(_tunnelcovers.index).mean()
         if len(tunneldaycover) != 24:  # Only 24h
-            tunneldaycover = 24*[100]
+            tunneldaycover = 24*[DEFAULT_COVER]
 
             
     # The cast day is the last in the list
@@ -142,26 +147,26 @@ async def get_cloud_info_24h(
         logger.error(f'Unable to retrieve cast sky data! Returning defaults')
         return (tunneldays,
                 tunnelcovers,
-                np.full(shape=24, fill_value=15).astype(f64),
+                np.full(shape=24, fill_value=DEFAULT_TEMPERATURE).astype(f64),
                 tunneldaycover.astype(f64),
-                np.full(shape=24, fill_value=100).astype(f64))
+                np.full(shape=24, fill_value=DEFAULT_COVER).astype(f64))
 
     
     # The covers of the castday
     castdaycover = castdaysky["cloud_cover"].to_numpy()
     castdaycover = castdaycover[:min(len(castdaycover),24)]
     if len(castdaycover) != 24:  # Only 24h
-        castdaycover = np.full(shape=24, fill_value=100)
+        castdaycover = np.full(shape=24, fill_value=DEFAULT_COVER)
 
     #The temperatures of castday
     temperatures = castdaysky["temperature"].to_numpy()
     temperatures = temperatures[:min(len(temperatures),24)]
     if len(temperatures) != 24:  # Only 24h
-        temperatures = np.full(shape=24, fill_value=15)
+        temperatures = np.full(shape=24, fill_value=DEFAULT_TEMPERATURE)
     temperaturesnan = np.isnan(temperatures)
     if temperaturesnan.any():
         logger.warning(f'Replacing undefined temperature values with default')
-    temperatures[temperaturesnan] = 15
+    temperatures[temperaturesnan] = DEFAULT_TEMPERATURE
     
     # Based on the ratio of 'castdaycover' and 'tunneldaycover' the
     # power values of castday may be predicted by aopplying the
