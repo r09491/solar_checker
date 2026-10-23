@@ -76,9 +76,9 @@ async def predict_sbpi_models(
     pool['SBPI_below_40']=(sbpi < 40).astype(int)
     pool['SBPI_above_100']=(sbpi > 100).astype(int)
 
-    #pool.loc[
-    #    pool['SBPI']<10, 'SBPI'
-    #] = 0
+    pool.loc[
+        pool['SBPI']<10, 'SBPI'
+    ] = 0
 
     pool.loc[
         pool['is_daylight']==0, 'SBPI'
@@ -197,6 +197,10 @@ async def predict_models(
     await predict_sbpb_models(
         pool = pool, sbpb_models = sbpb_models
     )
+    pool.loc[
+        (pool['SBPB']<=0) &
+        (pool['SBPI']<=0), 'SBPB'
+    ] = 0
 
     # Calculate SBPO
     

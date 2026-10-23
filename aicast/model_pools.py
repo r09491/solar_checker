@@ -177,7 +177,7 @@ async def get_sky_pool(
         
     try:
         df.index = pd.DatetimeIndex(df.index).tz_convert(tz)
-    except TypeError:
+    except TypeError, ValueError:
         # May be switching from summer time to winter time
         logger.error(f'Skipped sky features for "{logday}"')
         return None
