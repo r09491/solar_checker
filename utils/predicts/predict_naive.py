@@ -1003,10 +1003,11 @@ async def predict_naive_check(
         "H": h,
         "CAST": cast_wh,
         "REAL": real_wh,
-        "RE": re,
         "AE": ae,
         "AE/H": ae/h,
+        "RE": re,
+        "RE/H": re/h,
         "MCOV": [np.mean(tc.iloc[h_mask]) for tc in tunnelcovers]
     })
     
-    return df.sort_values(by="RE", ascending = True)
+    return df.sort_values(by="RE/H", ascending = True)
